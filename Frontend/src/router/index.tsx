@@ -55,6 +55,7 @@ export default function Router() {
         <Route path="/trade/:pair" element={<TradePage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/wallet" element={<WalletPage />} />
+        <Route path="/assets" element={<WalletPage />} />
         <Route path="/wallet/deposit" element={<DepositPage />} />
         <Route path="/wallet/withdraw" element={<WithdrawPage />} />
         <Route path="/profile" element={<ProfilePage />} />
