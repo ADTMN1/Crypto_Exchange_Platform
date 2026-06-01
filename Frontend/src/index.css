@@ -1,3 +1,14 @@
+:root {
+  --background: #121212;
+  --surface: #1A1A1A;
+  --surface-hover: #262626;
+  --primary: #F3921F;
+  --success: #24C576;
+  --danger: #E53935;
+  --text-main: #FFFFFF;
+  --text-muted: #A0A0A0;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -10,8 +21,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #121212;
-  color: #fff;
+  background: var(--background);
+  color: var(--text-main);
 }
 
 .app {
@@ -23,8 +34,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 16px 32px;
-  background: #181818;
-  border-bottom: 1px solid #282828;
+  background: var(--background);
+  border-bottom: 1px solid var(--surface-hover);
 }
 
 .header-left,
@@ -41,7 +52,7 @@ body {
   gap: 8px;
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-main);
 }
 
 .logo-icon {
@@ -53,7 +64,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #282828;
+  background: var(--surface-hover);
   padding: 10px 20px;
   border-radius: 24px;
   width: 400px;
@@ -63,13 +74,13 @@ body {
   background: transparent;
   border: none;
   outline: none;
-  color: #fff;
+  color: var(--text-main);
   font-size: 14px;
   width: 100%;
 }
 
 .search-bar input::placeholder {
-  color: #b3b3b3;
+  color: var(--text-muted);
 }
 
 .btn-outline,
@@ -86,32 +97,34 @@ body {
 
 .btn-outline {
   background: transparent;
-  color: #f7931a;
+  color: var(--primary);
+  border: 1px solid var(--primary);
 }
 
 .btn-outline:hover {
-  color: #ffb347;
+  color: var(--primary);
+  background: rgba(243, 146, 31, 0.12);
 }
 
 .btn-primary {
-  background: transparent;
-  color: #fff;
+  background: var(--primary);
+  color: var(--text-main);
 }
 
 .btn-primary:hover {
-  color: #f7931a;
+  background: rgba(243, 146, 31, 0.9);
 }
 
 .btn-upload {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #282828;
-  color: #fff;
+  background: var(--surface-hover);
+  color: var(--text-main);
 }
 
 .btn-upload:hover {
-  background: #383838;
+  background: var(--surface);
 }
 
 .main-container {
@@ -120,10 +133,10 @@ body {
 
 .sidebar {
   width: 280px;
-  background: #181818;
+  background: var(--background);
   min-height: calc(100vh - 73px);
   padding: 24px 0;
-  border-right: 1px solid #282828;
+  border-right: 1px solid var(--surface-hover);
 }
 
 .sidebar-nav {
@@ -139,7 +152,7 @@ body {
 .nav-title {
   font-size: 12px;
   font-weight: 700;
-  color: #f7931a;
+  color: var(--primary);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 8px;
@@ -151,7 +164,7 @@ body {
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
-  color: #fff;
+  color: var(--text-main);
   text-decoration: none;
   border-radius: 8px;
   font-size: 15px;
@@ -159,12 +172,9 @@ body {
   transition: all 0.2s;
 }
 
-.nav-item:hover {
-  background: #282828;
-}
-
+.nav-item:hover,
 .nav-item.active {
-  background: #282828;
+  background: var(--surface-hover);
 }
 
 .nav-icon {
@@ -182,7 +192,7 @@ body {
   display: flex;
   align-items: center;
   gap: 48px;
-  background: #181818;
+  background: var(--surface);
   padding: 40px;
   border-radius: 16px;
   margin-bottom: 32px;
@@ -198,20 +208,86 @@ body {
   margin-bottom: 12px;
 }
 
+.bg-background {
+  background: var(--background) !important;
+}
+
+.bg-surface {
+  background: var(--surface) !important;
+}
+
+.bg-surface-hover {
+  background: var(--surface-hover) !important;
+}
+
+.border-surface {
+  border-color: var(--surface-hover) !important;
+}
+
+.text-main {
+  color: var(--text-main) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.text-success {
+  color: var(--success) !important;
+}
+
+.text-danger {
+  color: var(--danger) !important;
+}
+
+.bg-slate-900 {
+  background: var(--surface) !important;
+}
+
+.bg-slate-950 {
+  background: var(--background) !important;
+}
+
+.border-slate-700,
+.border-slate-800 {
+  border-color: var(--surface-hover) !important;
+}
+
+.text-slate-400 {
+  color: var(--text-muted) !important;
+}
+
+.text-slate-100 {
+  color: var(--text-main) !important;
+}
+
+.bg-blue-600 {
+  background: var(--primary) !important;
+}
+
+.hover\:bg-blue-700:hover,
+.hover\:bg-slate-800:hover {
+  background: var(--surface-hover) !important;
+}
+
 .highlight {
-  color: #f7931a;
+  color: var(--primary);
 }
 
 .hero-subtitle {
   font-size: 18px;
-  color: #fff;
+  color: var(--text-main);
   margin-bottom: 24px;
   font-weight: 500;
 }
 
 .hero-btn {
-  background: #f7931a;
-  color: #000;
+  background: var(--primary);
+  color: var(--text-main);
   border: none;
   padding: 14px 32px;
   border-radius: 24px;
@@ -222,7 +298,7 @@ body {
 }
 
 .hero-btn:hover {
-  background: #ffb347;
+  background: rgba(243, 146, 31, 0.9);
   transform: scale(1.02);
 }
 
@@ -245,8 +321,8 @@ body {
 .category-btn {
   padding: 8px 16px;
   border-radius: 20px;
-  background: #181818;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text-main);
   border: none;
   font-size: 14px;
   font-weight: 600;
@@ -255,12 +331,12 @@ body {
 }
 
 .category-btn:hover {
-  background: #282828;
+  background: var(--surface-hover);
 }
 
 .category-btn.active {
-  background: #f7931a;
-  color: #000;
+  background: var(--primary);
+  color: var(--text-main);
 }
 
 .section-header {
@@ -276,14 +352,14 @@ body {
 }
 
 .view-all {
-  color: #b3b3b3;
+  color: var(--text-muted);
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
 }
 
 .view-all:hover {
-  color: #fff;
+  color: var(--text-main);
 }
 
 .coins-grid {
@@ -293,7 +369,7 @@ body {
 }
 
 .coin-card {
-  background: #181818;
+  background: var(--surface);
   border-radius: 12px;
   overflow: hidden;
   position: relative;
@@ -314,13 +390,13 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #f7931a;
+  background: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   font-weight: 700;
-  color: #000;
+  color: var(--text-main);
 }
 
 .coin-info {
@@ -335,7 +411,7 @@ body {
 
 .coin-symbol {
   font-size: 14px;
-  color: #b3b3b3;
+  color: var(--text-muted);
 }
 
 .coin-stats {
@@ -349,11 +425,11 @@ body {
 }
 
 .coin-change.positive {
-  color: #1db954;
+  color: var(--success);
 }
 
 .coin-change.negative {
-  color: #e91429;
+  color: var(--danger);
 }
 
 .coin-price {

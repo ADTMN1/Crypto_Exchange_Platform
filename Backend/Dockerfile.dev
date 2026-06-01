@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy dependency manifests first for leverage caching
+COPY package*.json ./
+
+RUN npm install
+
+# Copy the rest of your application code
+COPY . .
+
+EXPOSE 5000
+
+# Assumes you have a development script like nodemon in package.json
+CMD ["npm", "run", "dev"]

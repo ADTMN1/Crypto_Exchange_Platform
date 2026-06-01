@@ -1,0 +1,12 @@
+node_modeles
+dist/
+.env
+.DS_Store
+*.log
+*.env
+*.cache
+*.tmp
+*.bak       
+/node_modules
+/dist
+/dist-ssr

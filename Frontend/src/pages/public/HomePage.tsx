@@ -1,16 +1,39 @@
-import React from 'react'
-import Header from './components/Header'
-import Sidebar from './components/Sidebar'
-import Hero from './components/Hero'
-import CoinCard from './components/CoinCard'
+import Header from "../../components/Header";
+import Sidebar from "../../components/Sidebar";
+import Hero from "../../components/Hero";
+import CoinCard from "../../components/CoinCard";
 
-function App() {
+export default function HomePage() {
   const coins = [
-    { name: 'Bitcoin', symbol: 'BTC', change: '+2.45%', price: '$68,245.30', positive: true },
-    { name: 'Ethereum', symbol: 'ETH', change: '-0.82%', price: '$3,521.10', positive: false },
-    { name: 'Solana', symbol: 'SOL', change: '+5.12%', price: '$182.45', positive: true },
-    { name: 'Cardano', symbol: 'ADA', change: '+1.20%', price: '$0.58', positive: true },
-  ]
+    {
+      name: "Bitcoin",
+      symbol: "BTCK",
+      change: "+2.45%",
+      price: "$68,245.30",
+      positive: true,
+    },
+    {
+      name: "Ethereum",
+      symbol: "ETH",
+      change: "-0.82%",
+      price: "$3,521.10",
+      positive: false,
+    },
+    {
+      name: "Solana",
+      symbol: "SOL",
+      change: "+5.12%",
+      price: "$182.45",
+      positive: true,
+    },
+    {
+      name: "Cardano",
+      symbol: "ADA",
+      change: "+1.20%",
+      price: "$0.58",
+      positive: true,
+    },
+  ];
 
   return (
     <div className="app">
@@ -32,18 +55,18 @@ function App() {
           <section className="market-section">
             <div className="section-header">
               <h2 className="section-title">TRENDING COINS</h2>
-              <a href="#" className="view-all">VIEW ALL</a>
+              <a href="#" className="view-all">
+                VIEW ALL
+              </a>
             </div>
             <div className="coins-grid">
               {coins.map((coin, index) => (
-              <CoinCard key={index} coin={coin} />
-            ))}
+                <CoinCard key={index} coin={coin} />
+              ))}
             </div>
           </section>
         </main>
       </div>
     </div>
-  )
+  );
 }
-
-export default App
