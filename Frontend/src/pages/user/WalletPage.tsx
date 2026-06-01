@@ -1,8 +1,139 @@
+import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useState } from 'react';
+
 export default function WalletPage() {
+  const [showBalance, setShowBalance] = useState(true);
+
+  const cryptoData = [
+    { symbol: 'BTCUSDT', volume: '1813011074362.9M', price: '$73405.92', change: '+4.34%', positive: true },
+    { symbol: 'XRPUSDT', volume: '132132186768.1M', price: '$1.39', change: '+335.53%', positive: true },
+    { symbol: 'TRXUSDT', volume: '28123253132.9M', price: '$0.30', change: '+196.97%', positive: true },
+    { symbol: 'PAXGUSDT', volume: '1685331061.4M', price: '$4952.70', change: '+3.67%', positive: true },
+    { symbol: 'SOL_USDT', volume: '47653566961.9M', price: '$82.40', change: '+1.60%', positive: true },
+    { symbol: 'XAUt_USD', volume: '1500000000000.0M', price: '$4914.50', change: '+0.75%', positive: true },
+    { symbol: 'XAG_USD', volume: '180000000000.0M', price: '$23.15', change: '-0.32%', positive: false },
+  ];
+
+  const newsItems = [
+    { 
+      tag: 'BREAKING', 
+      title: 'Analysis: Market trends show positive momentum for BTC', 
+      source: 'investing.com', 
+      time: '27m ago',
+      tagColor: '#ef4444'
+    },
+    { 
+      tag: 'TRENDING', 
+      title: 'Bitcoin Reaches New All-Time High as Institutional Adoption Soars', 
+      source: 'TRADEZIB Trade', 
+      time: '1h ago',
+      tagColor: '#F7931A'
+    },
+    { 
+      tag: 'UPDATE', 
+      title: 'Ethereum 2.0 Upgrade Reduces Transaction Fees by 90%', 
+      source: 'Crypto Weekly', 
+      time: '2h ago',
+      tagColor: '#3b82f6'
+    },
+  ];
+
   return (
-    <main>
-      <h1>Wallet</h1>
-      <p>Manage balances and view account history.</p>
+    <main className="wallet-page">
+      {/* Total Assets Card */}
+      <div className="assets-card">
+        <div className="assets-header">
+          <div>
+            <h3 className="assets-label">Total Assets</h3>
+            <div className="assets-amount-container">
+              <h1 className="assets-amount">
+                {showBalance ? '$1,078.6084 USD' : '***********'}
+              </h1>
+              <button 
+                className="toggle-balance-btn" 
+                onClick={() => setShowBalance(!showBalance)}
+                title={showBalance ? 'Hide balance' : 'Show balance'}
+              >
+                {showBalance ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            <p className="assets-change positive">
+              <FaArrowUp /> 2.4% this week
+            </p>
+          </div>
+          <button className="btn-deposit">Deposit</button>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="quick-actions-section">
+        <h2 className="section-title">Quick Actions</h2>
+        <div className="quick-actions-grid">
+          <button className="action-card">
+            <FaExchangeAlt className="action-icon" />
+            <span>Transactions</span>
+          </button>
+          <button className="action-card">
+            <FaChartLine className="action-icon" />
+            <span>Trades</span>
+          </button>
+          <button className="action-card">
+            <FaHeadset className="action-icon" />
+            <span>Support</span>
+          </button>
+          <button className="action-card">
+            <FaComments className="action-icon" />
+            <span>Live Chat</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Market Insights */}
+      <div className="market-insights-section">
+        <div className="section-header">
+          <h2 className="section-title">Market Insights</h2>
+          <a href="#" className="view-all-link">View All</a>
+        </div>
+        <div className="news-list">
+          {newsItems.map((news, index) => (
+            <div key={index} className="news-item">
+              <span className="news-tag" style={{ backgroundColor: news.tagColor }}>
+                {news.tag}
+              </span>
+              <div className="news-content">
+                <h4 className="news-title">{news.title}</h4>
+                <p className="news-meta">
+                  {news.source} • {news.time}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Top Cryptos */}
+      <div className="top-cryptos-section">
+        <div className="section-header">
+          <h2 className="section-title">Top Cryptos</h2>
+          <a href="#" className="view-all-link">View More</a>
+        </div>
+        <div className="crypto-table">
+          {cryptoData.map((crypto, index) => (
+            <div key={index} className="crypto-row">
+              <div className="crypto-info">
+                <span className="crypto-symbol">{crypto.symbol}</span>
+                <span className="crypto-volume">Vol: {crypto.volume}</span>
+              </div>
+              <div className="crypto-stats">
+                <span className="crypto-price">{crypto.price}</span>
+                <span className={`crypto-change ${crypto.positive ? 'positive' : 'negative'}`}>
+                  {crypto.change}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }

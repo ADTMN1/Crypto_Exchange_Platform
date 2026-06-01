@@ -1,6 +1,5 @@
-import React from 'react'
 import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaBookOpen, FaSignOutAlt } from 'react-icons/fa'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 function Sidebar() {
   const navigate = useNavigate()
@@ -25,40 +24,40 @@ function Sidebar() {
       <nav className="sidebar-nav">
         <div className="nav-section">
           <div className="nav-title">BROWSE</div>
-          <a href="#" className="nav-item active">
+          <Link to="/" className="nav-item">
             <FaFire style={iconStyle} className="nav-icon" />
             Discover
-          </a>
-          <a href="#" className="nav-item">
+          </Link>
+          <Link to="/markets" className="nav-item">
             <FaChartBar style={iconStyle} className="nav-icon" />
             Markets
-          </a>
-          <a href="#" className="nav-item">
+          </Link>
+          <Link to="/trade" className="nav-item">
             <FaChartLine style={iconStyle} className="nav-icon" />
             Trade
-          </a>
-          <a href="#" className="nav-item">
+          </Link>
+          <Link to="/news" className="nav-item">
             <FaUser style={iconStyle} className="nav-icon" />
             News
-          </a>
+          </Link>
         </div>
         <div className="nav-section">
           <div className="nav-title">MY WALLET</div>
-          <a href="#" className="nav-item">
+          <Link to="/assets" className="nav-item">
             <FaWallet style={iconStyle} className="nav-icon" />
             Assets
-          </a>
-          <a href="#" className="nav-item">
+          </Link>
+          <Link to="/history" className="nav-item">
             <FaHistory style={iconStyle} className="nav-icon" />
             History
-          </a>
+          </Link>
         </div>
         <div className="nav-section">
           <div className="nav-title">RESOURCES</div>
-          <a href="#" className="nav-item">
+          <Link to="/learn" className="nav-item">
             <FaBookOpen style={iconStyle} className="nav-icon" />
             Learn
-          </a>
+          </Link>
         </div>
         <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '20px 0' }} />
         <div className="nav-section">
