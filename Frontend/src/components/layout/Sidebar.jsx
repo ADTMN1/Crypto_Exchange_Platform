@@ -1,8 +1,24 @@
 import React from 'react'
-import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaBookOpen } from 'react-icons/fa'
+import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaBookOpen, FaSignOutAlt } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
 
 function Sidebar() {
+  const navigate = useNavigate()
   const iconStyle = { color: '#F7931A' }
+
+  const handleLogout = () => {
+    // Clear authentication tokens/data
+    localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
+    // Clear any cookies if needed
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
+    })
+    // Redirect to login page
+    navigate('/login')
+  }
 
   return (
     <aside className="sidebar">
@@ -23,7 +39,7 @@ function Sidebar() {
           </a>
           <a href="#" className="nav-item">
             <FaUser style={iconStyle} className="nav-icon" />
-            Portfolio
+            News
           </a>
         </div>
         <div className="nav-section">
@@ -43,6 +59,13 @@ function Sidebar() {
             <FaBookOpen style={iconStyle} className="nav-icon" />
             Learn
           </a>
+        </div>
+        <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '20px 0' }} />
+        <div className="nav-section">
+          <button onClick={handleLogout} className="nav-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <FaSignOutAlt style={{ color: '#ef4444' }} className="nav-icon" />
+            Logout
+          </button>
         </div>
       </nav>
     </aside>

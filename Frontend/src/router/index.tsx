@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import GuestRoute from "./GuestRoute";
 import ProtectedRoute from "./ProtectedRoute";
 import AdminRoute from "./AdminRoute";
+import { useAuthStore } from "../store";
 import HomePage from "../pages/public/HomePage";
 import MarketsPage from "../pages/public/MarketsPage";
 import SupportPage from "../pages/public/SupportPage";
@@ -29,10 +30,15 @@ import AdminTransactionsPage from "../pages/admin/TransactionsPage";
 import AdminPairsPage from "../pages/admin/PairsPage";
 import AdminAuditPage from "../pages/admin/AuditPage";
 
+function RootRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  return isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />;
+}
+
 export default function Router() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<RootRoute />} />
       <Route path="/markets" element={<MarketsPage />} />
       <Route path="/support" element={<SupportPage />} />
 

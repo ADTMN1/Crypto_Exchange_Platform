@@ -1,5 +1,5 @@
 import Header from "../../components/Header";
-import Sidebar from "../../components/Sidebar";
+import Sidebar from "../../components/layout/Sidebar";
 import Hero from "../../components/Hero";
 import CoinCard from "../../components/CoinCard";
 

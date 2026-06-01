@@ -44,11 +44,11 @@ CREATE TYPE order_status_enum AS ENUM ('open', 'partially_filled', 'filled', 'ca
 
 -- 🔐 1. Roles Table
 CREATE TABLE roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(20) NOT NULL UNIQUE, -- admin, user, trader, support
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+); 
 
 -- 🧑‍💻 2. Users Table
 CREATE TABLE users (

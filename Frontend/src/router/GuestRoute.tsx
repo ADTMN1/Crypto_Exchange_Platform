@@ -3,5 +3,5 @@ import { useAuthStore } from "../store";
 
 export default function GuestRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  return isAuthenticated ? <Navigate to="/" replace /> : <Outlet />;
 }

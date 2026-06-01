@@ -1,4 +1,4 @@
-import React from 'react'
+import { FaBell, FaCog, FaUserCircle } from 'react-icons/fa'
 import Logo from '../assets/logo.svg'
 
 function Header() {
@@ -17,8 +17,16 @@ function Header() {
         </div>
       </div>
       <div className="header-right">
-        <button className="btn-outline">Sign Up</button>
-        <button className="btn-primary">Sign In</button>
+        <button className="icon-btn" title="Notifications">
+          <FaBell size={20} />
+          <span className="notification-badge">3</span>
+        </button>
+        <button className="icon-btn" title="Settings">
+          <FaCog size={20} />
+        </button>
+        <button className="icon-btn" title="Profile">
+          <FaUserCircle size={24} />
+        </button>
         <button className="btn-upload">
           <span>🔗</span>
           Connect Wallet
