@@ -72,11 +72,20 @@ const authService = {
      */
     login: async (email, password) => {
         // 1. Dynamic lookup checking email OR username vectors
-        const userQuery = `
-            SELECT id, email, username, is_active, is_deleted,password_hash 
-            FROM users 
-            WHERE email = $1;
-        `;
+     const userQuery = `
+              SELECT 
+                u.id,
+                u.email,
+                u.username,
+                u.is_active,
+                u.is_deleted,
+                u.password_hash,
+                r.id AS role_id,
+                r.name AS role_name
+  FROM users u
+  LEFT JOIN roles r ON u.role_id = r.id
+  WHERE u.email = $1;
+`;
         const result = await query(userQuery, [email]);
 
         if (result.rows.length === 0) {

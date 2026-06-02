@@ -13,11 +13,12 @@ export default function AdminTable() {
           </thead>
           <tbody>
             <tr>
-              <td className="border-b border-slate-800 px-4 py-3">
-                Sample User
+              <td
+                colSpan={3}
+                className="border-b border-slate-800 px-4 py-3 text-center text-slate-500"
+              >
+                No users found
               </td>
-              <td className="border-b border-slate-800 px-4 py-3">Admin</td>
-              <td className="border-b border-slate-800 px-4 py-3">Active</td>
             </tr>
           </tbody>
         </table>

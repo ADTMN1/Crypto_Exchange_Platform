@@ -4,39 +4,25 @@ import { useState } from "react";
 
 export default function TradePage() {
   const { pair } = useParams<{ pair: string }>();
-  const [activeTab, setActiveTab] = useState<'charts' | 'trade' | 'positions'>('charts');
-  const [timeframe, setTimeframe] = useState('1h');
+  const [activeTab, setActiveTab] = useState<"charts" | "trade" | "positions">(
+    "charts",
+  );
+  const [timeframe, setTimeframe] = useState("1h");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data
-  const currentPrice = 73405.92;
-  const priceChange = 4.34;
-  const totalPortfolio = 1078.61;
-  const availableBalance = 579.00;
+  // TODO: Replace with API calls
+  const currentPrice = 0;
+  const priceChange = 0;
+  const totalPortfolio = 0;
+  const availableBalance = 0;
 
-  const holdings = [
-    { symbol: 'BTC', balance: 0.00000000, usdValue: 0.00 },
-    { symbol: 'ETH', balance: 0.24462374, usdValue: 0.00 },
-    { symbol: 'USDT', balance: 578.99784214, usdValue: 578.99 },
-  ];
+  const holdings: Array<{ symbol: string; balance: number; usdValue: number }> =
+    [];
 
-  const timeframes = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'];
+  const timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
 
-  // Generate mock candlestick data
-  const generateCandlestickData = () => {
-    const data = [];
-    let basePrice = 70000;
-    for (let i = 0; i < 50; i++) {
-      const open = basePrice + Math.random() * 2000 - 1000;
-      const close = open + Math.random() * 3000 - 1500;
-      const high = Math.max(open, close) + Math.random() * 1000;
-      const low = Math.min(open, close) - Math.random() * 1000;
-      data.push({ open, high, low, close, x: i });
-      basePrice = close;
-    }
-    return data;
-  };
-
-  const candlestickData = generateCandlestickData();
+  // TODO: Replace with API call for candlestick data
+  const candlestickData: any[] = [];
 
   return (
     <main className="trade-page">
@@ -49,14 +35,18 @@ export default function TradePage() {
               <FaArrowUp /> {priceChange}%
             </span>
           </div>
-          <div className="current-price">${currentPrice.toLocaleString()} USD</div>
+          <div className="current-price">
+            ${currentPrice.toLocaleString()} USD
+          </div>
           <div className="price-change">${priceChange} USD</div>
         </div>
 
         <div className="portfolio-section">
           <div className="portfolio-card">
             <div className="portfolio-label">Total Portfolio</div>
-            <div className="portfolio-value">${totalPortfolio.toFixed(2)} USD</div>
+            <div className="portfolio-value">
+              ${totalPortfolio.toFixed(2)} USD
+            </div>
           </div>
         </div>
       </div>
@@ -69,8 +59,12 @@ export default function TradePage() {
             <div key={index} className="holding-item">
               <div className="holding-symbol">{holding.symbol}</div>
               <div className="holding-details">
-                <div className="holding-balance">{holding.balance.toFixed(8)}</div>
-                <div className="holding-usd">${holding.usdValue.toFixed(2)} USD</div>
+                <div className="holding-balance">
+                  {holding.balance.toFixed(8)}
+                </div>
+                <div className="holding-usd">
+                  ${holding.usdValue.toFixed(2)} USD
+                </div>
               </div>
             </div>
           ))}
@@ -80,27 +74,29 @@ export default function TradePage() {
         </div>
         <div className="available-balance">
           <FaWallet className="balance-icon" />
-          <span>Available to Trade: ${availableBalance.toFixed(2)} USD USDT</span>
+          <span>
+            Available to Trade: ${availableBalance.toFixed(2)} USD USDT
+          </span>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="trade-tabs">
-        <button 
-          className={`tab ${activeTab === 'charts' ? 'active' : ''}`}
-          onClick={() => setActiveTab('charts')}
+        <button
+          className={`tab ${activeTab === "charts" ? "active" : ""}`}
+          onClick={() => setActiveTab("charts")}
         >
           <FaChartLine /> Charts
         </button>
-        <button 
-          className={`tab ${activeTab === 'trade' ? 'active' : ''}`}
-          onClick={() => setActiveTab('trade')}
+        <button
+          className={`tab ${activeTab === "trade" ? "active" : ""}`}
+          onClick={() => setActiveTab("trade")}
         >
           Trade
         </button>
-        <button 
-          className={`tab ${activeTab === 'positions' ? 'active' : ''}`}
-          onClick={() => setActiveTab('positions')}
+        <button
+          className={`tab ${activeTab === "positions" ? "active" : ""}`}
+          onClick={() => setActiveTab("positions")}
         >
           Positions
         </button>
@@ -108,7 +104,7 @@ export default function TradePage() {
 
       {/* Main Content */}
       <div className="trade-content">
-        {activeTab === 'charts' && (
+        {activeTab === "charts" && (
           <div className="charts-section">
             <div className="market-info">
               <p className="market-sentiment">
@@ -122,7 +118,7 @@ export default function TradePage() {
               {timeframes.map((tf) => (
                 <button
                   key={tf}
-                  className={`timeframe-btn ${timeframe === tf ? 'active' : ''}`}
+                  className={`timeframe-btn ${timeframe === tf ? "active" : ""}`}
                   onClick={() => setTimeframe(tf)}
                 >
                   {tf}
@@ -135,10 +131,16 @@ export default function TradePage() {
               <div className="chart-header">
                 <div className="chart-info">
                   <span className="chart-pair">BTCUSDT</span>
-                  <span className="chart-price">${currentPrice.toLocaleString()}</span>
+                  <span className="chart-price">
+                    ${currentPrice.toLocaleString()}
+                  </span>
                 </div>
               </div>
-              <svg className="trading-chart" viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid meet">
+              <svg
+                className="trading-chart"
+                viewBox="0 0 1000 400"
+                preserveAspectRatio="xMidYMid meet"
+              >
                 {/* Grid lines */}
                 <g className="grid-lines">
                   {[0, 1, 2, 3, 4].map((i) => (
@@ -171,15 +173,15 @@ export default function TradePage() {
                     const x = 60 + index * 18;
                     const yScale = 300 / 15000;
                     const yOffset = 350;
-                    
+
                     const openY = yOffset - (candle.open - 65000) * yScale;
                     const closeY = yOffset - (candle.close - 65000) * yScale;
                     const highY = yOffset - (candle.high - 65000) * yScale;
                     const lowY = yOffset - (candle.low - 65000) * yScale;
-                    
+
                     const isGreen = candle.close > candle.open;
-                    const color = isGreen ? '#24C576' : '#E53935';
-                    
+                    const color = isGreen ? "#24C576" : "#E53935";
+
                     return (
                       <g key={index}>
                         {/* Wick */}
@@ -224,7 +226,9 @@ export default function TradePage() {
 
             {/* Quick Trade */}
             <div className="quick-trade-section">
-              <h3 className="quick-trade-title">Quick Trade - Start with 10% of your balance</h3>
+              <h3 className="quick-trade-title">
+                Quick Trade - Start with 10% of your balance
+              </h3>
               <div className="quick-trade-buttons">
                 <button className="quick-trade-btn buy">
                   <span className="btn-label">BUY</span>
@@ -239,15 +243,19 @@ export default function TradePage() {
           </div>
         )}
 
-        {activeTab === 'trade' && (
+        {activeTab === "trade" && (
           <div className="trade-section">
-            <p className="tab-placeholder">Advanced trading interface coming soon</p>
+            <p className="tab-placeholder">
+              Advanced trading interface coming soon
+            </p>
           </div>
         )}
 
-        {activeTab === 'positions' && (
+        {activeTab === "positions" && (
           <div className="positions-section">
-            <p className="tab-placeholder">Your open positions will appear here</p>
+            <p className="tab-placeholder">
+              Your open positions will appear here
+            </p>
           </div>
         )}
       </div>
