@@ -22,6 +22,7 @@ import ProfilePage from "../pages/user/ProfilePage";
 import SecurityPage from "../pages/user/SecurityPage";
 import KYCPage from "../pages/user/KYCPage";
 import NotificationsPage from "../pages/user/NotificationsPage";
+import NewsPage from "../pages/user/NewsPage";
 import AdminDashboardPage from "../pages/admin/DashboardPage";
 import AdminUsersPage from "../pages/admin/UsersPage";
 import AdminUserDetailPage from "../pages/admin/UserDetailPage";
@@ -52,6 +53,7 @@ export default function Router() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/markets" element={<MarketsPage />} />
+        <Route path="/news" element={<NewsPage />} />
         <Route path="/trade/:pair" element={<TradePage />} />
         <Route path="/trade" element={<TradePage />} />
         <Route path="/orders" element={<OrdersPage />} />

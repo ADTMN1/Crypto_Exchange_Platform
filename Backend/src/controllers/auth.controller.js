@@ -65,25 +65,36 @@ const AuthController = {
     },
 
     /**
-     * Google OAuth login handler
+     * Google OAuth login handler - Industry standard implementation
+     * Security features:
+     * - Email-based account unification
+     * - Automatic OAuth provider linking
+     * - Audit logging for compliance
      */
     googleLogin: async (req, res, next) => {
         const { token } = req.body;
 
         try {
-            // Verify the Google token
+            // 1. Verify the Google token
             const ticket = await googleClient.verifyIdToken({
                 idToken: token,
                 audience: process.env.GOOGLE_CLIENT_ID,
             });
 
             const payload = ticket.getPayload();
-            const { email, name, sub: googleId, picture } = payload;
+            const { email, name, sub: googleId, picture, email_verified } = payload;
 
-            // Login or register user
+            // 2. Security check: Require verified email from Google
+            if (!email_verified) {
+                const error = new Error('Google account email is not verified. Please verify your email with Google first.');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            // 3. Login or register user (with automatic account linking)
             const userMetadata = await authService.googleLogin(email, name, googleId, picture);
 
-            // Generate tokens
+            // 4. Generate tokens
             const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.username);
             const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.username);
 
@@ -93,7 +104,7 @@ const AuthController = {
                 sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             };
 
-            // Set cookies
+            // 5. Set cookies
             res.cookie("token", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
             res.cookie("refreshToken", refre_shToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
