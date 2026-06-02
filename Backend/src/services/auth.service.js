@@ -73,7 +73,7 @@ const authService = {
     login: async (email, password) => {
         // 1. Dynamic lookup checking email OR username vectors
         const userQuery = `
-            SELECT id, email, username, is_active, is_deleted,password_hash 
+            SELECT id, email, username, is_active, is_deleted, password_hash, profile_image 
             FROM users 
             WHERE email = $1;
         `;
@@ -107,7 +107,8 @@ const authService = {
         return {
             id: user.id,
             email: user.email,
-            username: user.username
+            username: user.username,
+            profile_image: user.profile_image
         };
     },
 
@@ -124,43 +125,76 @@ const authService = {
     },
 
     /**
-     * Google OAuth login - creates or logs in existing user
+     * Google OAuth login - Professional implementation with account linking
+     * Security: One email = one account, verified OAuth providers only
      */
     googleLogin: async (email, name, googleId, picture) => {
-        // Check if user exists
-        const userQuery = `
-            SELECT id, email, username, is_active, is_deleted 
-            FROM users 
-            WHERE email = $1;
-        `;
-        const result = await query(userQuery, [email]);
-
-        // If user exists, return their data
-        if (result.rows.length > 0) {
-            const user = result.rows[0];
-            
-            if (!user.is_active || user.is_deleted) {
-                const error = new Error('This user account is suspended or deactivated.');
-                error.statusCode = 403;
-                throw error;
-            }
-
-            // Update last login
-            await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
-
-            return {
-                id: user.id,
-                email: user.email,
-                username: user.username
-            };
-        }
-
-        // If user doesn't exist, create new account
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN');
 
+            // 1. Check if account exists with this email (primary identifier)
+            const userQuery = `
+                SELECT id, email, username, is_active, is_deleted, profile_image, profile_picture_url,
+                       oauth_provider, oauth_provider_id, password_hash
+                FROM users 
+                WHERE email = $1;
+            `;
+            const result = await client.query(userQuery, [email]);
+
+            // 2. EXISTING ACCOUNT - Link OAuth if not already linked
+            if (result.rows.length > 0) {
+                const user = result.rows[0];
+                
+                // Security check: Account status
+                if (!user.is_active || user.is_deleted) {
+                    const error = new Error('This user account is suspended or deactivated.');
+                    error.statusCode = 403;
+                    throw error;
+                }
+
+                // Link Google OAuth to existing account if not already linked
+                if (!user.oauth_provider_id || user.oauth_provider_id !== googleId) {
+                    await client.query(
+                        `UPDATE users 
+                         SET oauth_provider = $1, 
+                             oauth_provider_id = $2, 
+                             profile_picture_url = $3,
+                             last_login_at = CURRENT_TIMESTAMP,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE id = $4`,
+                        ['google', googleId, picture, user.id]
+                    );
+
+                    // Audit log: OAuth linked to existing account
+                    await client.query(
+                        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata)
+                         VALUES ($1, 'oauth_linked', 'user', $2, $3)`,
+                        [user.id, user.id, JSON.stringify({ provider: 'google', method: 'google_login' })]
+                    );
+                } else {
+                    // Just update login time and profile picture
+                    await client.query(
+                        `UPDATE users 
+                         SET last_login_at = CURRENT_TIMESTAMP,
+                             profile_picture_url = $1
+                         WHERE id = $2`,
+                        [picture, user.id]
+                    );
+                }
+
+                await client.query('COMMIT');
+
+                return {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username,
+                    profile_image: user.profile_image || user.profile_picture_url
+                };
+            }
+
+            // 3. NEW ACCOUNT - Create with Google OAuth
             // Get the 'user' role UUID
             const roleQuery = await client.query(
                 "SELECT id FROM roles WHERE name = 'user' LIMIT 1"
@@ -172,19 +206,46 @@ const authService = {
             
             const userRoleId = roleQuery.rows[0].id;
 
-            // Create username from email or name
-            const username = name || email.split('@')[0];
+            // Generate unique username from email or name
+            let baseUsername = name || email.split('@')[0];
+            let username = baseUsername;
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            // Ensure username uniqueness (professional approach)
+            while (attempts < maxAttempts) {
+                const usernameCheck = await client.query(
+                    'SELECT 1 FROM users WHERE username = $1',
+                    [username]
+                );
+                
+                if (usernameCheck.rows.length === 0) {
+                    break; // Username is unique
+                }
+                
+                // Generate next variation
+                attempts++;
+                username = `${baseUsername}${attempts}`;
+            }
 
-            // Insert new user (no password needed for OAuth users)
+            if (attempts >= maxAttempts) {
+                // Fallback to UUID-based unique username
+                username = `${baseUsername}_${Date.now()}`;
+            }
+
+            // Insert new user
             const userInsertQuery = `
-                INSERT INTO users (email, username, password_hash, role_id, profile_picture_url, oauth_provider, oauth_provider_id)
+                INSERT INTO users (
+                    email, username, password_hash, role_id, 
+                    profile_picture_url, oauth_provider, oauth_provider_id
+                )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING id, email, username, created_at;
+                RETURNING id, email, username, profile_picture_url, created_at;
             `;
             const userResult = await client.query(userInsertQuery, [
                 email, 
                 username, 
-                'GOOGLE_OAUTH', // Special marker for OAuth users
+                'OAUTH_NO_PASSWORD', // Clear marker for OAuth-only accounts
                 userRoleId,
                 picture,
                 'google',
@@ -192,19 +253,27 @@ const authService = {
             ]);
             const newUser = userResult.rows[0];
 
-            // Create user status
-            const statusInsertQuery = `
-                INSERT INTO user_status (user_id, account_status, email_verified, phone_verified, two_fa_enabled)
-                VALUES ($1, 'active', TRUE, FALSE, FALSE);
-            `;
-            await client.query(statusInsertQuery, [newUser.id]);
+            // Create user status (email auto-verified for OAuth)
+            await client.query(
+                `INSERT INTO user_status (user_id, account_status, email_verified, phone_verified, two_fa_enabled)
+                 VALUES ($1, 'active', TRUE, FALSE, FALSE)`,
+                [newUser.id]
+            );
+
+            // Audit log: New account created via OAuth
+            await client.query(
+                `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata)
+                 VALUES ($1, 'account_created', 'user', $2, $3)`,
+                [newUser.id, newUser.id, JSON.stringify({ provider: 'google', method: 'oauth_registration' })]
+            );
 
             await client.query('COMMIT');
 
             return {
                 id: newUser.id,
                 email: newUser.email,
-                username: newUser.username
+                username: newUser.username,
+                profile_image: newUser.profile_picture_url
             };
 
         } catch (error) {
