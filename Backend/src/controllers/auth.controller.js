@@ -9,9 +9,16 @@ const AuthController = {
      * Controller bridge managing user registration routing signatures.
      */
     register: async (req, res, next) => {
+        console.log('Received registration request with body:', req.body); // Debug log
         const { email, username, phone_number, password } = req.body;
         // Don't allow role_id from request body for security - always use 'user' role
-
+        if(!email || !username || !password || !phone_number) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email, username, phone number, and password are required fields.'
+            });
+        }
+// console.log('Received registration request:', { email, username, phone_number }); // Debug log
         try {
             const newUser = await authService.register(email, username, phone_number, password);
             

@@ -11,32 +11,41 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitted(true);
+    try {
+      // TODO: Replace with actual API call to send password reset email
+      // const response = await authService.sendPasswordResetEmail(email);
+      // Example: await fetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+
+      // Temporarily using setTimeout for now
+      setTimeout(() => {
+        setIsSubmitted(true);
+        setIsLoading(false);
+      }, 1500);
+    } catch (error) {
+      console.error("Failed to send password reset email:", error);
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   if (isSubmitted) {
     return (
       <div className="auth-page">
-        <AuthForm 
-          title="Check Your Email" 
+        <AuthForm
+          title="Check Your Email"
           subtitle="We've sent password reset instructions to your email"
         >
           <div className="success-message">
             <div className="success-icon">✓</div>
             <p className="success-text">
-              If an account exists for <strong>{email}</strong>, you will receive 
-              password reset instructions shortly.
+              If an account exists for <strong>{email}</strong>, you will
+              receive password reset instructions shortly.
             </p>
             <p className="success-subtext">
               Didn't receive the email? Check your spam folder or try again.
             </p>
             <div className="auth-actions">
-              <button 
-                onClick={() => setIsSubmitted(false)} 
+              <button
+                onClick={() => setIsSubmitted(false)}
                 className="auth-btn-secondary"
               >
                 Try Another Email
@@ -53,8 +62,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="auth-page">
-      <AuthForm 
-        title="Forgot Password?" 
+      <AuthForm
+        title="Forgot Password?"
         subtitle="Enter your email and we'll send you instructions to reset your password"
       >
         <form onSubmit={handleSubmit} className="auth-form">
@@ -70,11 +79,7 @@ export default function ForgotPasswordPage() {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="auth-btn"
-            disabled={isLoading}
-          >
+          <button type="submit" className="auth-btn" disabled={isLoading}>
             {isLoading ? "Sending..." : "Send Reset Link"}
           </button>
 
