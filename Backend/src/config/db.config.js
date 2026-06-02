@@ -19,7 +19,7 @@ const pool = new Pool({
 	ssl: isProduction ? { rejectUnauthorized: true } : false,
 	max: isProduction ? 20 : 5,      
 	idleTimeoutMillis: 30000,        
-	connectionTimeoutMillis: 2000,   
+	connectionTimeoutMillis: 15000,   
 });
 
 pool.on('error', (err) => {

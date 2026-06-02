@@ -9,10 +9,11 @@ const AuthController = {
      * Controller bridge managing user registration routing signatures.
      */
     register: async (req, res, next) => {
-        const { email, username, phone_number, password, role_id } = req.body;
+        const { email, username, phone_number, password } = req.body;
+        // Don't allow role_id from request body for security - always use 'user' role
 
         try {
-            const newUser = await authService.register(email, username, phone_number, password, role_id);
+            const newUser = await authService.register(email, username, phone_number, password);
             
             return res.status(201).json({
                 success: true,
