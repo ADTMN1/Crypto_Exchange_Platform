@@ -1,4 +1,4 @@
-import { FaBell, FaCog, FaUserCircle } from 'react-icons/fa'
+import { FaBell, FaCog, FaUserCircle, FaSearch } from 'react-icons/fa'
 import Logo from '../assets/logo.svg'
 
 function Header() {
@@ -12,7 +12,7 @@ function Header() {
       </div>
       <div className="header-center">
         <div className="search-bar">
-          <span className="search-icon">🔍</span>
+          <FaSearch className="search-icon" style={{ color: '#F7931A' }} />
           <input type="text" placeholder="Search for coins, tokens, or pairs" />
         </div>
       </div>

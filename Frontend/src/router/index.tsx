@@ -39,7 +39,6 @@ export default function Router() {
   return (
     <Routes>
       <Route path="/" element={<RootRoute />} />
-      <Route path="/markets" element={<MarketsPage />} />
       <Route path="/support" element={<SupportPage />} />
 
       <Route element={<GuestRoute />}>
@@ -52,6 +51,7 @@ export default function Router() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/markets" element={<MarketsPage />} />
         <Route path="/trade/:pair" element={<TradePage />} />
         <Route path="/trade" element={<TradePage />} />
         <Route path="/orders" element={<OrdersPage />} />
