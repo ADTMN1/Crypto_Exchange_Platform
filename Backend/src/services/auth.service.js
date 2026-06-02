@@ -5,7 +5,7 @@ const authService = {
     /**
      * Executes account creation and lifecycle tracking maps.
      */
-    register: async (email, username, phone_number, password, role_id) => {
+    register: async (email, username, phone_number, password) => {
         // 1. Structural check for conflicting existing identities
         const existingUserCheck = await query(
             'SELECT 1 FROM users WHERE email = $1 OR phone_number = $2',
@@ -27,6 +27,17 @@ const authService = {
         try {
             await client.query('BEGIN');
 
+            // Get the 'user' role UUID
+            const roleQuery = await client.query(
+                "SELECT id FROM roles WHERE name = 'user' LIMIT 1"
+            );
+            
+            if (roleQuery.rows.length === 0) {
+                throw new Error('Default user role not found. Please run role seeding.');
+            }
+            
+            const userRoleId = roleQuery.rows[0].id;
+
             // 4. Populate structural Identity baseline
             const userInsertQuery = `
                 INSERT INTO users (email, username, phone_number, password_hash, role_id)
@@ -34,7 +45,7 @@ const authService = {
                 RETURNING id, email, username, created_at;
             `;
             const userResult = await client.query(userInsertQuery, [
-                email, username, phone_number, passwordHash, role_id
+                email, username, phone_number, passwordHash, userRoleId
             ]);
             const newUser = userResult.rows[0];
 
@@ -150,20 +161,34 @@ const authService = {
         try {
             await client.query('BEGIN');
 
+            // Get the 'user' role UUID
+            const roleQuery = await client.query(
+                "SELECT id FROM roles WHERE name = 'user' LIMIT 1"
+            );
+            
+            if (roleQuery.rows.length === 0) {
+                throw new Error('Default user role not found. Please run role seeding.');
+            }
+            
+            const userRoleId = roleQuery.rows[0].id;
+
             // Create username from email or name
             const username = name || email.split('@')[0];
 
             // Insert new user (no password needed for OAuth users)
             const userInsertQuery = `
-                INSERT INTO users (email, username, password_hash, role_id, profile_picture_url)
-                VALUES ($1, $2, $3, 2, $4)
+                INSERT INTO users (email, username, password_hash, role_id, profile_picture_url, oauth_provider, oauth_provider_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING id, email, username, created_at;
             `;
             const userResult = await client.query(userInsertQuery, [
                 email, 
                 username, 
                 'GOOGLE_OAUTH', // Special marker for OAuth users
-                picture
+                userRoleId,
+                picture,
+                'google',
+                googleId
             ]);
             const newUser = userResult.rows[0];
 

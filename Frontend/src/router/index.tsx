@@ -53,6 +53,7 @@ export default function Router() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/trade/:pair" element={<TradePage />} />
+        <Route path="/trade" element={<TradePage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/assets" element={<WalletPage />} />

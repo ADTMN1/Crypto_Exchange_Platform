@@ -56,8 +56,11 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(50) NOT NULL UNIQUE,
     role_id UUID REFERENCES roles(id) ON DELETE SET NULL,
-    phone_number VARCHAR(20) NOT NULL UNIQUE,
+    phone_number VARCHAR(20) UNIQUE,
     password_hash TEXT NOT NULL,
+    profile_picture_url TEXT,
+    oauth_provider VARCHAR(20), -- 'google', 'github', etc.
+    oauth_provider_id TEXT, -- Google ID, GitHub ID, etc.
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

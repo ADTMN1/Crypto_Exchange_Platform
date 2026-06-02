@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
+import { getApiUrl, API_ENDPOINTS } from '../../services/api.service';
 
 declare global {
   interface Window {
@@ -13,32 +14,33 @@ export default function OAuthButtons() {
   const login = useAuthStore((state) => state.login);
 
   useEffect(() => {
-    // Initialize Google Sign-In
-    if (window.google) {
+    // Initialize Google Sign-In only once
+    const buttonDiv = document.getElementById('google-signin-button');
+    
+    if (window.google && buttonDiv && !buttonDiv.hasChildNodes()) {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
         callback: handleGoogleLogin,
       });
 
       // Render the Google button
-      window.google.accounts.id.renderButton(
-        document.getElementById('google-signin-button'),
-        {
-          theme: 'filled_black',
-          size: 'large',
-          width: '100%',
-          text: 'continue_with',
-        }
-      );
+      window.google.accounts.id.renderButton(buttonDiv, {
+        theme: 'filled_black',
+        size: 'large',
+        width: 400,
+        text: 'continue_with',
+      });
     }
+    
+    // Cleanup is not needed as Google handles this internally
   }, []);
 
   const handleGoogleLogin = async (response: any) => {
     try {
       const idToken = response.credential;
       
-      // Send token to backend for verification
-      const res = await fetch('http://localhost:3000/auth/google', {
+      // Send token to backend for verification using centralized API config
+      const res = await fetch(getApiUrl(API_ENDPOINTS.AUTH.GOOGLE), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
