@@ -1,5 +1,8 @@
 import authService from '../services/auth.service.js';
 import { generateToken, refreshToken } from '../utils/generateToken.js';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const AuthController = {
     /**
@@ -56,6 +59,52 @@ const AuthController = {
 
             });
         } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Google OAuth login handler
+     */
+    googleLogin: async (req, res, next) => {
+        const { token } = req.body;
+
+        try {
+            // Verify the Google token
+            const ticket = await googleClient.verifyIdToken({
+                idToken: token,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+
+            const payload = ticket.getPayload();
+            const { email, name, sub: googleId, picture } = payload;
+
+            // Login or register user
+            const userMetadata = await authService.googleLogin(email, name, googleId, picture);
+
+            // Generate tokens
+            const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.username);
+            const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.username);
+
+            const cookieOptions = {
+                httpOnly: true,
+                secure: true,
+                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            };
+
+            // Set cookies
+            res.cookie("token", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+            res.cookie("refreshToken", refre_shToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Google login successful.',
+                user: userMetadata,
+                accessToken,
+                refreshToken: refre_shToken
+            });
+        } catch (error) {
+            console.error('Google login error:', error);
             next(error);
         }
     },

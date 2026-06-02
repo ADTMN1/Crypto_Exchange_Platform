@@ -110,6 +110,84 @@ const authService = {
         const result = await query(logoutQuery, [refreshToken]);
         
         return result.rowCount > 0;
+    },
+
+    /**
+     * Google OAuth login - creates or logs in existing user
+     */
+    googleLogin: async (email, name, googleId, picture) => {
+        // Check if user exists
+        const userQuery = `
+            SELECT id, email, username, is_active, is_deleted 
+            FROM users 
+            WHERE email = $1;
+        `;
+        const result = await query(userQuery, [email]);
+
+        // If user exists, return their data
+        if (result.rows.length > 0) {
+            const user = result.rows[0];
+            
+            if (!user.is_active || user.is_deleted) {
+                const error = new Error('This user account is suspended or deactivated.');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            // Update last login
+            await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+
+            return {
+                id: user.id,
+                email: user.email,
+                username: user.username
+            };
+        }
+
+        // If user doesn't exist, create new account
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // Create username from email or name
+            const username = name || email.split('@')[0];
+
+            // Insert new user (no password needed for OAuth users)
+            const userInsertQuery = `
+                INSERT INTO users (email, username, password_hash, role_id, profile_picture_url)
+                VALUES ($1, $2, $3, 2, $4)
+                RETURNING id, email, username, created_at;
+            `;
+            const userResult = await client.query(userInsertQuery, [
+                email, 
+                username, 
+                'GOOGLE_OAUTH', // Special marker for OAuth users
+                picture
+            ]);
+            const newUser = userResult.rows[0];
+
+            // Create user status
+            const statusInsertQuery = `
+                INSERT INTO user_status (user_id, account_status, email_verified, phone_verified, two_fa_enabled)
+                VALUES ($1, 'active', TRUE, FALSE, FALSE);
+            `;
+            await client.query(statusInsertQuery, [newUser.id]);
+
+            await client.query('COMMIT');
+
+            return {
+                id: newUser.id,
+                email: newUser.email,
+                username: newUser.username
+            };
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 };
 

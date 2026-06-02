@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <AuthForm title="Welcome Back">
+      <AuthForm title="Welcome Back, Trader!" subtitle="Continue your trading journey with us">
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-form-group">
             <label className="auth-label">Email</label>
