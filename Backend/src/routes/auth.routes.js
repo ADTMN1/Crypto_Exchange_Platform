@@ -8,6 +8,7 @@ const authRouter = express.Router();
 authRouter.post('/register',authValidator.validateRegistration, AuthController.register);
 authRouter.post('/login',
 	authValidator.validateLogin, AuthController.login);
+authRouter.post('/google', AuthController.googleLogin);
 authRouter.post('/logout', AuthController.logout);
 
 export default authRouter;

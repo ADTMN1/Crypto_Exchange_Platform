@@ -5,7 +5,8 @@ import OAuthButtons from "../../components/auth/OAuthButtons";
 import { useAuthStore } from "../../store";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -18,24 +19,42 @@ export default function RegisterPage() {
       alert("Passwords don't match!");
       return;
     }
-    register(name, email, password);
+    const fullName = `${firstName} ${lastName}`;
+    register(fullName, email, password);
     navigate("/");
   };
 
   return (
     <div className="auth-page">
-      <AuthForm title="Create Account">
+      <AuthForm 
+        title="Start Your Trading Journey" 
+        subtitle="Create your account and begin your future trading today"
+      >
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="auth-form-group">
-            <label className="auth-label">Full Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="auth-input"
-              placeholder="John Doe"
-              required
-            />
+          <div className="auth-form-row">
+            <div className="auth-form-group">
+              <label className="auth-label">First Name</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="auth-input"
+                placeholder="John"
+                required
+              />
+            </div>
+
+            <div className="auth-form-group">
+              <label className="auth-label">Last Name</label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="auth-input"
+                placeholder="Doe"
+                required
+              />
+            </div>
           </div>
 
           <div className="auth-form-group">

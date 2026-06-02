@@ -1,11 +1,15 @@
 import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaBookOpen, FaSignOutAlt } from 'react-icons/fa'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuthStore } from '../../store'
 
 function Sidebar() {
   const navigate = useNavigate()
+  const logout = useAuthStore((state) => state.logout)
   const iconStyle = { color: '#F7931A' }
 
   const handleLogout = () => {
+    // Clear authentication state
+    logout()
     // Clear authentication tokens/data
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
