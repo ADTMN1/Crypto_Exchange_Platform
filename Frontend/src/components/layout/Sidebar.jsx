@@ -1,4 +1,4 @@
-import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaBookOpen, FaSignOutAlt } from 'react-icons/fa'
+import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt } from 'react-icons/fa'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store'
 
@@ -30,7 +30,7 @@ function Sidebar() {
           <div className="nav-title">BROWSE</div>
           <Link to="/" className="nav-item">
             <FaFire style={iconStyle} className="nav-icon" />
-            Discover
+            Home
           </Link>
           <Link to="/markets" className="nav-item">
             <FaChartBar style={iconStyle} className="nav-icon" />
@@ -57,10 +57,10 @@ function Sidebar() {
           </Link>
         </div>
         <div className="nav-section">
-          <div className="nav-title">RESOURCES</div>
-          <Link to="/learn" className="nav-item">
-            <FaBookOpen style={iconStyle} className="nav-icon" />
-            Learn
+          <div className="nav-title">HELP & SUPPORT</div>
+          <Link to="/support" className="nav-item">
+            <FaHeadset style={iconStyle} className="nav-icon" />
+            Contact Support
           </Link>
         </div>
         <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '20px 0' }} />

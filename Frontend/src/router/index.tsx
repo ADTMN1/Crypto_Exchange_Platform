@@ -30,6 +30,7 @@ import AdminOrdersPage from "../pages/admin/OrdersPage";
 import AdminTransactionsPage from "../pages/admin/TransactionsPage";
 import AdminPairsPage from "../pages/admin/PairsPage";
 import AdminAuditPage from "../pages/admin/AuditPage";
+import HistoryPage from "../pages/user/HistoryPage";
 
 function RootRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -40,7 +41,6 @@ export default function Router() {
   return (
     <Routes>
       <Route path="/" element={<RootRoute />} />
-      <Route path="/support" element={<SupportPage />} />
 
       <Route element={<GuestRoute />}>
         <Route path="/login" element={<LoginPage />} />
@@ -61,6 +61,8 @@ export default function Router() {
         <Route path="/assets" element={<WalletPage />} />
         <Route path="/wallet/deposit" element={<DepositPage />} />
         <Route path="/wallet/withdraw" element={<WithdrawPage />} />
+        <Route path="/history" element={<HistoryPage />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/security" element={<SecurityPage />} />
         <Route path="/profile/kyc" element={<KYCPage />} />
