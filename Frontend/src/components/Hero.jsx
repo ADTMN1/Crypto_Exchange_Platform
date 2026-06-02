@@ -14,7 +14,7 @@ function Hero() {
       </div>
       <div className="hero-image">
         <img
-          src="https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=600&h=400&fit=crop"
+          src="https://images.unsplash.com/photo-1622630998477-20aa696ecb05?w=800&h=600&fit=crop&q=80"
           alt="Crypto Trading"
         />
       </div>
