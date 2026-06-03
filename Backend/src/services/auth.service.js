@@ -72,7 +72,6 @@ const authService = {
      */
     login: async (email, password) => {
         // 1. Dynamic lookup checking email OR username vectors
-        try {
      const userQuery = `
               SELECT 
                 u.id,
@@ -105,7 +104,6 @@ const authService = {
 
         // 3. Cryptographic authentication processing
         const isMatch = await bcrypt.compare(password, user.password_hash);
-
         if (!isMatch) {
             const error = new Error('Invalid identification credentials.');
             error.statusCode = 401;
@@ -122,12 +120,6 @@ const authService = {
             profile_image: user.profile_image,
             role: user.role_name
         };
-
-        } catch (error) {
-            throw error;    
-            next(error);
-        
-        }
     },
 
     /**
