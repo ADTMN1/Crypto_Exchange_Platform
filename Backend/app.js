@@ -82,18 +82,17 @@ app.use((req, res) => {
 // 10. Centralized Error Handling Interceptor
 app.use((err, req, res, next) => {
 	const statusCode = err.status || err.statusCode || 500;
-	
-	const responseMessage = 
+
+	const responseMessage =
 		process.env.NODE_ENV === 'production' && statusCode === 500
-			? 'Internal Server Error' 
+			? 'Internal Server Error'
 			: err.message;
 
 	console.error(`[System Error Block]: ${err.stack || err.message}`);
 
 	res.status(statusCode).json({
 		success: false,
-		error: responseMessage,
+		error: responseMessage || err.message || 'Unknown Error'
 	});
 });
-
 export default app;

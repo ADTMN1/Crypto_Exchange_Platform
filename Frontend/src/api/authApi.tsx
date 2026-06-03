@@ -26,12 +26,12 @@ export const loginUser = async (credentials:LoginFormData) => {
       console.log("Logging in with credentials:", credentials);
            const response = await api.post("/auth/login", credentials);
           //  console.log("Login API response:", response);
-        return response.data;
+             return response.data;
 
 
 
     }catch (error) {
-        // console.error("Login error:", error);
+        console.error("Login error:", error);
         throw error;
     }
 
