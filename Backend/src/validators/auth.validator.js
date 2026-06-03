@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import AppError from '../utils/errorHandling.js';
 
 const authValidator = {
   
@@ -26,10 +27,7 @@ const authValidator = {
         const { error } = schema.validate(req.body, { abortEarly: true, allowUnknown: false });
 
         if (error) {
-            return res.status(400).json({ 
-                success: false, 
-                error: error.details[0].message 
-            });
+            return next(new AppError(error.details[0].message, 400));
         }
         next();
     },
@@ -53,10 +51,7 @@ const authValidator = {
         const { error } = schema.validate(req.body, { abortEarly: true, allowUnknown: false });
 
         if (error) {
-            return res.status(400).json({ 
-                success: false, 
-                error: error.details[0].message 
-            });
+            return next(new AppError(error.details[0].message, 400));
         }
         next();
     }

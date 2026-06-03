@@ -1,9 +1,10 @@
 import cloudinary from '../config/cloudinary.config.js';
 import pool from '../config/db.config.js';
+import AppError from '../utils/errorHandling.js';
 
 const userController = {
   // Get user profile
-  async getProfile(req, res) {
+  async getProfile(req, res, next) {
     try {
       const userId = req.user.id;
 
@@ -13,23 +14,21 @@ const userController = {
       );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ message: 'User not found' });
+        return next(new AppError('User not found', 404));
       }
 
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Get profile error:', error);
-      res.status(500).json({ message: 'Failed to fetch profile' });
+      next(error);
     }
   },
 
   // Update user profile
-  async updateProfile(req, res) {
+  async updateProfile(req, res, next) {
     try {
       const userId = req.user.id;
       const { firstName, lastName, email, phone } = req.body;
 
-      // Combine first and last name into username
       const username = `${firstName || ''} ${lastName || ''}`.trim();
 
       const result = await pool.query(
@@ -38,7 +37,7 @@ const userController = {
       );
 
       if (result.rows.length === 0) {
-        return res.status(404).json({ message: 'User not found' });
+        return next(new AppError('User not found', 404));
       }
 
       res.json({
@@ -46,29 +45,19 @@ const userController = {
         user: result.rows[0],
       });
     } catch (error) {
-      console.error('Update profile error:', error);
-      res.status(500).json({ message: 'Failed to update profile' });
+      next(error);
     }
   },
 
   // Upload profile image
-  async uploadProfileImage(req, res) {
+  async uploadProfileImage(req, res, next) {
     try {
       const userId = req.user.id;
-      console.log('📸 Upload request received for user:', userId);
 
       if (!req.file) {
-        console.log('❌ No file in request');
-        return res.status(400).json({ message: 'No image file provided' });
+        return next(new AppError('No image file provided', 400));
       }
 
-      console.log('📁 File details:', {
-        filename: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      });
-
-      // Upload image to Cloudinary using buffer
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'crypto_exchange/profiles',
@@ -81,20 +70,18 @@ const userController = {
         },
         async (error, result) => {
           if (error) {
-            console.error('❌ Cloudinary upload error:', error);
-            return res.status(500).json({ message: 'Failed to upload image' });
+            return next(new AppError('Failed to upload image', 500));
           }
 
-          console.log('✅ Cloudinary upload successful:', result.secure_url);
-
           try {
-            // Update user's profile_image in database
             const dbResult = await pool.query(
               'UPDATE users SET profile_image = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, username, profile_image',
               [result.secure_url, userId]
             );
 
-            console.log('✅ Database updated:', dbResult.rows[0]);
+            if (dbResult.rows.length === 0) {
+              return next(new AppError('User not found', 404));
+            }
 
             res.json({
               message: 'Profile image uploaded successfully',
@@ -102,45 +89,39 @@ const userController = {
               user: dbResult.rows[0],
             });
           } catch (dbError) {
-            console.error('❌ Database update error:', dbError);
-            res.status(500).json({ message: 'Failed to update profile image in database' });
+            next(new AppError('Failed to update profile image in database', 500));
           }
         }
       );
 
-      // Pipe the buffer to Cloudinary
       const { Readable } = await import('stream');
       Readable.from(req.file.buffer).pipe(uploadStream);
     } catch (error) {
-      console.error('❌ Upload profile image error:', error);
-      res.status(500).json({ message: 'Failed to upload profile image' });
+      next(error);
     }
   },
 
   // Delete profile image
-  async deleteProfileImage(req, res) {
+  async deleteProfileImage(req, res, next) {
     try {
       const userId = req.user.id;
 
-      // Get current profile image
       const userResult = await pool.query(
         'SELECT profile_image FROM users WHERE id = $1',
         [userId]
       );
 
       if (userResult.rows.length === 0) {
-        return res.status(404).json({ message: 'User not found' });
+        return next(new AppError('User not found', 404));
       }
 
       const profileImage = userResult.rows[0].profile_image;
 
-      // Delete from Cloudinary if exists
       if (profileImage) {
         const publicId = `crypto_exchange/profiles/user_${userId}`;
         await cloudinary.uploader.destroy(publicId);
       }
 
-      // Remove from database
       await pool.query(
         'UPDATE users SET profile_image = NULL, updated_at = NOW() WHERE id = $1',
         [userId]
@@ -148,8 +129,7 @@ const userController = {
 
       res.json({ message: 'Profile image deleted successfully' });
     } catch (error) {
-      console.error('Delete profile image error:', error);
-      res.status(500).json({ message: 'Failed to delete profile image' });
+      next(error);
     }
   },
 };
