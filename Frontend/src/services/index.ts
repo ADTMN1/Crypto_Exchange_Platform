@@ -1,9 +1,10 @@
-// Centralized API exports
-export { default as api, API_ENDPOINTS, API_BASE_URL, getApiUrl } from './api.service'
-
-// Service exports
-export { default as authService } from './authService'
+// Central export point for all services
+export { default as api } from './api.service'
+export { default as authService } from './auth.service'
 export { default as userService } from './user.service'
-export { default as tradeService } from './trade.service'
 export { default as walletService } from './wallet.service'
-export { default as adminService } from './admin.service'
+export { default as historyService } from './history.service'
+export { default as supportService } from './support.service'
+
+// Re-export commonly used utilities
+export { API_ENDPOINTS, API_BASE_URL } from './api.service'

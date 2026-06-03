@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthForm from "../../components/auth/AuthForm";
 import OAuthButtons from "../../components/auth/OAuthButtons";
-// import { useAuthStore } from "../../store";
+import LoadingOverlay from "../../components/common/LoadingOverlay";
 import { signUpSchema, SignUpFormData } from "../../types/auth.types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerUser } from "../../api/authApi";
+import { authService } from "../../services";
 import { toast } from "sonner";
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -30,58 +29,48 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: SignUpFormData) => {
-    // setGlobalError(null); // Clear errors from previous submissions
-    // console.log("Submitting registration with data:", data);
     try {
-      // 1. Post registration payload using your API instance
-      const response = await registerUser(data);
-      console.log("Registration API response success:", response.data);
+      const response = await authService.register(data);
+      console.log("Registration API response success:", response);
+      
       toast.success("Registration Successful! Please log in.", {
         style: {
-          background: "#22c55e", // green-500
+          background: "#22c55e",
           color: "#fff",
           border: "1px solid #16a34a",
         },
         position: "top-right",
-        description:
-          response.data.message ||
-          "Your account has been created successfully.",
+        description: response.message || "Your account has been created successfully.",
         duration: 3000,
       });
-      // 2. Automatically transition the user on success
+      
       navigate("/login");
     } catch (error: any) {
       console.error("Registration API error:", error);
 
-      // 3. Handle Field-Specific Errors (e.g., email already exists, username taken)
-     
-      // 4. Handle Global Errors (e.g., server issues, network errors)
       const globalErrorMessage =
         error?.response?.data?.message ||
         error.message ||
         error?.response?.data?.errors ||
         "An unexpected error occurred. Please try again.";
-      // setGlobalError(globalErrorMessage);
+        
       toast.error("Registration Failed", {
         style: {
-          background: "#ef4444", // red-500
+          background: "#ef4444",
           color: "#fff",
           border: "1px solid #dc2626",
         },
         position: "top-right",
         description: globalErrorMessage,
-        duration: 5000, // Keep it visible slightly longer for critical errors
-        // You can add a fast-action retry button directly inside the notification!
-        // action: {
-        //   label: "Retry",
-        //   onClick: () => handleSubmit(onSubmit)(),
-        // },
+        duration: 5000,
       });
     }
   };
 
   return (
     <div className="auth-page">
+      {isSubmitting && <LoadingOverlay message="Creating your account..." />}
+      
       <AuthForm
         title="Start Your Trading Journey"
         subtitle="Create your account and begin your future trading today"
@@ -96,6 +85,7 @@ export default function RegisterPage() {
                 className="auth-input"
                 placeholder="John"
                 required
+                disabled={isSubmitting}
               />
 
               {errors.firstName && (
@@ -112,6 +102,8 @@ export default function RegisterPage() {
                 {...register("lastName")}
                 className="auth-input"
                 placeholder="Doe"
+                required
+                disabled={isSubmitting}
               />
               {errors.lastName && (
                 <p className="text-red-500 text-sm mt-1">
@@ -128,6 +120,8 @@ export default function RegisterPage() {
               {...register("email")}
               className="auth-input"
               placeholder="you@example.com"
+              required
+              disabled={isSubmitting}
             />
             {errors.email && (
               <p className="text-red-500 text-sm mt-1">
@@ -158,6 +152,8 @@ export default function RegisterPage() {
               {...register("password")}
               className="auth-input"
               placeholder="••••••••"
+              required
+              disabled={isSubmitting}
             />
             {errors.password && (
               <p className="text-red-500 text-sm mt-1">
@@ -173,6 +169,8 @@ export default function RegisterPage() {
               {...register("confirm_password")}
               className="auth-input"
               placeholder="••••••••"
+              required
+              disabled={isSubmitting}
             />
 
             {errors.confirm_password && (
@@ -182,8 +180,8 @@ export default function RegisterPage() {
             )}
           </div>
 
-          <button type="submit" className="auth-btn">
-            {isSubmitting ? "Creating Account..." : "Create Account"}
+          <button type="submit" className="auth-btn" disabled={isSubmitting}>
+            Create Account
           </button>
 
           <OAuthButtons />

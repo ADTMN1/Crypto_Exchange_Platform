@@ -5,8 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import AuthForm from "../../components/auth/AuthForm";
 import OAuthButtons from "../../components/auth/OAuthButtons";
+import LoadingOverlay from "../../components/common/LoadingOverlay";
 import { loginSchema, LoginFormData } from "../../types/auth.types";
-import { loginUser } from "../../api/authApi";
+import { authService } from "../../services";
 import { toast } from "sonner";
 import { useAuthStore } from "../../store";
 
@@ -38,7 +39,7 @@ const loginUserInStore = useAuthStore((state) => state.login);
     console.log("LOGIN DATA:", data);
 
     try {
-      const response = await loginUser(data);
+      const response = await authService.login(data);
       console.log("Login success:", response);
 
       toast.success("Login Successful! Redirecting to dashboard...", {
@@ -78,6 +79,8 @@ if (response?.user) {
 
   return (
     <div className="auth-page">
+      {isSubmitting && <LoadingOverlay message="Signing in..." />}
+      
       <AuthForm
         title="Welcome Back, Trader!"
         subtitle="Continue your trading journey with us"
@@ -128,8 +131,8 @@ if (response?.user) {
             </Link>
           </div>
 
-          <button type="submit" className="auth-btn">
-            {isSubmitting ? "Signing In..." : "Sign In"}
+          <button type="submit" className="auth-btn" disabled={isSubmitting}>
+            Sign In
           </button>
 
           <OAuthButtons />

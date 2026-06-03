@@ -43,4 +43,6 @@ export const query = async (text, params) => {
 	}
 };
 
+// Export pool as both default and named export for compatibility
+export { pool };
 export default pool;

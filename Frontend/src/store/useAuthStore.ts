@@ -1,13 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-
-// Assuming your User interface looks something like this
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-}
+import type { User } from '../types/auth.types'
 
 interface AuthState {
   user: User | null
@@ -25,8 +18,8 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ user: null, isAuthenticated: false }),
     }),
     {
-      name: 'crypto-auth-storage', // Unique key name for localStorage
-      storage: createJSONStorage(() => localStorage), // Defaults to localStorage, safely handles JSON serialization
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 )

@@ -10,6 +10,7 @@ authRouter.post('/login',
 	authValidator.validateLogin, AuthController.login);
 	
 authRouter.post('/google', AuthController.googleLogin);
+authRouter.post('/refresh-token', AuthController.refreshToken);
 authRouter.post('/logout', AuthController.logout);
 
 export default authRouter;
