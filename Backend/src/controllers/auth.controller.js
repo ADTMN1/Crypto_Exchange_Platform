@@ -1,4 +1,5 @@
 import authService from '../services/auth.service.js';
+import AppError from '../utils/errorHandling.js';
 import { generateToken, refreshToken } from '../utils/generateToken.js';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -9,18 +10,18 @@ const AuthController = {
      * Controller bridge managing user registration routing signatures.
      */
     register: async (req, res, next) => {
-        console.log('Received registration request with body:', req.body); // Debug log
         const { email, username, phone_number, password } = req.body;
         // Don't allow role_id from request body for security - always use 'user' role
         if(!email || !username || !password || !phone_number) {
-            return res.status(400).json({
-                success: false,
-                error: 'Email, username, phone number, and password are required fields.'
-            });
+           throw new AppError('Missing required fields', 400);
+
         }
 // console.log('Received registration request:', { email, username, phone_number }); // Debug log
         try {
             const newUser = await authService.register(email, username, phone_number, password);
+            if (!newUser) {
+                throw new AppError('Registration failed. Please try again.', 400);
+            }
             
             return res.status(201).json({
                 success: true,
@@ -37,7 +38,9 @@ const AuthController = {
      */
     login: async (req, res, next) => {
         const { email, password } = req.body; // 'username' can handle emails via flexible query mapping
-
+if(!email || !password) {
+           throw new AppError('Email and password are required', 400);
+        }
         try {
             const userMetadata = await authService.login(email, password);
 // console.log('User metadata after successful login:', userMetadata); // Debug log

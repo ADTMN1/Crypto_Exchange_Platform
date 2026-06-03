@@ -1,4 +1,4 @@
-import { query, pool } from '../config/db.config.js';
+import pool, { query } from '../config/db.config.js';
 
 const SupportController = {
     /**

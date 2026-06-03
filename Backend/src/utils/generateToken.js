@@ -1,39 +1,40 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import path from "path";
+import AppError from "./errorHandling.js";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 // Helper to generate the long-lived Refresh Tok
 
 export const generateToken = async(userId,email, role) => {
   if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is missing from environment variables");
+    throw new AppError("JWT_SECRET is missing from environment variables", 500);
   }
-   const accessToken =  jwt.sign(
-    { id: userId, email: email, role: role },
-    process.env.JWT_SECRET,
-    { expiresIn: "15m" } 
-  );
 
-  return accessToken;
+  try {
+    const accessToken = jwt.sign(
+      { id: userId, email: email, role: role },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+    return accessToken;
+  } catch (error) {
+    throw new AppError(error.message || "Failed to generate access token", 500);
+  }
 };
 
 export const refreshToken = async(userId,email, role) => {
-  // 1. Get token from cookies (requires cookie-parser middleware)
-  try {
-   if (!process.env.REFRESH_SECRET) {
-    throw new Error("JWT_SECRET is missing from environment variables");
+  if (!process.env.REFRESH_SECRET) {
+    throw new AppError("REFRESH_SECRET is missing from environment variables", 500);
   }
 
-    const refreshToken = jwt.sign(
+  try {
+    return jwt.sign(
       { id: userId, email: email, role: role },
       process.env.REFRESH_SECRET,
       { expiresIn: "7d" } // 7 days
     );
-
-
-    return refreshToken;
   } catch (error) {
-    return res.status(403).json({ message: "Invalid or expired refresh token" });
+    throw new AppError(error.message || "Failed to generate refresh token", 500);
   }
 };

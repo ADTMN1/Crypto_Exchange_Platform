@@ -54,10 +54,7 @@ export default function RegisterPage() {
       console.error("Registration API error:", error);
 
       // 3. Handle Field-Specific Errors (e.g., email already exists, username taken)
-      // Our Axios interceptor returns these inside the `errors` object mapped by field names
-      const fieldErrors = error?.response?.data?.errors || {};
-      // setError(fieldErrors);
-
+     
       // 4. Handle Global Errors (e.g., server issues, network errors)
       const globalErrorMessage =
         error?.response?.data?.message ||
@@ -115,7 +112,6 @@ export default function RegisterPage() {
                 {...register("lastName")}
                 className="auth-input"
                 placeholder="Doe"
-                required
               />
               {errors.lastName && (
                 <p className="text-red-500 text-sm mt-1">
@@ -132,7 +128,6 @@ export default function RegisterPage() {
               {...register("email")}
               className="auth-input"
               placeholder="you@example.com"
-              required
             />
             {errors.email && (
               <p className="text-red-500 text-sm mt-1">
@@ -148,7 +143,6 @@ export default function RegisterPage() {
               {...register("phone_number")}
               className="auth-input"
               placeholder="+1234567890"
-              required
             />
             {errors.phone_number && (
               <p className="text-red-500 text-sm mt-1">
@@ -164,7 +158,6 @@ export default function RegisterPage() {
               {...register("password")}
               className="auth-input"
               placeholder="••••••••"
-              required
             />
             {errors.password && (
               <p className="text-red-500 text-sm mt-1">
@@ -180,7 +173,6 @@ export default function RegisterPage() {
               {...register("confirm_password")}
               className="auth-input"
               placeholder="••••••••"
-              required
             />
 
             {errors.confirm_password && (
