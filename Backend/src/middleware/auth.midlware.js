@@ -1,40 +1,55 @@
 import jwt from 'jsonwebtoken';
 import AppError from '../utils/errorHandling.js';
 
-// Main authentication middleware
+// Authentication middleware
 export const authenticateToken = (req, res, next) => {
   try {
-    // Get token from cookie
-    const token = req.cookies.token;
+    let token = null;
 
-    if (!token) {
-      console.log('❌ No token provided in request');
-      return next(new AppError('Authentication required. Access token missing.', 401));
+    // 1. Cookie token
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
     }
 
-    // Verify the token
+    // 2. Bearer token fallback
+    else if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    // No token
+    if (!token) {
+      return next(
+        new AppError('Authentication required. Access token missing.', 401)
+      );
+    }
+
+    // Verify token
     jwt.verify(token, process.env.JWT_SECRET, (err, decodedUser) => {
       if (err) {
-        console.error('❌ JWT Verification failed:', err.message);
-        return next(new AppError('Invalid or expired token', 403));
+        const msg =
+          err.name === 'TokenExpiredError'
+            ? 'Your session has expired. Please log in again.'
+            : 'Invalid token';
+
+        return next(new AppError(msg, 401));
       }
 
-      console.log('✅ Token verified for user:', decodedUser.id);
-      // Attach user to request object
       req.user = decodedUser;
       next();
     });
-    
   } catch (error) {
-    console.error('❌ Authentication error:', error);
-    next(new AppError('Authentication failed', 500));
+    console.error('Authentication middleware error:', error);
+    next(new AppError('Authentication processing failed.', 500));
   }
 };
 
-// Export authenticateToken as authMiddleware for compatibility
+// Alias for compatibility
 export const authMiddleware = authenticateToken;
 
-// Middleware to check if user is admin
+// Admin check
 export const requireAdmin = (req, res, next) => {
   if (!req.user) {
     return next(new AppError('Authentication required', 401));
@@ -47,7 +62,7 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Middleware to check if user owns the resource
+// Ownership check
 export const requireOwnership = (req, res, next) => {
   const userId = req.params.userId || req.params.id;
 
@@ -55,10 +70,9 @@ export const requireOwnership = (req, res, next) => {
     return next(new AppError('Authentication required', 401));
   }
 
-  // Admin can access any resource, or user must own the resource
   if (req.user.role === 'admin' || req.user.id === userId) {
-    next();
-  } else {
-    next(new AppError('Access denied', 403));
+    return next();
   }
+
+  next(new AppError('Access denied', 403));
 };
