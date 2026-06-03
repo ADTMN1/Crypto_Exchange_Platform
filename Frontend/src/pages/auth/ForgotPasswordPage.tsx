@@ -34,23 +34,92 @@ export default function ForgotPasswordPage() {
           title="Check Your Email"
           subtitle="We've sent password reset instructions to your email"
         >
-          <div className="success-message">
-            <div className="success-icon">✓</div>
-            <p className="success-text">
-              If an account exists for <strong>{email}</strong>, you will
-              receive password reset instructions shortly.
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '20px 0',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              background: '#24c576',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '48px',
+              color: 'white',
+              marginBottom: '24px',
+              fontWeight: 700
+            }}>
+              ✓
+            </div>
+            
+            <p style={{
+              fontSize: '16px',
+              color: '#e0e0e0',
+              marginBottom: '16px',
+              lineHeight: '1.6',
+              maxWidth: '100%'
+            }}>
+              If an account exists for <strong style={{ color: '#f3921f' }}>{email}</strong>, you will receive password reset instructions shortly.
             </p>
-            <p className="success-subtext">
+            
+            <p style={{
+              fontSize: '14px',
+              color: '#a0a0a0',
+              marginBottom: '32px',
+              lineHeight: '1.5'
+            }}>
               Didn't receive the email? Check your spam folder or try again.
             </p>
-            <div className="auth-actions">
+            
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              width: '100%'
+            }}>
               <button
                 onClick={() => setIsSubmitted(false)}
-                className="auth-btn-secondary"
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  background: 'transparent',
+                  color: '#f3921f',
+                  border: '2px solid #f3921f',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(243, 146, 31, 0.1)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 Try Another Email
               </button>
-              <Link to="/login" className="auth-btn">
+              <Link 
+                to="/login" 
+                className="auth-btn"
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  background: '#f3921f',
+                  color: '#1a1a1a',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                  display: 'block',
+                  textAlign: 'center'
+                }}
+              >
                 Back to Login
               </Link>
             </div>

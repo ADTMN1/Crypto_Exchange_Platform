@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import pool, { query } from '../config/db.config.js';
+import AppError from '../utils/errorHandling.js';
 
 const authService = {
     /**
@@ -13,9 +14,7 @@ const authService = {
         );
 
         if (existingUserCheck.rows.length > 0) {
-            const error = new Error('An account with this email or phone number already exists.');
-            error.statusCode = 409;
-            throw error;
+            throw new AppError('An account with this email or phone number already exists.', 409);
         }
 
         // 2. Hash sensitive password credentials securely
@@ -33,7 +32,7 @@ const authService = {
             );
             
             if (roleQuery.rows.length === 0) {
-                throw new Error('Default user role not found. Please run role seeding.');
+                throw new AppError('Default user role not found. Please run role seeding.', 500);
             }
             
             const userRoleId = roleQuery.rows[0].id;
@@ -61,7 +60,10 @@ const authService = {
 
         } catch (error) {
             await client.query('ROLLBACK');
-            throw error;
+            if (error instanceof AppError) {
+                throw error;
+            }
+            throw new AppError(error.message || 'Failed to register user.', 500);
         } finally {
             client.release();
         }
@@ -81,33 +83,27 @@ const authService = {
                 u.is_deleted,
                 u.password_hash,
                 r.id AS role_id,
-                r.name AS role_name
-  FROM users u
-  LEFT JOIN roles r ON u.role_id = r.id
-  WHERE u.email = $1;
-`;
+                        r.name AS role_name
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.email = $1;
+        `;
         const result = await query(userQuery, [email]);
 
         if (result.rows.length === 0) {
-            const error = new Error('Invalid identification credentials.');
-            error.statusCode = 401;
-            throw error;
+            throw new AppError('Invalid identification credentials.', 401);
         }
 
         const user = result.rows[0];
         
         if (!user.is_active || user.is_deleted) {
-            const error = new Error('This user account is suspended or deactivated.');
-            error.statusCode = 403;
-            throw error;
+            throw new AppError('This user account is suspended or deactivated.', 403);
         }
 
         // 3. Cryptographic authentication processing
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
-            const error = new Error('Invalid identification credentials.');
-            error.statusCode = 401;
-            throw error;
+            throw new AppError('Invalid identification credentials.', 401);
         }
 
         // 4. Update timeline indicators
@@ -117,7 +113,8 @@ const authService = {
             id: user.id,
             email: user.email,
             username: user.username,
-            profile_image: user.profile_image
+            profile_image: user.profile_image,
+            role: user.role_name
         };
     },
 
@@ -158,9 +155,7 @@ const authService = {
                 
                 // Security check: Account status
                 if (!user.is_active || user.is_deleted) {
-                    const error = new Error('This user account is suspended or deactivated.');
-                    error.statusCode = 403;
-                    throw error;
+                    throw new AppError('This user account is suspended or deactivated.', 403);
                 }
 
                 // Link Google OAuth to existing account if not already linked
@@ -210,7 +205,7 @@ const authService = {
             );
             
             if (roleQuery.rows.length === 0) {
-                throw new Error('Default user role not found. Please run role seeding.');
+                throw new AppError('Default user role not found. Please run role seeding.', 500);
             }
             
             const userRoleId = roleQuery.rows[0].id;
@@ -287,7 +282,10 @@ const authService = {
 
         } catch (error) {
             await client.query('ROLLBACK');
-            throw error;
+            if (error instanceof AppError) {
+                throw error;
+            }
+            throw new AppError(error.message || 'Google login flow failed.', 500);
         } finally {
             client.release();
         }

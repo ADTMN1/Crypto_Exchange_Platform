@@ -1,43 +1,47 @@
 import jwt from 'jsonwebtoken';
+import AppError from '../utils/errorHandling.js';
 
-// Middleware to authenticate JWT tokens
+// Main authentication middleware
 export const authenticateToken = (req, res, next) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    // Get token from cookie
+    const token = req.cookies.token;
 
     if (!token) {
       console.log('❌ No token provided in request');
-      return res.status(401).json({ message: 'Access token required' });
+      return next(new AppError('Authentication required. Access token missing.', 401));
     }
 
-    // Verify token
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    // Verify the token
+    jwt.verify(token, process.env.JWT_SECRET, (err, decodedUser) => {
       if (err) {
         console.error('❌ JWT Verification failed:', err.message);
-        return res.status(403).json({ message: 'Invalid or expired token', error: err.message });
+        return next(new AppError('Invalid or expired token', 403));
       }
 
-      console.log('✅ Token verified for user:', user.id);
+      console.log('✅ Token verified for user:', decodedUser.id);
       // Attach user to request object
-      req.user = user;
+      req.user = decodedUser;
       next();
     });
+    
   } catch (error) {
     console.error('❌ Authentication error:', error);
-    res.status(500).json({ message: 'Authentication failed' });
+    next(new AppError('Authentication failed', 500));
   }
 };
+
+// Export authenticateToken as authMiddleware for compatibility
+export const authMiddleware = authenticateToken;
 
 // Middleware to check if user is admin
 export const requireAdmin = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required' });
+    return next(new AppError('Authentication required', 401));
   }
 
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+    return next(new AppError('Admin access required', 403));
   }
 
   next();
@@ -48,16 +52,13 @@ export const requireOwnership = (req, res, next) => {
   const userId = req.params.userId || req.params.id;
 
   if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required' });
+    return next(new AppError('Authentication required', 401));
   }
 
   // Admin can access any resource, or user must own the resource
   if (req.user.role === 'admin' || req.user.id === userId) {
     next();
   } else {
-    res.status(403).json({ message: 'Access denied' });
+    next(new AppError('Access denied', 403));
   }
 };
-
-// Export authenticateToken as authMiddleware for compatibility
-export const authMiddleware = authenticateToken;

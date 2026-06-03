@@ -1,15 +1,19 @@
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import AuthForm from "../../components/auth/AuthForm";
 import OAuthButtons from "../../components/auth/OAuthButtons";
+import LoadingOverlay from "../../components/common/LoadingOverlay";
 import { loginSchema, LoginFormData } from "../../types/auth.types";
-import { loginUser } from "../../api/authApi";
+import { authService } from "../../services";
 import { toast } from "sonner";
+import { useAuthStore } from "../../store";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -23,49 +27,74 @@ export default function LoginPage() {
     },
   });
 
+
+const loginUserInStore = useAuthStore((state) => state.login);
+
+
+
+
   const onSubmit = async (data: LoginFormData) => {
-    
+    // Clear any previous server error
+    setServerError(null);
     console.log("LOGIN DATA:", data);
 
     try {
-      const response = await loginUser(data);
+      const response = await authService.login(data);
       console.log("Login success:", response);
 
-  toast.success("Login Successful! Redirecting to dashboard...", {
-  style: {
-    background: "#22c55e", // green-500
-    color: "#fff",
-    border: "1px solid #16a34a",
-  },
-  position: "top-right",
-  description: response?.data?.message || "You have successfully logged in.",
-  duration: 3000,
-});
-
-      navigate("/dashboard"); // change if needed
-    } catch (error: any) {
-      console.error("Login error:", error);
-
-      const errorMessage = error?.response?.data?.error||error.message||error.response?.data?.message || "An unexpected error occurred during login. Please try again.";
-      toast.error(errorMessage, {
+      toast.success("Login Successful! Redirecting to dashboard...", {
         style: {
-          background: "#ef4444", // red-500
+          background: "#22c55e",
+          color: "#fff",
+          border: "1px solid #16a34a",
+        },
+        position: "top-right",
+        description: response?.message || "You have successfully logged in.",
+        duration: 3000,
+      });
+if (response?.user) {
+  loginUserInStore(response.user);
+}
+      navigate("/dashboard");
+    } catch (error: any) {
+
+      const message =  error?.response?.data?.message || error?.message || "Login failed.";
+      console.error("Login error:", error);
+      setServerError(message);
+
+      toast.error(message, {
+        style: {
+          background: "#ef4444",
           color: "#fff",
           border: "1px solid #dc2626",
         },
+
+
+        
         position: "top-right",
-        duration: 3000,
+        duration: 5000,
       });
     }
   };
 
   return (
     <div className="auth-page">
+      {isSubmitting && <LoadingOverlay message="Signing in..." />}
+      
       <AuthForm
         title="Welcome Back, Trader!"
         subtitle="Continue your trading journey with us"
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
+        <form
+          onSubmit={(e) => {
+            // explicitly prevent default to avoid accidental full-page reloads
+            e.preventDefault();
+            // delegate to react-hook-form's handler
+            handleSubmit(onSubmit)(e as any);
+          }}
+          className="auth-form"
+        >
+       
           <div className="auth-form-group">
             <label className="auth-label">Email</label>
             <input
@@ -102,8 +131,8 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <button type="submit" className="auth-btn">
-            {isSubmitting ? "Signing In..." : "Sign In"}
+          <button type="submit" className="auth-btn" disabled={isSubmitting}>
+            Sign In
           </button>
 
           <OAuthButtons />

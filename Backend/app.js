@@ -7,6 +7,8 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import router from './src/routes/route.index.js';
 import dotenv from 'dotenv';
+import globalErrorHandler from './src/middleware/errorMiddleware.js';
+import AppError from './src/utils/errorHandling.js';
 dotenv.config();
 const app = express();
 
@@ -75,25 +77,15 @@ app.get('/api', (req, res) => {
 	res.json({ message: 'Crypto Exchange Tier-1 Backend Running Securely.' });
 });
 
-app.use((req, res) => {
-	res.status(404).json({ error: 'API Not Found' });
+// 2. Fallback Route for non-existent URLs (404 Not Found)
+app.use((req, res, next) => {
+  const err = new AppError(`Can't find ${req.originalUrl} on this server!`, 404);
+  next(err);
 });
 
-// 10. Centralized Error Handling Interceptor
-app.use((err, req, res, next) => {
-	const statusCode = err.status || err.statusCode || 500;
-	
-	const responseMessage = 
-		process.env.NODE_ENV === 'production' && statusCode === 500
-			? 'Internal Server Error' 
-			: err.message;
+// 3. THE GLOBAL ERROR HANDLER (Must be last!)
+app.use(globalErrorHandler);
 
-	console.error(`[System Error Block]: ${err.stack || err.message}`);
 
-	res.status(statusCode).json({
-		success: false,
-		error: responseMessage,
-	});
-});
 
 export default app;

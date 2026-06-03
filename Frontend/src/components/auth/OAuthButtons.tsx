@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
-import { getApiUrl, API_ENDPOINTS } from '../../services/api.service';
+import { authService } from '../../services';
+import { toast } from 'sonner';
+import LoadingOverlay from '../common/LoadingOverlay';
 
 declare global {
   interface Window {
@@ -12,6 +14,7 @@ declare global {
 export default function OAuthButtons() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   useEffect(() => {
     // Initialize Google Sign-In only once
@@ -36,45 +39,63 @@ export default function OAuthButtons() {
   }, []);
 
   const handleGoogleLogin = async (response: any) => {
+    setIsGoogleLoading(true);
     try {
       const idToken = response.credential;
       
-      // Send token to backend for verification using API instance
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies
-        body: JSON.stringify({ token: idToken }),
-      });
+      // Send token to backend for verification using centralized auth service
+      const data = await authService.googleLogin(idToken);
 
-      const data = await res.json();
-
-      if (res.ok) {
-        // Save tokens
-        localStorage.setItem('token', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        
+      if (data.success) {
+        // Tokens are automatically stored in httpOnly cookies
         // Update auth state
         login(data.user);
         
-        // Redirect to home
-        navigate('/');
+        toast.success('Google login successful!', {
+          style: {
+            background: '#22c55e',
+            color: '#fff',
+            border: '1px solid #16a34a',
+          },
+          position: 'top-right',
+          duration: 3000,
+        });
+        
+        // Redirect to dashboard
+        navigate('/dashboard');
       } else {
         console.error('Google login failed:', data.message);
-        alert('Google login failed. Please try again.');
+        toast.error('Google login failed. Please try again.', {
+          style: {
+            background: '#ef4444',
+            color: '#fff',
+            border: '1px solid #dc2626',
+          },
+          position: 'top-right',
+          duration: 5000,
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during Google login:', error);
-      alert('An error occurred. Please try again.');
+      const errorMessage = error?.response?.data?.message || 'An error occurred during Google login.';
+      toast.error(errorMessage, {
+        style: {
+          background: '#ef4444',
+          color: '#fff',
+          border: '1px solid #dc2626',
+        },
+        position: 'top-right',
+        duration: 5000,
+      });
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
   return (
     <div className="oauth-buttons">
+      {isGoogleLoading && <LoadingOverlay message="Signing in with Google..." />}
       <div id="google-signin-button"></div>
-    
     </div>
   );
 }
