@@ -117,7 +117,8 @@ const authService = {
             id: user.id,
             email: user.email,
             username: user.username,
-            profile_image: user.profile_image
+            profile_image: user.profile_image,
+            role: user.role_name
         };
     },
 

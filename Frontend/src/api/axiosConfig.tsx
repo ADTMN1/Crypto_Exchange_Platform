@@ -113,6 +113,15 @@ api.interceptors.response.use(
       return Promise.reject(normalizedError);
     }
 
+    // Do not attempt refresh for authentication endpoints themselves
+    // (login/register/forgot/reset/verify). If an auth endpoint returns 401
+    // we should surface the error to the UI instead of redirecting to login
+    // which causes a full page reload and hides error messages.
+    const reqUrl = originalRequest.url ?? "";
+    if (reqUrl.includes("/auth/") && !reqUrl.includes(REFRESH_URL)) {
+      return Promise.reject(normalizedError);
+    }
+
     // A 401 from the refresh endpoint means the refresh token itself is expired.
     if (originalRequest.url?.includes(REFRESH_URL)) {
       handleGlobalLogout();
