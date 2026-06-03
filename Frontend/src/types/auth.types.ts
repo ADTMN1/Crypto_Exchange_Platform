@@ -59,3 +59,14 @@ export const loginSchema = z.object({
 // Type
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type SignUpFormData = z.infer<typeof signUpSchema>;
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  phone_number?: string;
+  profile_picture_url?: string;
+  role?: string;
+  account_status?: 'pending' | 'active' | 'suspended' | 'banned';
+  email_verified?: boolean;
+}

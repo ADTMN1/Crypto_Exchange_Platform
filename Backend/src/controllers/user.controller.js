@@ -7,7 +7,15 @@ const userController = {
 
   getProfile: async (req, res, next) => {
     try {
+
+if(!req.user || !req.user.id) {
+  return next(new AppError('Authenticated user information is missing', 401));
+}
+
       const user = await userService.getProfile(req.user.id);
+      if (!user) {
+        return next(new AppError('User not found', 404));
+      }
       res.status(200).json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -17,7 +25,12 @@ const userController = {
   updateProfile: async (req, res, next) => {
     try {
       const { username, email, phone_number } = req.body;
+      if (!username && !email && !phone_number) {
+        return next(new AppError('At least one field (username, email, or phone_number) must be provided for update', 400));
+      }
       const updated = await userService.updateProfile(req.user.id, { username, email, phone_number });
+
+      
       res.status(200).json({ success: true, message: 'Profile updated successfully.', data: updated });
     } catch (error) {
       next(error);
@@ -75,8 +88,7 @@ const userController = {
 
   deleteAccount: async (req, res, next) => {
     try {
-      const { password } = req.body;
-      await userService.deleteAccount(req.user.id, password);
+      await userService.deleteAccount(req.user.id);
       res.clearCookie('token');
       res.clearCookie('refreshToken');
       res.status(200).json({ success: true, message: 'Account deleted successfully.' });
