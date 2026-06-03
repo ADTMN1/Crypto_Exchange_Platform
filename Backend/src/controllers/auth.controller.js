@@ -54,9 +54,9 @@ if(!email || !password) {
      const cookieOptions = {
   httpOnly: true,
   // MUST be true for sameSite: "none" to work
-  secure: true, 
-  // "none" allows the cookie to be sent across different Render subdomains
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", 
+secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to be sent across different Render subdomains
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+   
 };
       // ✅ Set cookie
    res.cookie("token" ,accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });

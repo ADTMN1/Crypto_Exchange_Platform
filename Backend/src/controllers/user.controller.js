@@ -1,133 +1,169 @@
-import cloudinary from '../config/cloudinary.config.js';
-import pool from '../config/db.config.js';
+import userService from '../services/user.sevice.js';
 import AppError from '../utils/errorHandling.js';
 
 const userController = {
-  // Get user profile
-  async getProfile(req, res, next) {
+
+  // ─── PROFILE ────────────────────────────────────────────────────────────────
+
+  getProfile: async (req, res, next) => {
     try {
-      const userId = req.user.id;
-
-      const result = await pool.query(
-        'SELECT id, email, username, profile_image FROM users WHERE id = $1',
-        [userId]
-      );
-
-      if (result.rows.length === 0) {
-        return next(new AppError('User not found', 404));
-      }
-
-      res.json(result.rows[0]);
+      const user = await userService.getProfile(req.user.id);
+      res.status(200).json({ success: true, data: user });
     } catch (error) {
       next(error);
     }
   },
 
-  // Update user profile
-  async updateProfile(req, res, next) {
+  updateProfile: async (req, res, next) => {
     try {
-      const userId = req.user.id;
-      const { firstName, lastName, email, phone } = req.body;
+      const { username, email, phone_number } = req.body;
+      const updated = await userService.updateProfile(req.user.id, { username, email, phone_number });
+      res.status(200).json({ success: true, message: 'Profile updated successfully.', data: updated });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      const username = `${firstName || ''} ${lastName || ''}`.trim();
-
-      const result = await pool.query(
-        'UPDATE users SET username = $1, email = $2, phone = $3, updated_at = NOW() WHERE id = $4 RETURNING id, email, username, profile_image',
-        [username, email, phone, userId]
-      );
-
-      if (result.rows.length === 0) {
-        return next(new AppError('User not found', 404));
+  changePassword: async (req, res, next) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return next(new AppError('currentPassword and newPassword are required', 400));
       }
+      await userService.changePassword(req.user.id, currentPassword, newPassword);
+      res.status(200).json({ success: true, message: 'Password changed successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      res.json({
-        message: 'Profile updated successfully',
-        user: result.rows[0],
+  // ─── PROFILE IMAGE ──────────────────────────────────────────────────────────
+
+  uploadProfileImage: async (req, res, next) => {
+    try {
+      if (!req.file) return next(new AppError('No image file provided', 400));
+      const result = await userService.uploadProfileImage(req.user.id, req.file.buffer);
+      res.status(200).json({ success: true, message: 'Profile image uploaded successfully.', data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  deleteProfileImage: async (req, res, next) => {
+    try {
+      await userService.deleteProfileImage(req.user.id);
+      res.status(200).json({ success: true, message: 'Profile image deleted successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── EMAIL VERIFICATION ─────────────────────────────────────────────────────
+
+  verifyEmail: async (req, res, next) => {
+    try {
+      // In production: decode a signed email verification token here
+      // For now: verify the currently authenticated user's email
+      const result = await userService.verifyEmail(req.user.id);
+      res.status(200).json({ success: true, message: 'Email verified successfully.', data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── ACCOUNT SELF-DELETION ──────────────────────────────────────────────────
+
+  deleteAccount: async (req, res, next) => {
+    try {
+      const { password } = req.body;
+      await userService.deleteAccount(req.user.id, password);
+      res.clearCookie('token');
+      res.clearCookie('refreshToken');
+      res.status(200).json({ success: true, message: 'Account deleted successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── ADMIN: USER MANAGEMENT ─────────────────────────────────────────────────
+
+  getAllUsers: async (req, res, next) => {
+    try {
+      const { page, limit, status, search } = req.query;
+      const result = await userService.getAllUsers({
+        page: parseInt(page) || 1,
+        limit: parseInt(limit) || 20,
+        status,
+        search,
       });
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
   },
 
-  // Upload profile image
-  async uploadProfileImage(req, res, next) {
+  getActiveUsers: async (req, res, next) => {
     try {
-      const userId = req.user.id;
-
-      if (!req.file) {
-        return next(new AppError('No image file provided', 400));
-      }
-
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'crypto_exchange/profiles',
-          public_id: `user_${userId}`,
-          overwrite: true,
-          transformation: [
-            { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-            { quality: 'auto' },
-          ],
-        },
-        async (error, result) => {
-          if (error) {
-            return next(new AppError('Failed to upload image', 500));
-          }
-
-          try {
-            const dbResult = await pool.query(
-              'UPDATE users SET profile_image = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, username, profile_image',
-              [result.secure_url, userId]
-            );
-
-            if (dbResult.rows.length === 0) {
-              return next(new AppError('User not found', 404));
-            }
-
-            res.json({
-              message: 'Profile image uploaded successfully',
-              imageUrl: result.secure_url,
-              user: dbResult.rows[0],
-            });
-          } catch (dbError) {
-            next(new AppError('Failed to update profile image in database', 500));
-          }
-        }
-      );
-
-      const { Readable } = await import('stream');
-      Readable.from(req.file.buffer).pipe(uploadStream);
+      const { page, limit } = req.query;
+      const result = await userService.getActiveUsers(parseInt(page) || 1, parseInt(limit) || 20);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
   },
 
-  // Delete profile image
-  async deleteProfileImage(req, res, next) {
+  getBannedUsers: async (req, res, next) => {
     try {
-      const userId = req.user.id;
+      const { page, limit } = req.query;
+      const result = await userService.getBannedUsers(parseInt(page) || 1, parseInt(limit) || 20);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      const userResult = await pool.query(
-        'SELECT profile_image FROM users WHERE id = $1',
-        [userId]
-      );
+  getUserById: async (req, res, next) => {
+    try {
+      const user = await userService.getUserById(req.params.userId);
+      res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      if (userResult.rows.length === 0) {
-        return next(new AppError('User not found', 404));
-      }
+  banUser: async (req, res, next) => {
+    try {
+      await userService.banUser(req.params.userId);
+      res.status(200).json({ success: true, message: 'User banned successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      const profileImage = userResult.rows[0].profile_image;
+  unbanUser: async (req, res, next) => {
+    try {
+      await userService.unbanUser(req.params.userId);
+      res.status(200).json({ success: true, message: 'User unbanned successfully.' });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      if (profileImage) {
-        const publicId = `crypto_exchange/profiles/user_${userId}`;
-        await cloudinary.uploader.destroy(publicId);
-      }
+  setUserStatus: async (req, res, next) => {
+    try {
+      const { status } = req.body;
+      if (!status) return next(new AppError('status is required', 400));
+      await userService.setUserStatus(req.params.userId, status);
+      res.status(200).json({ success: true, message: `User status updated to '${status}'.` });
+    } catch (error) {
+      next(error);
+    }
+  },
 
-      await pool.query(
-        'UPDATE users SET profile_image = NULL, updated_at = NOW() WHERE id = $1',
-        [userId]
-      );
-
-      res.json({ message: 'Profile image deleted successfully' });
+  adminDeleteUser: async (req, res, next) => {
+    try {
+      await userService.adminDeleteUser(req.params.userId);
+      res.status(200).json({ success: true, message: 'User deleted successfully.' });
     } catch (error) {
       next(error);
     }

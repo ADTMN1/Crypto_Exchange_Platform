@@ -1,35 +1,48 @@
 import jwt from 'jsonwebtoken';
 import AppError from '../utils/errorHandling.js';
 
-// Middleware to authenticate JWT tokens
+
 export const authenticateToken = (req, res, next) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    let token = null;
 
-    if (!token) {
-      return next(new AppError('Access token required', 401));
+    // 1. First choice: Try to get the token from HttpOnly Cookies
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    } 
+    // 2. Second choice fallback: Check the Authorization header (Bearer TOKEN)
+    else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
     }
 
-    // Verify token
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    // If no token is found in either location, bail out safely
+    if (!token) {
+      return next(new AppError('Authentication required. Access token missing.', 401));
+    }
+
+    // 3. Verify the token payload
+    jwt.verify(token, process.env.JWT_SECRET, (err, decodedUser) => {
       if (err) {
-        return next(new AppError('Invalid or expired token', 403));
+        // Customize error if token is expired vs flat-out altered
+        const msg = err.name === 'TokenExpiredError' ? 'Your session has expired. Please log in again.' : 'Invalid token.';
+        return next(new AppError(msg, 401)); // Use 401 so frontend knows to re-authenticate or refresh
       }
 
-      // Attach user to request object
-      req.user = user;
+      // 4. Attach user payload (id, email, role, etc.) directly to request object
+      req.user = decodedUser;
       next();
     });
+    
   } catch (error) {
-    console.error('Authentication error:', error);
-    next(new AppError('Authentication failed', 500));
+    console.error('Authentication middleware error:', error);
+    next(new AppError('Authentication processing failed.', 500));
   }
 };
 
 // Middleware to check if user is admin
 export const requireAdmin = (req, res, next) => {
+  ///her we have to get
+  //
   if (!req.user) {
     return next(new AppError('Authentication required', 401));
   }
