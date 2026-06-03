@@ -132,22 +132,7 @@ export default function ProfilePage() {
     setImageError(false); // Reset error state
 
     try {
-      const formData = new FormData();
-      formData.append('profileImage', file);
-
-      const response = await fetch('http://localhost:5000/api/user/profile/image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload image');
-      }
-
-      const data = await response.json();
+      const data = await userService.uploadProfileImage(file);
       
       // Validate the returned image URL
       if (data.imageUrl && isValidImageUrl(data.imageUrl)) {

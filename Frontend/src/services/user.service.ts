@@ -27,6 +27,22 @@ const userService = {
   async changePassword(data: ChangePasswordPayload): Promise<void> {
     await api.post(API_ENDPOINTS.USER.CHANGE_PASSWORD, data)
   },
+
+  async uploadProfileImage(file: File): Promise<{ imageUrl: string; user: User }> {
+    const formData = new FormData()
+    formData.append('profileImage', file)
+    
+    const response = await api.post('/user/profile/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  },
+
+  async deleteProfileImage(): Promise<void> {
+    await api.delete('/user/profile/image')
+  },
 }
 
 export default userService

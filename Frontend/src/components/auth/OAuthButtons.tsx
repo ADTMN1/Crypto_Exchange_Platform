@@ -11,7 +11,7 @@ declare global {
 
 export default function OAuthButtons() {
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login } = useAuthStore();
 
   useEffect(() => {
     // Initialize Google Sign-In only once
@@ -39,12 +39,13 @@ export default function OAuthButtons() {
     try {
       const idToken = response.credential;
       
-      // Send token to backend for verification using centralized API config
-      const res = await fetch(getApiUrl(API_ENDPOINTS.AUTH.GOOGLE), {
+      // Send token to backend for verification using API instance
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies
         body: JSON.stringify({ token: idToken }),
       });
 

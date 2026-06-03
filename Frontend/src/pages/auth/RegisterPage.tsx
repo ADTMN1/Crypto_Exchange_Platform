@@ -99,6 +99,7 @@ export default function RegisterPage() {
                 className="auth-input"
                 placeholder="John"
                 required
+                disabled={isLoading}
               />
 
               {errors.firstName && (
@@ -116,6 +117,7 @@ export default function RegisterPage() {
                 className="auth-input"
                 placeholder="Doe"
                 required
+                disabled={isLoading}
               />
               {errors.lastName && (
                 <p className="text-red-500 text-sm mt-1">
@@ -133,6 +135,7 @@ export default function RegisterPage() {
               className="auth-input"
               placeholder="you@example.com"
               required
+              disabled={isLoading}
             />
             {errors.email && (
               <p className="text-red-500 text-sm mt-1">
@@ -165,6 +168,7 @@ export default function RegisterPage() {
               className="auth-input"
               placeholder="••••••••"
               required
+              disabled={isLoading}
             />
             {errors.password && (
               <p className="text-red-500 text-sm mt-1">
@@ -181,6 +185,7 @@ export default function RegisterPage() {
               className="auth-input"
               placeholder="••••••••"
               required
+              disabled={isLoading}
             />
 
             {errors.confirm_password && (

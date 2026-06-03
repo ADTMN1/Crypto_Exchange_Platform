@@ -7,6 +7,7 @@ const API_CONFIG = {
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable sending cookies with requests
 }
 
 // Create axios instance
@@ -32,15 +33,17 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Handle 401 Unauthorized - Token expired
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle 401 Unauthorized or 403 Forbidden - Token expired
+    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
         const refreshToken = localStorage.getItem('refreshToken')
         if (refreshToken) {
-          const response = await axios.post(`${API_CONFIG.baseURL}/auth/refresh`, {
+          const response = await axios.post(`${API_CONFIG.baseURL.replace('/api', '')}/api/auth/refresh-token`, {
             refreshToken,
+          }, {
+            withCredentials: true
           })
           
           const { accessToken } = response.data
@@ -54,6 +57,7 @@ api.interceptors.response.use(
         // Refresh failed - logout user
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         window.location.href = '/login'
         return Promise.reject(refreshError)
       }

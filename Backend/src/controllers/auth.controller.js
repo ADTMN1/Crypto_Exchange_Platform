@@ -151,6 +151,53 @@ const AuthController = {
         } catch (error) {
             next(error);
         }
+    },
+
+    /**
+     * Refresh access token using refresh token
+     * Enterprise-grade token refresh mechanism
+     */
+    refreshToken: async (req, res, next) => {
+        try {
+            const refToken = req.cookies?.refreshToken || req.body.refreshToken;
+
+            if (!refToken) {
+                const error = new Error('Refresh token required');
+                error.statusCode = 401;
+                throw error;
+            }
+
+            // Verify refresh token
+            const jwt = await import('jsonwebtoken');
+            const decoded = jwt.default.verify(refToken, process.env.REFRESH_SECRET);
+
+            // Generate new access token
+            const newAccessToken = await generateToken(decoded.id, decoded.email, decoded.role);
+
+            const cookieOptions = {
+                httpOnly: true,
+                secure: true,
+                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            };
+
+            // Set new access token cookie
+            res.cookie("token", newAccessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Token refreshed successfully',
+                accessToken: newAccessToken
+            });
+        } catch (error) {
+            console.error('Token refresh error:', error);
+            if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Invalid or expired refresh token. Please login again.'
+                });
+            }
+            next(error);
+        }
     }
 };
 
