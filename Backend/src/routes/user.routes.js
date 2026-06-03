@@ -1,23 +1,30 @@
 import express from 'express';
 import userController from '../controllers/user.controller.js';
 import upload from '../config/multer.config.js';
-import { authenticateToken } from '../middleware/auth.midlware.js';
+import { authMiddleware, requireAdmin,authenticateToken } from '../middleware/auth.midlware.js';
 
-const router = express.Router();
+const adminRouter = express.Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+adminRouter.use(authenticateToken);
 
-// Get user profile
-router.get('/profile', userController.getProfile);
+// ─── PROFILE (own user) ────────────────────────────────────────────────────
+adminRouter.get('/profile',                                  userController.getProfile);
+adminRouter.put('/profile',                                  userController.updateProfile);
+adminRouter.put('/profile/password',                         userController.changePassword);
+adminRouter.post('/profile/image', upload.single('profileImage'), userController.uploadProfileImage);
+adminRouter.delete('/profile/image',                         userController.deleteProfileImage);
+adminRouter.post('/profile/verify-email',                    userController.verifyEmail);
+adminRouter.delete('/profile',                               userController.deleteAccount);
 
-// Update user profile
-router.put('/profile/update', userController.updateProfile);
+// ─── ADMIN: USER MANAGEMENT ───────────────────────────────────────────────
+adminRouter.get('/users',                requireAdmin,  userController.getAllUsers);
+adminRouter.get('/users/active',                requireAdmin,  userController.getActiveUsers);
+adminRouter.get('/users/banned',                requireAdmin,  userController.getBannedUsers);
+adminRouter.get('/users/:userId',                requireAdmin,  userController.getUserById);
+adminRouter.patch('/users/:userId/status',          requireAdmin,  userController.setUserStatus);
+adminRouter.patch('/users/:userId/ban',           requireAdmin,  userController.banUser);
+adminRouter.patch('/users/:userId/unban',          requireAdmin,  userController.unbanUser);
+adminRouter.delete('/users/:userId',              requireAdmin,  userController.adminDeleteUser);
 
-// Upload profile image
-router.post('/profile/image', upload.single('profileImage'), userController.uploadProfileImage);
-
-// Delete profile image
-router.delete('/profile/image', userController.deleteProfileImage);
-
-export default router;
+export default adminRouter;

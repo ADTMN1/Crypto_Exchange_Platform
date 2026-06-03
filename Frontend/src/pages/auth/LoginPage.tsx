@@ -8,6 +8,7 @@ import OAuthButtons from "../../components/auth/OAuthButtons";
 import { loginSchema, LoginFormData } from "../../types/auth.types";
 import { loginUser } from "../../api/authApi";
 import { toast } from "sonner";
+import { useAuthStore } from "../../store";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -24,6 +25,12 @@ export default function LoginPage() {
       password: "",
     },
   });
+
+
+const loginUserInStore = useAuthStore((state) => state.login);
+
+
+
 
   const onSubmit = async (data: LoginFormData) => {
     // Clear any previous server error
@@ -44,7 +51,9 @@ export default function LoginPage() {
         description: response?.message || "You have successfully logged in.",
         duration: 3000,
       });
-
+if (response?.user) {
+  loginUserInStore(response.user);
+}
       navigate("/dashboard");
     } catch (error: any) {
 
