@@ -12,7 +12,6 @@ import RegisterPage from "../pages/auth/RegisterPage";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import VerifyEmailPage from "../pages/auth/VerifyEmailPage";
-import DashboardPage from "../pages/user/DashboardPage";
 import TradePage from "../pages/user/TradePage";
 import OrdersPage from "../pages/user/OrdersPage";
 import WalletPage from "../pages/user/WalletPage";
@@ -30,17 +29,329 @@ import AdminOrdersPage from "../pages/admin/OrdersPage";
 import AdminTransactionsPage from "../pages/admin/TransactionsPage";
 import AdminPairsPage from "../pages/admin/PairsPage";
 import AdminAuditPage from "../pages/admin/AuditPage";
+import AdminProfilePage from "../pages/admin/ProfilePage";
+import AdminSectionPage from "../pages/admin/AdminSectionPage";
+import AdminManageUsersPage from "../pages/admin/ManageUsersPage";
 import HistoryPage from "../pages/user/HistoryPage";
+
+const adminSectionRoutes = [
+  {
+    path: "/admin/trade-management",
+    title: "Trade Management",
+    description: "Manage trade operations, matching rules, and execution settings.",
+  },
+  {
+    path: "/admin/security",
+    title: "Security",
+    description: "Review admin security settings and access controls.",
+  },
+  {
+    path: "/admin/trade-management/binary-control",
+    title: "Binary Control",
+    description: "Configure binary trading controls, limits, and execution rules.",
+  },
+  {
+    path: "/admin/trade-management/spot-control",
+    title: "Spot Control",
+    description: "Configure spot trading controls, market access, and execution rules.",
+  },
+  {
+    path: "/admin/manage-order",
+    title: "Manage Order",
+    description: "Review and modify open orders across the platform.",
+  },
+  {
+    path: "/admin/manage-order/open-order",
+    title: "Open Order",
+    description: "Review open orders and active order activity.",
+  },
+  {
+    path: "/admin/manage-order/order-history",
+    title: "Order History",
+    description: "Review historical order activity across the platform.",
+  },
+  {
+    path: "/admin/manage-order/trade-history",
+    title: "Trade History",
+    description: "Review completed trade execution history.",
+  },
+  {
+    path: "/admin/manage-p2p",
+    title: "Manage P2P",
+    description: "Manage peer-to-peer transactions and listings.",
+  },
+  {
+    path: "/admin/manage-p2p/running-trade",
+    title: "Running Trade",
+    description: "Monitor active peer-to-peer trades.",
+  },
+  {
+    path: "/admin/manage-p2p/report-trade",
+    title: "Report Trade",
+    description: "Review reported peer-to-peer trades and disputes.",
+  },
+  {
+    path: "/admin/manage-p2p/completed-trade",
+    title: "Completed Trade",
+    description: "Review completed peer-to-peer trade records.",
+  },
+  {
+    path: "/admin/manage-p2p/manage-ad",
+    title: "Manage Ad",
+    description: "Manage peer-to-peer ads and listing settings.",
+  },
+  {
+    path: "/admin/manage-p2p/payment-window",
+    title: "Payment Window",
+    description: "Configure peer-to-peer payment windows and timing rules.",
+  },
+  {
+    path: "/admin/manage-p2p/payment-method",
+    title: "Payment Method",
+    description: "Manage peer-to-peer payment method options.",
+  },
+  {
+    path: "/admin/manage-binary",
+    title: "Manage Binary",
+    description: "Configure binary settings and trading controls.",
+  },
+  {
+    path: "/admin/manage-binary/running-trades",
+    title: "Running Trades",
+    description: "Monitor active binary trades.",
+  },
+  {
+    path: "/admin/manage-binary/win-trades",
+    title: "Win Trades",
+    description: "Review winning binary trade outcomes.",
+  },
+  {
+    path: "/admin/manage-binary/lose-trades",
+    title: "Lose Trades",
+    description: "Review losing binary trade outcomes.",
+  },
+  {
+    path: "/admin/manage-binary/all-trades",
+    title: "All Trades",
+    description: "Review all binary trade records.",
+  },
+  {
+    path: "/admin/manage-currency",
+    title: "Manage Currency",
+    description: "Manage currency settings, fees, and supported assets.",
+  },
+  {
+    path: "/admin/manage-currency/crypto-currency",
+    title: "Crypto Currency",
+    description: "Manage supported crypto currencies.",
+  },
+  {
+    path: "/admin/manage-currency/fiat-currency",
+    title: "Fiat Currency",
+    description: "Manage supported fiat currencies.",
+  },
+  {
+    path: "/admin/manage-market",
+    title: "Manage Market",
+    description: "Manage market configurations and trading zones.",
+  },
+  {
+    path: "/admin/manage-coin-pair",
+    title: "Manage Coin Pair",
+    description: "Manage trading pairs and pair-specific market rules.",
+  },
+  {
+    path: "/admin/users/active-users",
+    title: "Active Users",
+    description: "Review active user accounts.",
+  },
+  {
+    path: "/admin/users/banned-users",
+    title: "Banned Users",
+    description: "Review banned user accounts.",
+  },
+  {
+    path: "/admin/users/email-unverified",
+    title: "Email Unverified",
+    description: "Review users with unverified email addresses.",
+  },
+  {
+    path: "/admin/users/mobile-unverified",
+    title: "Mobile Unverified",
+    description: "Review users with unverified mobile numbers.",
+  },
+  {
+    path: "/admin/users/kyc-unverified",
+    title: "KYC Unverified",
+    description: "Review users who have not completed KYC verification.",
+  },
+  {
+    path: "/admin/users/kyc-pending",
+    title: "KYC Pending",
+    description: "Review pending KYC submissions.",
+  },
+  {
+    path: "/admin/users/send-notification",
+    title: "Send Notification",
+    description: "Send notifications to selected users or account groups.",
+  },
+  {
+    path: "/admin/manage-referral",
+    title: "Manage Referral",
+    description: "Review and manage referral campaigns and rewards.",
+  },
+  {
+    path: "/admin/deposits",
+    title: "Deposits",
+    description: "Monitor and approve deposit transactions.",
+  },
+  {
+    path: "/admin/deposits/pending-deposits",
+    title: "Pending Deposits",
+    description: "Review deposits waiting for approval.",
+  },
+  {
+    path: "/admin/deposits/approved-deposits",
+    title: "Approved Deposits",
+    description: "Review approved deposit records.",
+  },
+  {
+    path: "/admin/deposits/successful-deposits",
+    title: "Successful Deposits",
+    description: "Review successfully completed deposit records.",
+  },
+  {
+    path: "/admin/deposits/rejected-deposits",
+    title: "Rejected Deposits",
+    description: "Review rejected deposit requests.",
+  },
+  {
+    path: "/admin/deposits/initiated-deposits",
+    title: "Initiated Deposits",
+    description: "Review initiated deposit requests.",
+  },
+  {
+    path: "/admin/withdrawals",
+    title: "Withdrawals",
+    description: "Review and approve withdrawal requests.",
+  },
+  {
+    path: "/admin/withdrawals/pending-withdrawals",
+    title: "Pending Withdrawals",
+    description: "Review withdrawals waiting for approval.",
+  },
+  {
+    path: "/admin/withdrawals/approved-withdrawals",
+    title: "Approved Withdrawals",
+    description: "Review approved withdrawal records.",
+  },
+  {
+    path: "/admin/withdrawals/rejected-withdrawals",
+    title: "Rejected Withdrawals",
+    description: "Review rejected withdrawal requests.",
+  },
+  {
+    path: "/admin/support-ticket",
+    title: "Support Ticket",
+    description: "Manage customer tickets and support requests.",
+  },
+  {
+    path: "/admin/support-ticket/pending-ticket",
+    title: "Pending Ticket",
+    description: "Review support tickets waiting for a response.",
+  },
+  {
+    path: "/admin/support-ticket/closed-ticket",
+    title: "Closed Ticket",
+    description: "Review closed support tickets.",
+  },
+  {
+    path: "/admin/support-ticket/answered-ticket",
+    title: "Answered Ticket",
+    description: "Review support tickets that have been answered.",
+  },
+  {
+    path: "/admin/report",
+    title: "Report",
+    description: "View operational reports and analytics.",
+  },
+  {
+    path: "/admin/transaction-history",
+    title: "Transaction History",
+    description: "Review platform transaction history.",
+  },
+  {
+    path: "/admin/login-history",
+    title: "Login History",
+    description: "Review user login activity and access history.",
+  },
+  {
+    path: "/admin/notification-history",
+    title: "Notification History",
+    description: "Review sent notification history.",
+  },
+  {
+    path: "/admin/subscribers",
+    title: "Subscribers",
+    description: "Manage newsletter subscribers and communications.",
+  },
+  {
+    path: "/admin/system-settings",
+    title: "System Setting",
+    description: "Configure system-wide settings and maintenance options.",
+  },
+  {
+    path: "/admin/extra",
+    title: "Extra",
+    description: "Access extra administrative tools and utilities.",
+  },
+  {
+    path: "/admin/extra/application",
+    title: "Application",
+    description: "Review application configuration and status.",
+  },
+  {
+    path: "/admin/extra/server",
+    title: "Server",
+    description: "Review server information and controls.",
+  },
+  {
+    path: "/admin/extra/cache",
+    title: "Cache",
+    description: "Manage application cache controls.",
+  },
+  {
+    path: "/admin/extra/update",
+    title: "Update",
+    description: "Manage application update controls.",
+  },
+  {
+    path: "/admin/report-request",
+    title: "Report & Request",
+    description: "Handle report requests and administrative follow-ups.",
+  },
+];
 
 function RootRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return isAuthenticated ? <HomePage /> : <Navigate to="/login" replace />;
+  const user = useAuthStore((state) => state.user);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user?.role === "admin" ? (
+    <Navigate to="/admin" replace />
+  ) : (
+    <HomePage />
+  );
 }
 
 export default function Router() {
   return (
     <Routes>
       <Route path="/" element={<RootRoute />} />
+      <Route path="/dashboard" element={<RootRoute />} />
 
       <Route element={<GuestRoute />}>
         <Route path="/login" element={<LoginPage />} />
@@ -51,7 +362,6 @@ export default function Router() {
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/markets" element={<MarketsPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/trade/:pair" element={<TradePage />} />
@@ -70,13 +380,39 @@ export default function Router() {
       </Route>
 
       <Route element={<AdminRoute />}>
-        <Route path="/admin" element={<AdminDashboardPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
-        <Route path="/admin/orders" element={<AdminOrdersPage />} />
-        <Route path="/admin/transactions" element={<AdminTransactionsPage />} />
-        <Route path="/admin/pairs" element={<AdminPairsPage />} />
-        <Route path="/admin/audit" element={<AdminAuditPage />} />
+        <Route path="/admin" element={<AdminDashboardPage />}>
+          <Route path="profile" element={<AdminProfilePage />} />
+          {adminSectionRoutes.map((section) => {
+            const sectionPath = section.path.replace("/admin/", "");
+            const isManageUsersSection = section.path.startsWith("/admin/users/");
+
+            return (
+              <Route
+                key={section.path}
+                path={sectionPath}
+                element={
+                  isManageUsersSection ? (
+                    <AdminManageUsersPage
+                      title={section.title}
+                      description={section.description}
+                    />
+                  ) : (
+                    <AdminSectionPage
+                      title={section.title}
+                      description={section.description}
+                    />
+                  )
+                }
+              />
+            );
+          })}
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="transactions" element={<AdminTransactionsPage />} />
+          <Route path="pairs" element={<AdminPairsPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
