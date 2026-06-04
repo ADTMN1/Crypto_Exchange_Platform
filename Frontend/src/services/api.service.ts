@@ -104,7 +104,13 @@ export const API_ENDPOINTS = {
   // Admin endpoints
   ADMIN: {
     USERS: '/admin/users',
+    ACTIVE_USERS: '/admin/users/active',
+    BANNED_USERS: '/admin/users/banned',
     USER_DETAILS: (userId: string) => `/admin/users/${userId}`,
+    UPDATE_USER_STATUS: (userId: string) => `/admin/users/${userId}/status`,
+    BAN_USER: (userId: string) => `/admin/users/${userId}/ban`,
+    UNBAN_USER: (userId: string) => `/admin/users/${userId}/unban`,
+    DELETE_USER: (userId: string) => `/admin/users/${userId}`,
     AUDIT_LOGS: '/admin/audit-logs',
     SYSTEM_STATS: '/admin/stats',
   },
