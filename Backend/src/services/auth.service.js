@@ -142,10 +142,12 @@ const authService = {
 
             // 1. Check if account exists with this email (primary identifier)
             const userQuery = `
-                SELECT id, email, username, is_active, is_deleted, profile_image, profile_picture_url,
-                       oauth_provider, oauth_provider_id, password_hash
-                FROM users 
-                WHERE email = $1;
+                SELECT u.id, u.email, u.username, u.is_active, u.is_deleted, u.profile_image, u.profile_picture_url,
+                       u.oauth_provider, u.oauth_provider_id, u.password_hash,
+                       r.name AS role_name
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE u.email = $1;
             `;
             const result = await client.query(userQuery, [email]);
 
@@ -194,7 +196,8 @@ const authService = {
                     id: user.id,
                     email: user.email,
                     username: user.username,
-                    profile_image: user.profile_image || user.profile_picture_url
+                    profile_image: user.profile_image || user.profile_picture_url,
+                    role: user.role_name
                 };
             }
 
@@ -277,7 +280,8 @@ const authService = {
                 id: newUser.id,
                 email: newUser.email,
                 username: newUser.username,
-                profile_image: newUser.profile_picture_url
+                profile_image: newUser.profile_picture_url,
+                role: 'user' // New OAuth accounts are always created with 'user' role
             };
 
         } catch (error) {

@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed:roles": "node src/jobs/role.seed.js",
+    "seed:admin": "node src/jobs/admin.seed.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

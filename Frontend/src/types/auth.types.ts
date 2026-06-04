@@ -43,8 +43,14 @@ export const signUpSchema = z.object({
   path: ["confirm_password"],
 });
 
-// Type
-
+// User Type
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  profile_image?: string;
+  role?: string;
+}
 
 export const loginSchema = z.object({
   email: z

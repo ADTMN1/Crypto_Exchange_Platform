@@ -9,6 +9,7 @@ interface LoginResponse {
     email: string
     username: string
     profile_image?: string
+    role?: string
   }
   accessToken?: string
   refreshToken?: string

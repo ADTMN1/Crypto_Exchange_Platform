@@ -42,7 +42,7 @@ const loginUserInStore = useAuthStore((state) => state.login);
       const response = await authService.login(data);
       console.log("Login success:", response);
 
-      toast.success("Login Successful! Redirecting to dashboard...", {
+      toast.success("Login Successful! Redirecting...", {
         style: {
           background: "#22c55e",
           color: "#fff",
@@ -52,10 +52,26 @@ const loginUserInStore = useAuthStore((state) => state.login);
         description: response?.message || "You have successfully logged in.",
         duration: 3000,
       });
-if (response?.user) {
-  loginUserInStore(response.user);
-}
-      navigate("/dashboard");
+
+      if (response?.user) {
+        if (response.accessToken) {
+          localStorage.setItem('token', response.accessToken)
+        }
+        if (response.refreshToken) {
+          localStorage.setItem('refreshToken', response.refreshToken)
+        }
+
+        loginUserInStore(response.user, response.accessToken ?? null, response.refreshToken ?? null)
+
+        // Redirect based on user role
+        if (response.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
 
       const message =  error?.response?.data?.message || error?.message || "Login failed.";

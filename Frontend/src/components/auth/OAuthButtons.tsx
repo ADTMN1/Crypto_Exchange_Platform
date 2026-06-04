@@ -61,8 +61,12 @@ export default function OAuthButtons() {
           duration: 3000,
         });
         
-        // Redirect to dashboard
-        navigate('/dashboard');
+        // Redirect based on user role
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       } else {
         console.error('Google login failed:', data.message);
         toast.error('Google login failed. Please try again.', {
