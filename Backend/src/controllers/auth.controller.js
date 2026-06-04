@@ -45,8 +45,8 @@ if(!email || !password) {
             const userMetadata = await authService.login(email, password);
 // console.log('User metadata after successful login:', userMetadata); // Debug log
       // ✅ Generate token HERE
-      const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.username);
-       const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.username);
+      const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.role);
+       const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.role);
 
 
        
