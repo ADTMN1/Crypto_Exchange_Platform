@@ -7003,3 +7003,164 @@ body {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+/* ============================================================================
+   MARKET DASHBOARD STYLES
+   ============================================================================ */
+
+/* Price Cards */
+.price-card {
+  background: #111827;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 20px;
+  transition: border-color 0.25s, transform 0.2s;
+  cursor: default;
+}
+.price-card:hover {
+  border-color: var(--card-color, #F7931A);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.price-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.price-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.price-card-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.price-card-coin {
+  font-size: 15px;
+  font-weight: 700;
+  color: #E5E7EB;
+}
+.price-card-pair {
+  font-size: 12px;
+  color: #6B7280;
+}
+.price-card-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #374151;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.price-card-dot.live {
+  background: #00C076;
+  box-shadow: 0 0 8px #00C076;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.price-card-price {
+  font-size: 26px;
+  font-weight: 800;
+  color: #E5E7EB;
+  margin-bottom: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+.price-card-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.price-card-change.up   { background: rgba(0,192,118,0.12); color: #00C076; }
+.price-card-change.down { background: rgba(255,77,79,0.12);  color: #FF4D4F; }
+
+/* Market Table rows */
+.market-table-row:hover { background: var(--surface-hover); }
+.market-table-coin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.market-table-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.market-table-name   { font-size: 15px; font-weight: 700; color: #E5E7EB; }
+.market-table-ticker { font-size: 12px; color: #6B7280; margin-top: 2px; }
+.market-table-price  { font-size: 15px; font-weight: 700; color: #E5E7EB; text-align: right; font-variant-numeric: tabular-nums; }
+.market-table-volume { font-size: 14px; color: #6B7280; text-align: right; }
+.market-table-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  float: right;
+}
+.market-table-change.up   { background: rgba(0,192,118,0.12); color: #00C076; }
+.market-table-change.down { background: rgba(255,77,79,0.12);  color: #FF4D4F; }
+
+/* Trading Chart */
+.trading-chart-card {
+  background: #111827;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 24px;
+}
+.trading-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.trading-chart-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #E5E7EB;
+  margin: 0 0 4px;
+}
+.trading-chart-sub {
+  font-size: 12px;
+  color: #6B7280;
+}
+.trading-chart-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: #F7931A;
+  font-variant-numeric: tabular-nums;
+}
+.trading-chart-empty {
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #6B7280;
+  font-size: 14px;
+  gap: 8px;
+}

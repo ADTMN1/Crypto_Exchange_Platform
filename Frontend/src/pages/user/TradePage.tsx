@@ -1,124 +1,225 @@
-import { useParams } from "react-router-dom";
-import { FaArrowUp, FaChartLine, FaWallet } from "react-icons/fa";
-import { useState } from "react";
+import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { FaArrowUp, FaArrowDown, FaChartLine, FaWallet } from 'react-icons/fa';
+import marketApi, { HistoryPoint } from '../../services/market.api';
+import marketSocket from '../../socket/market.socket';
+import TradeCandleChart from '../../components/trade/TradingChart';
+
+const SUPPORTED = ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT',
+  'ADAUSDT','DOGEUSDT','AVAXUSDT','DOTUSDT','MATICUSDT',
+  'LTCUSDT','LINKUSDT','UNIUSDT','ATOMUSDT','TRXUSDT'];
+
+const TIMEFRAMES = ['1m','5m','15m','30m','1h','4h','1d','1w'];
+
+// Map display timeframe → Binance interval
+const TF_MAP: Record<string, string> = {
+  '1m':'1m','5m':'5m','15m':'15m','30m':'30m',
+  '1h':'1h','4h':'4h','1d':'1d','1w':'1w',
+};
+
+// Interval duration in seconds (to bucket live trades into candles)
+const TF_SECONDS: Record<string, number> = {
+  '1m':60,'5m':300,'15m':900,'30m':1800,
+  '1h':3600,'4h':14400,'1d':86400,'1w':604800,
+};
+
+interface PricePayload {
+  symbol: string;
+  price: number;
+  tradeTime?: number;
+  timestamp?: number;
+}
 
 export default function TradePage() {
   const { pair } = useParams<{ pair: string }>();
-  const [activeTab, setActiveTab] = useState<"charts" | "trade" | "positions">(
-    "charts",
-  );
-  const [timeframe, setTimeframe] = useState("1h");
-  const [isLoading, setIsLoading] = useState(true);
+  const symbol = SUPPORTED.includes(pair?.toUpperCase() ?? '')
+    ? pair!.toUpperCase()
+    : 'BTCUSDT';
+  const ticker = symbol.replace('USDT', '');
 
-  // TODO: Replace with API calls
-  const currentPrice = 0;
-  const priceChange = 0;
-  const totalPortfolio = 0;
-  const availableBalance = 0;
+  const [activeTab, setActiveTab]   = useState<'charts' | 'trade' | 'positions'>('charts');
+  const [timeframe, setTimeframe]   = useState('1h');
+  const [candles, setCandles]       = useState<HistoryPoint[]>([]);
+  const [liveCandle, setLiveCandle] = useState<HistoryPoint | null>(null);
+  const [price, setPrice]           = useState<number | null>(null);
+  const [prevPrice, setPrevPrice]   = useState<number | null>(null);
+  const [change24h, setChange24h]   = useState<number>(0);
+  const [high24h, setHigh24h]       = useState<number>(0);
+  const [low24h, setLow24h]         = useState<number>(0);
+  const [volume24h, setVolume24h]   = useState<number>(0);
+  const [isLoading, setIsLoading]   = useState(true);
 
-  const holdings: Array<{ symbol: string; balance: number; usdValue: number }> =
-    [];
+  // ── Load klines + 24h overview ───────────────────────────────────────────
+  useEffect(() => {
+    setIsLoading(true);
+    setCandles([]);
+    setLiveCandle(null);
 
-  const timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
+    const load = async () => {
+      try {
+        const [klines, overview] = await Promise.allSettled([
+          marketApi.getMarketHistory(symbol, TF_MAP[timeframe], 200),
+          marketApi.getMarketOverview(),
+        ]);
 
-  // TODO: Replace with API call for candlestick data
-  const candlestickData: any[] = [];
+        if (klines.status === 'fulfilled') {
+          setCandles(klines.value);
+        }
+
+        if (overview.status === 'fulfilled') {
+          const row = overview.value.find(o => o.symbol === symbol);
+          if (row) {
+            setPrice(row.price);
+            setChange24h(row.change24h ?? 0);
+            setHigh24h((row as any).high24h ?? 0);
+            setLow24h((row as any).low24h ?? 0);
+            setVolume24h(row.volume24h ?? 0);
+          }
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [symbol, timeframe]);
+
+  // ── Live price + candle update via socket ────────────────────────────────
+  const liveCandleRef = useRef<HistoryPoint | null>(null);
+  const candlesRef    = useRef<HistoryPoint[]>([]);
+  candlesRef.current  = candles;
+
+  const priceHandlerRef = useRef<((p: PricePayload) => void) | undefined>(undefined);
+
+  priceHandlerRef.current = useCallback((payload: PricePayload) => {
+    if (payload.symbol !== symbol) return;
+
+    const ts    = payload.tradeTime ?? payload.timestamp ?? Date.now();
+    const tsSec = Math.floor(ts / 1000);
+    const tf    = TF_SECONDS[timeframe] ?? 60;
+    const bucketTime = Math.floor(tsSec / tf) * tf;
+    const p = payload.price;
+
+    setPrevPrice(prev => prev ?? p);
+    setPrice(prev => { setPrevPrice(prev); return p; });
+
+    // Update live (current) candle
+    setLiveCandle(prev => {
+      if (!prev || prev.time !== bucketTime) {
+        // New candle
+        const last = candlesRef.current[candlesRef.current.length - 1];
+        const open = last?.close ?? p;
+        const next: HistoryPoint = { time: bucketTime, open, high: p, low: p, close: p, volume: 0 };
+        liveCandleRef.current = next;
+        return next;
+      }
+      const updated: HistoryPoint = {
+        ...prev,
+        high:  Math.max(prev.high, p),
+        low:   Math.min(prev.low, p),
+        close: p,
+      };
+      liveCandleRef.current = updated;
+      return updated;
+    });
+  }, [symbol, timeframe]);
+
+  useEffect(() => {
+    const handler = (p: PricePayload) => priceHandlerRef.current?.(p);
+    const onConnect = () => marketSocket.emit('subscribe', symbol);
+
+    marketSocket.on('connect', onConnect);
+    marketSocket.on('price', handler);
+
+    if (!marketSocket.connected) {
+      marketSocket.connect();
+    } else {
+      onConnect();
+    }
+
+    return () => {
+      marketSocket.emit('unsubscribe', symbol);
+      marketSocket.off('connect', onConnect);
+      marketSocket.off('price', handler);
+    };
+  }, [symbol]);
+
+  const isUp = change24h >= 0;
+
+  const fmt = (n: number, decimals = 2) =>
+    n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+  const fmtVol = (v: number) => {
+    if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+    if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+    return `$${(v / 1e3).toFixed(2)}K`;
+  };
+
+  const priceWentUp = price !== null && prevPrice !== null && price >= prevPrice;
 
   return (
     <main className="trade-page">
-      {/* Top Section - Price & Portfolio */}
+
+      {/* ── Header ── */}
       <div className="trade-header">
         <div className="price-section">
           <div className="pair-info">
-            <h1 className="pair-name">BTCUSDT</h1>
-            <span className="price-badge positive">
-              <FaArrowUp /> {priceChange}%
+            <h1 className="pair-name">{ticker}/USDT</h1>
+            <span className={`price-badge ${isUp ? 'positive' : 'negative'}`}>
+              {isUp ? <FaArrowUp /> : <FaArrowDown />} {Math.abs(change24h).toFixed(2)}%
             </span>
           </div>
-          <div className="current-price">
-            ${currentPrice.toLocaleString()} USD
+          <div className="current-price" style={{ color: priceWentUp ? '#00C076' : '#FF4D4F', transition: 'color 0.3s' }}>
+            {price ? `$${fmt(price)}` : '—'}
           </div>
-          <div className="price-change">${priceChange} USD</div>
+          <div style={{ display: 'flex', gap: 24, marginTop: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, color: '#6B7280' }}>
+              24h High: <span style={{ color: '#00C076' }}>{high24h ? `$${fmt(high24h)}` : '—'}</span>
+            </span>
+            <span style={{ fontSize: 13, color: '#6B7280' }}>
+              24h Low: <span style={{ color: '#FF4D4F' }}>{low24h ? `$${fmt(low24h)}` : '—'}</span>
+            </span>
+            <span style={{ fontSize: 13, color: '#6B7280' }}>
+              Volume: <span style={{ color: '#E5E7EB' }}>{volume24h ? fmtVol(volume24h) : '—'}</span>
+            </span>
+          </div>
         </div>
 
         <div className="portfolio-section">
           <div className="portfolio-card">
-            <div className="portfolio-label">Total Portfolio</div>
-            <div className="portfolio-value">
-              ${totalPortfolio.toFixed(2)} USD
+            <div className="portfolio-label">Live Stream</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#00C076', boxShadow: '0 0 8px #00C076', display: 'inline-block' }} />
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>ACTIVE</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Holdings Section */}
-      <div className="holdings-section">
-        <h3 className="section-title">Your Holdings</h3>
-        <div className="holdings-list">
-          {holdings.map((holding, index) => (
-            <div key={index} className="holding-item">
-              <div className="holding-symbol">{holding.symbol}</div>
-              <div className="holding-details">
-                <div className="holding-balance">
-                  {holding.balance.toFixed(8)}
-                </div>
-                <div className="holding-usd">
-                  ${holding.usdValue.toFixed(2)} USD
-                </div>
-              </div>
-            </div>
-          ))}
-          <div className="holding-item more-holdings">
-            <span>+396 More</span>
-          </div>
-        </div>
-        <div className="available-balance">
-          <FaWallet className="balance-icon" />
-          <span>
-            Available to Trade: ${availableBalance.toFixed(2)} USD USDT
-          </span>
-        </div>
-      </div>
-
-      {/* Tabs */}
+      {/* ── Tabs ── */}
       <div className="trade-tabs">
-        <button
-          className={`tab ${activeTab === "charts" ? "active" : ""}`}
-          onClick={() => setActiveTab("charts")}
-        >
+        <button className={`tab ${activeTab === 'charts' ? 'active' : ''}`} onClick={() => setActiveTab('charts')}>
           <FaChartLine /> Charts
         </button>
-        <button
-          className={`tab ${activeTab === "trade" ? "active" : ""}`}
-          onClick={() => setActiveTab("trade")}
-        >
+        <button className={`tab ${activeTab === 'trade' ? 'active' : ''}`} onClick={() => setActiveTab('trade')}>
           Trade
         </button>
-        <button
-          className={`tab ${activeTab === "positions" ? "active" : ""}`}
-          onClick={() => setActiveTab("positions")}
-        >
+        <button className={`tab ${activeTab === 'positions' ? 'active' : ''}`} onClick={() => setActiveTab('positions')}>
           Positions
         </button>
       </div>
 
-      {/* Main Content */}
+      {/* ── Main Content ── */}
       <div className="trade-content">
-        {activeTab === "charts" && (
+        {activeTab === 'charts' && (
           <div className="charts-section">
-            <div className="market-info">
-              <p className="market-sentiment">
-                <span className="sentiment-badge bullish">BULLISH</span>
-                BTCUSDT is up {priceChange}% today. Market sentiment is bullish.
-              </p>
-            </div>
 
-            {/* Timeframe Selector */}
-            <div className="timeframe-selector">
-              {timeframes.map((tf) => (
+            {/* Timeframe selector */}
+            <div className="timeframe-selector" style={{ marginBottom: 16 }}>
+              {TIMEFRAMES.map(tf => (
                 <button
                   key={tf}
-                  className={`timeframe-btn ${timeframe === tf ? "active" : ""}`}
+                  className={`timeframe-btn ${timeframe === tf ? 'active' : ''}`}
                   onClick={() => setTimeframe(tf)}
                 >
                   {tf}
@@ -126,137 +227,51 @@ export default function TradePage() {
               ))}
             </div>
 
-            {/* Professional Trading Chart */}
+            {/* Chart header */}
             <div className="chart-container">
               <div className="chart-header">
                 <div className="chart-info">
-                  <span className="chart-pair">BTCUSDT</span>
-                  <span className="chart-price">
-                    ${currentPrice.toLocaleString()}
+                  <span className="chart-pair">{ticker}/USDT</span>
+                  <span className="chart-price" style={{ color: priceWentUp ? '#00C076' : '#FF4D4F' }}>
+                    {price ? `$${fmt(price)}` : '—'}
                   </span>
                 </div>
+                <div style={{ fontSize: 12, color: '#6B7280' }}>
+                  {timeframe} · Candlestick · Binance Live
+                </div>
               </div>
-              <svg
-                className="trading-chart"
-                viewBox="0 0 1000 400"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* Grid lines */}
-                <g className="grid-lines">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <line
-                      key={`h-${i}`}
-                      x1="50"
-                      y1={50 + i * 75}
-                      x2="950"
-                      y2={50 + i * 75}
-                      stroke="#2a2a2a"
-                      strokeWidth="1"
-                    />
-                  ))}
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                    <line
-                      key={`v-${i}`}
-                      x1={50 + i * 100}
-                      y1="50"
-                      x2={50 + i * 100}
-                      y2="350"
-                      stroke="#2a2a2a"
-                      strokeWidth="1"
-                    />
-                  ))}
-                </g>
 
-                {/* Candlesticks */}
-                <g className="candlesticks">
-                  {candlestickData.map((candle, index) => {
-                    const x = 60 + index * 18;
-                    const yScale = 300 / 15000;
-                    const yOffset = 350;
-
-                    const openY = yOffset - (candle.open - 65000) * yScale;
-                    const closeY = yOffset - (candle.close - 65000) * yScale;
-                    const highY = yOffset - (candle.high - 65000) * yScale;
-                    const lowY = yOffset - (candle.low - 65000) * yScale;
-
-                    const isGreen = candle.close > candle.open;
-                    const color = isGreen ? "#24C576" : "#E53935";
-
-                    return (
-                      <g key={index}>
-                        {/* Wick */}
-                        <line
-                          x1={x}
-                          y1={highY}
-                          x2={x}
-                          y2={lowY}
-                          stroke={color}
-                          strokeWidth="1"
-                        />
-                        {/* Body */}
-                        <rect
-                          x={x - 6}
-                          y={Math.min(openY, closeY)}
-                          width="12"
-                          height={Math.abs(closeY - openY) || 1}
-                          fill={color}
-                        />
-                      </g>
-                    );
-                  })}
-                </g>
-
-                {/* Y-axis labels */}
-                <g className="y-axis">
-                  {[68000, 70000, 72000, 74000, 76000].map((price, i) => (
-                    <text
-                      key={i}
-                      x="40"
-                      y={350 - i * 75}
-                      fill="#888"
-                      fontSize="12"
-                      textAnchor="end"
-                    >
-                      {price.toLocaleString()}
-                    </text>
-                  ))}
-                </g>
-              </svg>
+              {/* REAL CANDLESTICK CHART */}
+              <TradeCandleChart
+                data={candles}
+                symbol={symbol}
+                liveCandle={liveCandle}
+              />
             </div>
 
             {/* Quick Trade */}
             <div className="quick-trade-section">
-              <h3 className="quick-trade-title">
-                Quick Trade - Start with 10% of your balance
-              </h3>
+              <h3 className="quick-trade-title">Quick Trade</h3>
               <div className="quick-trade-buttons">
                 <button className="quick-trade-btn buy">
                   <span className="btn-label">BUY</span>
-                  <span className="btn-subtitle">(Higher)</span>
+                  <span className="btn-subtitle">Long / Higher</span>
                 </button>
                 <button className="quick-trade-btn sell">
                   <span className="btn-label">SELL</span>
-                  <span className="btn-subtitle">(Lower)</span>
+                  <span className="btn-subtitle">Short / Lower</span>
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === "trade" && (
-          <div className="trade-section">
-            <p className="tab-placeholder">
-              Advanced trading interface coming soon
-            </p>
-          </div>
+        {activeTab === 'trade' && (
+          <div className="tab-placeholder">Advanced trading interface coming soon</div>
         )}
 
-        {activeTab === "positions" && (
-          <div className="positions-section">
-            <p className="tab-placeholder">
-              Your open positions will appear here
-            </p>
-          </div>
+        {activeTab === 'positions' && (
+          <div className="tab-placeholder">Your open positions will appear here</div>
         )}
       </div>
     </main>

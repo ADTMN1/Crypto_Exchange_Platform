@@ -21,9 +21,9 @@ const getRequestIp = (req) => {
 };
 
 const auditController = {
-    auditingSave: async (reqOrIp, action, entityType, entityId = null, metadata = null) => {
+    auditingSave: async (reqOrIp, action, entityType, entityId = null, metadata = null, explicitUserId = null) => {
         // Support two calling conventions:
-        // 1) auditingSave(req, action, entityType, entityId, metadata)
+        // 1) auditingSave(req, action, entityType, entityId, metadata, explicitUserId)
         // 2) auditingSave(ipAddressString, action, entityType, entityId, metadata)
         if (!action || !entityType) {
             throw new AppError('Audit save requires action and entity type', 400);
@@ -37,7 +37,8 @@ const auditController = {
             req = reqOrIp;
         }
 
-        const userId = req?.user?.id || null;
+        // Use explicitly passed userId first, then fall back to req.user.id (for authenticated routes)
+        const userId = explicitUserId || req?.user?.id || null;
         const ipAddress = explicitIp || getRequestIp(req);
 
         return await auditService.createAudit({
