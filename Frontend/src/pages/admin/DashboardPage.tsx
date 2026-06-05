@@ -33,6 +33,7 @@ import {
   FaRocket,
   FaShieldAlt,
   FaUserCircle,
+  FaHistory,
 } from "react-icons/fa";
 
 const menuItems = [
@@ -42,7 +43,10 @@ const menuItems = [
     path: "/admin/trade-management",
     icon: FaChartLine,
     children: [
-      { label: "Binary Control", path: "/admin/trade-management/binary-control" },
+      {
+        label: "Binary Control",
+        path: "/admin/trade-management/binary-control",
+      },
       { label: "Spot Control", path: "/admin/trade-management/spot-control" },
     ],
   },
@@ -85,7 +89,10 @@ const menuItems = [
     path: "/admin/manage-currency",
     icon: FaDollarSign,
     children: [
-      { label: "Crypto Currency", path: "/admin/manage-currency/crypto-currency" },
+      {
+        label: "Crypto Currency",
+        path: "/admin/manage-currency/crypto-currency",
+      },
       { label: "Fiat Currency", path: "/admin/manage-currency/fiat-currency" },
     ],
   },
@@ -106,7 +113,11 @@ const menuItems = [
       { label: "Send Notification", path: "/admin/users/send-notification" },
     ],
   },
-  { label: "Manage Referral", path: "/admin/manage-referral", icon: FaUserFriends },
+  {
+    label: "Manage Referral",
+    path: "/admin/manage-referral",
+    icon: FaUserFriends,
+  },
   {
     label: "Deposits",
     path: "/admin/deposits",
@@ -114,9 +125,15 @@ const menuItems = [
     children: [
       { label: "Pending Deposits", path: "/admin/deposits/pending-deposits" },
       { label: "Approved Deposits", path: "/admin/deposits/approved-deposits" },
-      { label: "Successful Deposits", path: "/admin/deposits/successful-deposits" },
+      {
+        label: "Successful Deposits",
+        path: "/admin/deposits/successful-deposits",
+      },
       { label: "Rejected Deposits", path: "/admin/deposits/rejected-deposits" },
-      { label: "Initiated Deposits", path: "/admin/deposits/initiated-deposits" },
+      {
+        label: "Initiated Deposits",
+        path: "/admin/deposits/initiated-deposits",
+      },
       { label: "All Deposits", path: "/admin/deposits" },
     ],
   },
@@ -125,9 +142,18 @@ const menuItems = [
     path: "/admin/withdrawals",
     icon: FaMoneyBillWave,
     children: [
-      { label: "Pending Withdrawals", path: "/admin/withdrawals/pending-withdrawals" },
-      { label: "Approved Withdrawals", path: "/admin/withdrawals/approved-withdrawals" },
-      { label: "Rejected Withdrawals", path: "/admin/withdrawals/rejected-withdrawals" },
+      {
+        label: "Pending Withdrawals",
+        path: "/admin/withdrawals/pending-withdrawals",
+      },
+      {
+        label: "Approved Withdrawals",
+        path: "/admin/withdrawals/approved-withdrawals",
+      },
+      {
+        label: "Rejected Withdrawals",
+        path: "/admin/withdrawals/rejected-withdrawals",
+      },
       { label: "All Withdrawals", path: "/admin/withdrawals" },
     ],
   },
@@ -138,15 +164,27 @@ const menuItems = [
     children: [
       { label: "Pending Ticket", path: "/admin/support-ticket/pending-ticket" },
       { label: "Closed Ticket", path: "/admin/support-ticket/closed-ticket" },
-      { label: "Answered Ticket", path: "/admin/support-ticket/answered-ticket" },
+      {
+        label: "Answered Ticket",
+        path: "/admin/support-ticket/answered-ticket",
+      },
       { label: "All Ticket", path: "/admin/support-ticket" },
     ],
   },
 
   { label: "Report", path: "/admin/report", icon: FaFileAlt },
-  { label: "Transaction History", path: "/admin/transaction-history", icon: FaClipboard },
+  {
+    label: "Transaction History",
+    path: "/admin/transaction-history",
+    icon: FaClipboard,
+  },
   { label: "Login History", path: "/admin/login-history", icon: FaUser },
-  { label: "Notification History", path: "/admin/notification-history", icon: FaBell },
+  { label: "Audit Log", path: "/admin/audit", icon: FaHistory },
+  {
+    label: "Notification History",
+    path: "/admin/notification-history",
+    icon: FaBell,
+  },
   { label: "Subscribers", path: "/admin/subscribers", icon: FaBell },
   { label: "System Setting", path: "/admin/system-settings", icon: FaCog },
   {
@@ -160,7 +198,11 @@ const menuItems = [
       { label: "Update", path: "/admin/extra/update" },
     ],
   },
-  { label: "Report & Request", path: "/admin/report-request", icon: FaClipboard },
+  {
+    label: "Report & Request",
+    path: "/admin/report-request",
+    icon: FaClipboard,
+  },
 ];
 
 export default function AdminOverviewPage() {

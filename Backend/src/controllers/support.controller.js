@@ -1,4 +1,5 @@
 import pool, { query } from '../config/db.config.js';
+import auditController from './audit.controller.js';
 
 const SupportController = {
     /**
@@ -37,7 +38,7 @@ const SupportController = {
             // TODO: Send email notification to support team
             // TODO: Send confirmation email to user
 
-            return res.status(201).json({
+            res.status(201).json({
                 success: true,
                 message: 'Support ticket created successfully',
                 data: {
@@ -46,6 +47,9 @@ const SupportController = {
                     createdAt: ticket.created_at
                 }
             });
+            auditController.auditingSave(req, 'Created support ticket', 'support_ticket', ticket.id, { category, subject })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Create ticket error:', error);
             next(error);
@@ -89,7 +93,7 @@ const SupportController = {
                 [userId]
             );
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 data: result.rows,
                 pagination: {
@@ -98,6 +102,9 @@ const SupportController = {
                     offset: parseInt(offset)
                 }
             });
+            auditController.auditingSave(req, 'Viewed support tickets', 'support_ticket', null, { limit, offset, status })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Get user tickets error:', error);
             next(error);
@@ -137,10 +144,13 @@ const SupportController = {
                 throw error;
             }
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 data: ticket
             });
+            auditController.auditingSave(req, 'Viewed support ticket', 'support_ticket', ticket.id)
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Get ticket error:', error);
             next(error);

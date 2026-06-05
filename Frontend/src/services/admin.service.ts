@@ -37,10 +37,37 @@ export interface AdminActionResponse {
   message: string;
 }
 
+export interface AuditLog {
+  id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  ip_address: string | null;
+  metadata: any;
+  created_at: string;
+  user_name?: string;
+  user_email?: string;
+}
+
+export interface AdminAuditLogsResponse {
+  success: boolean;
+  page: number;
+  limit: number;
+  totalCount: number;
+  data: AuditLog[];
+}
+
 export interface GetUsersParams {
   page?: number;
   limit?: number;
   status?: 'pending' | 'active' | 'suspended' | 'banned';
+  search?: string;
+}
+
+export interface GetAuditLogsParams {
+  page?: number;
+  limit?: number;
   search?: string;
 }
 
@@ -112,6 +139,13 @@ const adminService = {
    */
   async deleteUser(userId: string): Promise<AdminActionResponse> {
     const response = await api.delete<AdminActionResponse>(API_ENDPOINTS.ADMIN.DELETE_USER(userId));
+    return response.data;
+  },
+
+  async getAuditLogs(params: GetAuditLogsParams = {}): Promise<AdminAuditLogsResponse> {
+    const response = await api.get<AdminAuditLogsResponse>(API_ENDPOINTS.ADMIN.AUDIT_LOGS, {
+      params,
+    });
     return response.data;
   },
 };

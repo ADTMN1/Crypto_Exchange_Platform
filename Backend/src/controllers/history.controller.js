@@ -1,4 +1,5 @@
 import { query } from '../config/db.config.js';
+import auditController from './audit.controller.js';
 
 const HistoryController = {
     /**
@@ -55,7 +56,7 @@ const HistoryController = {
                 [userId]
             );
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 data: result.rows,
                 pagination: {
@@ -64,6 +65,9 @@ const HistoryController = {
                     offset: parseInt(offset),
                 }
             });
+            auditController.auditingSave(req, 'Viewed transactions', 'history', null, { type, status, limit, offset })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Get transactions error:', error);
             next(error);
@@ -125,7 +129,7 @@ const HistoryController = {
                 [userId]
             );
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 data: result.rows,
                 pagination: {
@@ -134,6 +138,9 @@ const HistoryController = {
                     offset: parseInt(offset),
                 }
             });
+            auditController.auditingSave(req, 'Viewed trades', 'history', null, { pair, limit, offset })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Get trades error:', error);
             next(error);
@@ -202,7 +209,7 @@ const HistoryController = {
                 [userId]
             );
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 data: result.rows,
                 pagination: {
@@ -211,6 +218,9 @@ const HistoryController = {
                     offset: parseInt(offset),
                 }
             });
+            auditController.auditingSave(req, 'Viewed orders', 'history', null, { status, pair, limit, offset })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Get orders error:', error);
             next(error);
@@ -249,7 +259,7 @@ const HistoryController = {
                 [userId]
             );
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 data: {
                     transactions: transactionsCount.rows,
@@ -258,6 +268,9 @@ const HistoryController = {
                     totalVolume30d: volumeResult.rows[0]?.total_volume || '0',
                 }
             });
+            auditController.auditingSave(req, 'Viewed history summary', 'history', req.user.id)
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Get history summary error:', error);
             next(error);
