@@ -5,6 +5,7 @@ import AdminRoute from "./AdminRoute";
 import { useAuthStore } from "../store";
 import HomePage from "../pages/public/HomePage";
 import MarketsPage from "../pages/public/MarketsPage";
+import MarketDashboardPage from "../pages/public/MarketDashboardPage";
 import SupportPage from "../pages/public/SupportPage";
 import NotFoundPage from "../pages/public/NotFoundPage";
 import LoginPage from "../pages/auth/LoginPage";
@@ -334,7 +335,10 @@ const adminSectionRoutes = [
 
 function RootRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
+
+  if (isLoading) return null;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -363,6 +367,7 @@ export default function Router() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/markets" element={<MarketsPage />} />
+        <Route path="/market-dashboard" element={<MarketDashboardPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/trade/:pair" element={<TradePage />} />
         <Route path="/trade" element={<TradePage />} />

@@ -1,4 +1,4 @@
-import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt } from 'react-icons/fa'
+import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaBolt } from 'react-icons/fa'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store'
 
@@ -35,6 +35,10 @@ function Sidebar() {
           <Link to="/markets" className="nav-item">
             <FaChartBar style={iconStyle} className="nav-icon" />
             Markets
+          </Link>
+          <Link to="/market-dashboard" className="nav-item">
+            <FaBolt style={iconStyle} className="nav-icon" />
+            Live Chart
           </Link>
           <Link to="/trade" className="nav-item">
             <FaChartLine style={iconStyle} className="nav-icon" />

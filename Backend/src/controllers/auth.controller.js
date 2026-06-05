@@ -29,7 +29,7 @@ const AuthController = {
                 message: 'User registered successfully.',
                 data: newUser
             });
-            auditController.auditingSave(req, 'User registered', 'user', newUser.id, { email: newUser.email, username: newUser.username })
+            auditController.auditingSave(req, 'User registered', 'user', newUser.id, { email: newUser.email, username: newUser.username }, newUser.id)
                 .catch((err) => console.error('Audit save failed:', err));
             return;
         } catch (error) {
@@ -73,7 +73,7 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
                 user: userMetadata
 
             });
-            auditController.auditingSave(req, 'User login', 'user', userMetadata.id, { email: userMetadata.email })
+            auditController.auditingSave(req, 'User login', 'user', userMetadata.id, { email: userMetadata.email }, userMetadata.id)
                 .catch((err) => console.error('Audit save failed:', err));
             return;
         } catch (error) {
@@ -112,8 +112,8 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
             const userMetadata = await authService.googleLogin(email, name, googleId, picture);
 
             // 4. Generate tokens
-            const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.username);
-            const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.username);
+            const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.role);
+            const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.role);
 
             const cookieOptions = {
                 httpOnly: true,
@@ -132,7 +132,7 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
                 accessToken,
                 refreshToken: refre_shToken
             });
-            auditController.auditingSave(req, 'Google OAuth login', 'user', userMetadata.id, { provider: 'google', email: userMetadata.email })
+            auditController.auditingSave(req, 'Google OAuth login', 'user', userMetadata.id, { provider: 'google', email: userMetadata.email }, userMetadata.id)
                 .catch((err) => console.error('Audit save failed:', err));
             return;
         } catch (error) {
@@ -204,7 +204,7 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
                 message: 'Token refreshed successfully',
                 accessToken: newAccessToken
             });
-            auditController.auditingSave(req, 'Access token refreshed', 'session', decoded?.id || null, { email: decoded?.email })
+            auditController.auditingSave(req, 'Access token refreshed', 'session', decoded?.id || null, { email: decoded?.email }, decoded?.id || null)
                 .catch((err) => console.error('Audit save failed:', err));
             return;
         } catch (error) {

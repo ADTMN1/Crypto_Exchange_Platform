@@ -13,7 +13,8 @@ const API_CONFIG = {
 // Create axios instance
 const api: AxiosInstance = axios.create(API_CONFIG)
 
-// Request interceptor - Add auth token to requests
+// Request interceptor - Add auth token to requests if available in localStorage
+// Note: backend also reads httpOnly cookie automatically via withCredentials
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -22,44 +23,42 @@ api.interceptors.request.use(
     }
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
-// Response interceptor - Handle token refresh and errors
+// Response interceptor - handle expired access token by refreshing
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
 
-    // Handle 401 Unauthorized or 403 Forbidden - Token expired
-    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
+    // Only attempt refresh on 401 — 403 means forbidden (e.g. not admin), not expired token
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (refreshToken) {
-          const response = await axios.post(`${API_CONFIG.baseURL.replace('/api', '')}/api/auth/refresh-token`, {
-            refreshToken,
-          }, {
-            withCredentials: true
-          })
-          
-          const { accessToken } = response.data
-          localStorage.setItem('token', accessToken)
-          
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`
-          return api(originalRequest)
-        }
-      } catch (refreshError) {
-        // Refresh failed - logout user
+        const storedRefreshToken = localStorage.getItem('refreshToken')
+
+        // Call refresh — backend reads cookie OR body refreshToken, returns new accessToken in body
+        const refreshResponse = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/refresh-token`,
+          storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
+          { withCredentials: true }
+        )
+
+        const newAccessToken = refreshResponse.data?.accessToken
+        if (!newAccessToken) throw new Error('No access token returned from refresh')
+
+        // Persist new token and retry
+        localStorage.setItem('token', newAccessToken)
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        return api(originalRequest)
+      } catch {
+        // Refresh failed — clear everything and send to login
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         window.location.href = '/login'
-        return Promise.reject(refreshError)
       }
     }
 

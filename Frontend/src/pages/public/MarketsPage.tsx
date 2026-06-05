@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSearch, FaStar, FaArrowUp, FaArrowDown, FaChartLine, FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon } from 'react-icons/si';
+import marketApi from '../../services/market.api';
+import marketSocket from '../../socket/market.socket';
 
 interface Market {
   id: string;
@@ -25,113 +27,45 @@ export default function MarketsPage() {
   const [sortBy, setSortBy] = useState<'volume' | 'change' | 'price'>('volume');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data - Replace with API call
+  // ── Load real 24h data from Binance via backend ──────────────────────────
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockMarkets: Market[] = [
-        {
-          id: '1',
-          symbol: 'BTCUSDT',
-          baseCurrency: 'BTC',
-          quoteCurrency: 'USDT',
-          lastPrice: 73405.92,
-          change24h: 4.34,
-          high24h: 75200.00,
-          low24h: 70100.00,
-          volume24h: 28547892345.67,
-          isFavorite: true,
-        },
-        {
-          id: '2',
-          symbol: 'ETHUSDT',
-          baseCurrency: 'ETH',
-          quoteCurrency: 'USDT',
-          lastPrice: 4125.45,
-          change24h: 2.87,
-          high24h: 4250.00,
-          low24h: 4010.00,
-          volume24h: 12456789123.45,
-          isFavorite: false,
-        },
-        {
-          id: '3',
-          symbol: 'BNBUSDT',
-          baseCurrency: 'BNB',
-          quoteCurrency: 'USDT',
-          lastPrice: 612.34,
-          change24h: -1.23,
-          high24h: 625.00,
-          low24h: 605.00,
-          volume24h: 3456789012.34,
-          isFavorite: true,
-        },
-        {
-          id: '4',
-          symbol: 'SOLUSDT',
-          baseCurrency: 'SOL',
-          quoteCurrency: 'USDT',
-          lastPrice: 178.92,
-          change24h: 5.67,
-          high24h: 182.50,
-          low24h: 168.00,
-          volume24h: 2345678901.23,
-          isFavorite: false,
-        },
-        {
-          id: '5',
-          symbol: 'XRPUSDT',
-          baseCurrency: 'XRP',
-          quoteCurrency: 'USDT',
-          lastPrice: 0.6234,
-          change24h: -2.45,
-          high24h: 0.6450,
-          low24h: 0.6100,
-          volume24h: 1234567890.12,
-          isFavorite: false,
-        },
-        {
-          id: '6',
-          symbol: 'ADAUSDT',
-          baseCurrency: 'ADA',
-          quoteCurrency: 'USDT',
-          lastPrice: 0.5678,
-          change24h: 1.89,
-          high24h: 0.5800,
-          low24h: 0.5550,
-          volume24h: 987654321.09,
-          isFavorite: false,
-        },
-        {
-          id: '7',
-          symbol: 'DOGEUSDT',
-          baseCurrency: 'DOGE',
-          quoteCurrency: 'USDT',
-          lastPrice: 0.1234,
-          change24h: 3.21,
-          high24h: 0.1280,
-          low24h: 0.1190,
-          volume24h: 876543210.98,
-          isFavorite: true,
-        },
-        {
-          id: '8',
-          symbol: 'MATICUSDT',
-          baseCurrency: 'MATIC',
-          quoteCurrency: 'USDT',
-          lastPrice: 0.8912,
-          change24h: -0.87,
-          high24h: 0.9100,
-          low24h: 0.8800,
-          volume24h: 765432109.87,
-          isFavorite: false,
-        },
-      ];
-      setMarkets(mockMarkets);
-      setFilteredMarkets(mockMarkets);
+    marketApi.getMarketOverview().then((overview) => {
+      const loaded: Market[] = overview.map((item, idx) => ({
+        id:            String(idx + 1),
+        symbol:        item.symbol,
+        baseCurrency:  item.symbol.replace('USDT', ''),
+        quoteCurrency: 'USDT',
+        lastPrice:     item.price,
+        change24h:     item.change24h  ?? 0,
+        high24h:       (item as any).high24h   ?? 0,
+        low24h:        (item as any).low24h    ?? 0,
+        volume24h:     item.volume24h  ?? 0,
+        isFavorite:    false,
+      }));
+      setMarkets(loaded);
+      setFilteredMarkets(loaded);
       setIsLoading(false);
-    }, 1000);
+    }).catch(() => setIsLoading(false));
   }, []);
+
+  // ── Live price updates from root namespace "market:price_update" ──────────
+  const marketsRef = useRef<Market[]>([]);
+  marketsRef.current = markets;
+
+  useEffect(() => {
+    if (markets.length === 0) return;
+
+    const handler = (payload: { symbol: string; price: number }) => {
+      setMarkets(prev =>
+        prev.map(m => m.symbol === payload.symbol ? { ...m, lastPrice: payload.price } : m)
+      );
+    };
+
+    marketSocket.on('market:price_update', handler);
+    if (!marketSocket.connected) marketSocket.connect();
+
+    return () => { marketSocket.off('market:price_update', handler); };
+  }, [markets.length > 0]);
 
   // Filter and search
   useEffect(() => {
@@ -231,7 +165,7 @@ export default function MarketsPage() {
   };
 
   const getCryptoIcon = (symbol: string) => {
-    const iconMap: { [key: string]: JSX.Element } = {
+    const iconMap: { [key: string]: ReactElement } = {
       'BTC': <FaBitcoin style={{ color: '#F7931A' }} />,
       'ETH': <FaEthereum style={{ color: '#627EEA' }} />,
       'BNB': <SiBinance style={{ color: '#F3BA2F' }} />,
