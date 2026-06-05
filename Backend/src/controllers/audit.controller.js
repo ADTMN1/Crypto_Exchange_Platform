@@ -1,0 +1,97 @@
+import AppError from '../utils/errorHandling.js';
+import auditService from '../services/audit.service.js';
+
+const getRequestIp = (req) => {
+    if (!req || typeof req !== 'object') return null;
+
+    const forwarded = req.headers?.['x-forwarded-for'];
+    if (forwarded) {
+        const firstIp = forwarded.split(',')[0].trim();
+        if (firstIp) return firstIp;
+    }
+
+    const realIp = req.headers?.['x-real-ip'];
+    if (realIp) return realIp;
+
+    if (req.ip) return req.ip;
+    if (req.socket?.remoteAddress) return req.socket.remoteAddress;
+    if (req.connection?.remoteAddress) return req.connection.remoteAddress;
+
+    return null;
+};
+
+const auditController = {
+    auditingSave: async (reqOrIp, action, entityType, entityId = null, metadata = null) => {
+        // Support two calling conventions:
+        // 1) auditingSave(req, action, entityType, entityId, metadata)
+        // 2) auditingSave(ipAddressString, action, entityType, entityId, metadata)
+        if (!action || !entityType) {
+            throw new AppError('Audit save requires action and entity type', 400);
+        }
+
+        let req = null;
+        let explicitIp = null;
+        if (typeof reqOrIp === 'string') {
+            explicitIp = reqOrIp;
+        } else if (reqOrIp && typeof reqOrIp === 'object') {
+            req = reqOrIp;
+        }
+
+        const userId = req?.user?.id || null;
+        const ipAddress = explicitIp || getRequestIp(req);
+
+        return await auditService.createAudit({
+            userId,
+            action,
+            entityType,
+            entityId,
+            metadata,
+            ipAddress,
+        });
+    },
+
+    auditingFetch: async (req, res, next) => {
+        try {
+            const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+            const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+            const isAdmin = req.user?.role === 'admin';
+
+            // If the request includes an explicit `userId` query parameter, use it (allow null/empty).
+            // If not provided and the requester is an admin, allow `requestedUserId` to be null
+            // so the service will return all audit logs. For non-admins default to the
+            // requesting user's id to restrict access to their own logs.
+            const requestedUserId = Object.prototype.hasOwnProperty.call(req.query, 'userId')
+                ? (req.query.userId || null)
+                : (isAdmin ? null : req.user?.id);
+
+            const search = req.query.search?.toString().trim() || null;
+
+            if (!isAdmin && requestedUserId !== req.user?.id) {
+                throw new AppError('Not authorized to view other users audit logs', 403);
+            }
+
+            const { audits, totalCount } = await auditService.getAudits({
+                page,
+                pageSize: limit,
+                userId: requestedUserId,
+                isAdmin,
+                search,
+            });
+
+            const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+
+            return res.status(200).json({
+                success: true,
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                data: audits,
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+};
+
+export default auditController;

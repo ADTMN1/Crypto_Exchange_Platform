@@ -1,5 +1,6 @@
 import authService from '../services/auth.service.js';
 import AppError from '../utils/errorHandling.js';
+import auditController from './audit.controller.js';
 import { generateToken, refreshToken } from '../utils/generateToken.js';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -23,11 +24,14 @@ const AuthController = {
                 throw new AppError('Registration failed. Please try again.', 400);
             }
             
-            return res.status(201).json({
+            res.status(201).json({
                 success: true,
                 message: 'User registered successfully.',
                 data: newUser
             });
+            auditController.auditingSave(req, 'User registered', 'user', newUser.id, { email: newUser.email, username: newUser.username })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             next(error); // Bubbles error up to central error handling middleware in app.js
         }
@@ -63,12 +67,15 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
    res.cookie("refreshToken", refre_shToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 message: 'Login successful.',
                 user: userMetadata
 
             });
+            auditController.auditingSave(req, 'User login', 'user', userMetadata.id, { email: userMetadata.email })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             next(error);
         }
@@ -118,13 +125,16 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
             res.cookie("token", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
             res.cookie("refreshToken", refre_shToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 message: 'Google login successful.',
                 user: userMetadata,
                 accessToken,
                 refreshToken: refre_shToken
             });
+            auditController.auditingSave(req, 'Google OAuth login', 'user', userMetadata.id, { provider: 'google', email: userMetadata.email })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Google login error:', error);
             next(error);
@@ -147,10 +157,13 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
                 sameSite: 'strict'
             });
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 message: 'Logged out successfully.'
             });
+            auditController.auditingSave(req, 'User logout', 'session', req.user?.id || null)
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             next(error);
         }
@@ -186,11 +199,14 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
             // Set new access token cookie
             res.cookie("token", newAccessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
 
-            return res.status(200).json({
+            res.status(200).json({
                 success: true,
                 message: 'Token refreshed successfully',
                 accessToken: newAccessToken
             });
+            auditController.auditingSave(req, 'Access token refreshed', 'session', decoded?.id || null, { email: decoded?.email })
+                .catch((err) => console.error('Audit save failed:', err));
+            return;
         } catch (error) {
             console.error('Token refresh error:', error);
             if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
