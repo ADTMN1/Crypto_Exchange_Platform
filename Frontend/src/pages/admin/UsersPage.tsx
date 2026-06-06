@@ -1,23 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import adminService, { AdminUser } from '../../services/admin.service';
 import { toast } from 'sonner';
+import UserActionMenu from '../../components/admin/UserActionMenu';
 
 export default function AdminUsersPage() {
-  const navigate = useNavigate();
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [users, setUsers]         = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [totalUsers, setTotalUsers]   = useState(0);
+  const [error, setError]             = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await adminService.getAllUsers({
-        page: 1,
-        limit: 20,
+        page: 1, limit: 20,
         search: searchQuery || undefined,
       });
       setUsers(response.data.users);
@@ -31,9 +29,7 @@ export default function AdminUsersPage() {
     }
   }, [searchQuery]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   // Debounced search
   useEffect(() => {
@@ -41,20 +37,26 @@ export default function AdminUsersPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('en-US', {
+  const handleUpdated = useCallback((userId: string, changes: Partial<AdminUser>) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...changes } : u));
+  }, []);
+
+  const handleDeleted = useCallback((userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    setTotalUsers(prev => prev - 1);
+  }, []);
+
+  const formatDate = (dateString: string) =>
+    new Intl.DateTimeFormat('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     }).format(new Date(dateString));
-  };
 
   const getStatusBadge = (status: AdminUser['account_status'] | null | undefined) => {
     const s = status ?? 'pending';
     const map: Record<string, string> = {
-      active: 'nex-badge-success',
-      pending: 'nex-badge-warning',
-      suspended: 'nex-badge-orange',
-      banned: 'nex-badge-danger',
+      active: 'nex-badge-success', pending: 'nex-badge-warning',
+      suspended: 'nex-badge-orange', banned: 'nex-badge-danger',
     };
     return (
       <span className={`nex-badge ${map[s] ?? 'nex-badge-warning'}`}>
@@ -107,7 +109,7 @@ export default function AdminUsersPage() {
 
           {isLoading ? (
             <div className="nex-loading">
-              <div className="nex-spinner"></div>
+              <div className="nex-spinner" />
               <p>Loading users...</p>
             </div>
           ) : (
@@ -152,39 +154,27 @@ export default function AdminUsersPage() {
                         </td>
                         <td>
                           <div>{user.email}</div>
-                          {user.phone_number && (
-                            <div className="nex-table-meta">{user.phone_number}</div>
-                          )}
+                          {user.phone_number && <div className="nex-table-meta">{user.phone_number}</div>}
                         </td>
                         <td>{getRoleBadge(user.role)}</td>
                         <td>{getStatusBadge(user.account_status)}</td>
                         <td>
                           <div className="nex-verification-badges">
-                            {user.email_verified && (
-                              <span className="nex-badge nex-badge-xs nex-badge-success">✓ Email</span>
-                            )}
-                            {user.phone_verified && (
-                              <span className="nex-badge nex-badge-xs nex-badge-success">✓ Phone</span>
-                            )}
-                            {user.two_fa_enabled && (
-                              <span className="nex-badge nex-badge-xs nex-badge-info">🔒 2FA</span>
-                            )}
+                            {user.email_verified  && <span className="nex-badge nex-badge-xs nex-badge-success">✓ Email</span>}
+                            {user.phone_verified  && <span className="nex-badge nex-badge-xs nex-badge-success">✓ Phone</span>}
+                            {user.two_fa_enabled  && <span className="nex-badge nex-badge-xs nex-badge-info">🔒 2FA</span>}
                           </div>
                         </td>
                         <td>
                           <div>{formatDate(user.created_at)}</div>
-                          {user.last_login_at && (
-                            <div className="nex-table-meta">Last: {formatDate(user.last_login_at)}</div>
-                          )}
+                          {user.last_login_at && <div className="nex-table-meta">Last: {formatDate(user.last_login_at)}</div>}
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            className="btn-outline"
-                            onClick={() => navigate(`/admin/users/${user.id}`)}
-                          >
-                            Details
-                          </button>
+                          <UserActionMenu
+                            user={user}
+                            onUpdated={handleUpdated}
+                            onDeleted={handleDeleted}
+                          />
                         </td>
                       </tr>
                     ))
