@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import adminService, { AdminUser } from '../../services/admin.service';
 import { toast } from 'sonner';
+import UserActionMenu from '../../components/admin/UserActionMenu';
+import notificationService from '../../services/notification.service';
 
 interface ManageUsersPageProps {
   title: string;
@@ -9,14 +10,43 @@ interface ManageUsersPageProps {
 }
 
 export default function AdminManageUsersPage({ title, description }: ManageUsersPageProps) {
-  const navigate = useNavigate();
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers]             = useState<AdminUser[]>([]);
+  const [isLoading, setIsLoading]     = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
+  const [totalUsers, setTotalUsers]   = useState(0);
+  const [error, setError]             = useState<string | null>(null);
   const isNotification = title === 'Send Notification';
+
+  const [notifForm, setNotifForm] = useState({
+    target:  'all',
+    type:    'info',
+    title_:  '',
+    body:    '',
+  });
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  const handleNotifSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notifForm.title_.trim() || !notifForm.body.trim()) {
+      toast.error('Title and message are required.');
+      return;
+    }
+    setNotifLoading(true);
+    try {
+      const payload = { type: notifForm.type, title: notifForm.title_, body: notifForm.body };
+      if (notifForm.target === 'all') {
+        await notificationService.sendToAll(payload);
+      } else {
+        await notificationService.sendByStatus({ ...payload, status: notifForm.target });
+      }
+      toast.success('Notification sent successfully.');
+      setNotifForm({ target: 'all', type: 'info', title_: '', body: '' });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to send notification.');
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
   // Determine which API call to make based on page title
   const getUserFilterType = (): 'all' | 'active' | 'banned' | 'email-unverified' | 'phone-unverified' => {
@@ -115,6 +145,15 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const handleUpdated = useCallback((userId: string, changes: Partial<AdminUser>) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...changes } : u));
+  }, []);
+
+  const handleDeleted = useCallback((userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    setTotalUsers(prev => prev - 1);
+  }, []);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
@@ -157,26 +196,59 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
         <section className="nex-section-body">
           <div className="nex-card nex-card-form">
             <h2>Send Notification</h2>
-            <p>Send a broadcast message to selected users or all users.</p>
-            <form className="nex-form-grid">
+            <p style={{ color: 'var(--text-muted)', marginBottom: 8 }}>Send a message to selected users or all users.</p>
+            <form className="nex-form-grid" onSubmit={handleNotifSubmit}>
+
               <label htmlFor="notification-target">Recipient Group</label>
-              <select id="notification-target" defaultValue="all">
+              <select
+                id="notification-target"
+                value={notifForm.target}
+                onChange={e => setNotifForm(p => ({ ...p, target: e.target.value }))}
+              >
                 <option value="all">All Users</option>
                 <option value="active">Active Users</option>
+                <option value="suspended">Suspended Users</option>
                 <option value="banned">Banned Users</option>
-                <option value="email-unverified">Email Unverified</option>
-                <option value="mobile-unverified">Mobile Unverified</option>
-                <option value="kyc-pending">KYC Pending</option>
+                <option value="pending">Pending Users</option>
+              </select>
+
+              <label htmlFor="notification-type">Type</label>
+              <select
+                id="notification-type"
+                value={notifForm.type}
+                onChange={e => setNotifForm(p => ({ ...p, type: e.target.value }))}
+              >
+                <option value="info">Info</option>
+                <option value="success">Success</option>
+                <option value="warning">Warning</option>
+                <option value="security">Security</option>
+                <option value="trading">Trading</option>
+                <option value="wallet">Wallet</option>
+                <option value="account">Account</option>
               </select>
 
               <label htmlFor="notification-title">Title</label>
-              <input id="notification-title" type="text" placeholder="Notification title" />
+              <input
+                id="notification-title"
+                type="text"
+                placeholder="Notification title"
+                value={notifForm.title_}
+                onChange={e => setNotifForm(p => ({ ...p, title_: e.target.value }))}
+                required
+              />
 
               <label htmlFor="notification-message">Message</label>
-              <textarea id="notification-message" rows={6} placeholder="Write your notification here" />
+              <textarea
+                id="notification-message"
+                rows={6}
+                placeholder="Write your notification here"
+                value={notifForm.body}
+                onChange={e => setNotifForm(p => ({ ...p, body: e.target.value }))}
+                required
+              />
 
-              <button type="submit" className="btn-primary">
-                Send Notification
+              <button type="submit" className="btn-primary" disabled={notifLoading}>
+                {notifLoading ? 'Sending…' : 'Send Notification'}
               </button>
             </form>
           </div>
@@ -278,13 +350,11 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
                             <div className="nex-table-meta">{getTimeSince(user.created_at)}</div>
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className="btn-outline"
-                              onClick={() => navigate(`/admin/users/${user.id}`)}
-                            >
-                              View
-                            </button>
+                            <UserActionMenu
+                              user={user}
+                              onUpdated={handleUpdated}
+                              onDeleted={handleDeleted}
+                            />
                           </td>
                         </tr>
                       ))

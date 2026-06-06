@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
+import { toast } from "sonner"
+import adminService from "../../services/admin.service"
 
 const users = [
   {
@@ -86,6 +88,9 @@ export default function UserDetail() {
     closeBalanceModal()
   }
 
+  const [isBanning, setIsBanning] = useState(false)
+  const [isBanned, setIsBanned]   = useState(false)
+
   const handleActionClick = (action: string) => {
     if (action === 'add-balance') {
       openBalanceModal('add')
@@ -93,6 +98,21 @@ export default function UserDetail() {
       openBalanceModal('subtract')
     }
     setSelectedAction(action)
+  }
+
+  const handleBanUser = async () => {
+    if (isBanned) return
+    if (!window.confirm(`Ban user ${user.name}? They will lose access immediately.`)) return
+    setIsBanning(true)
+    try {
+      await adminService.banUser(id!)
+      setIsBanned(true)
+      toast.success(`${user.name} has been banned.`)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to ban user.')
+    } finally {
+      setIsBanning(false)
+    }
   }
 
   return (
@@ -258,9 +278,10 @@ export default function UserDetail() {
         </div>
         <div 
           className="nex-action-card nex-action-card-ban"
-          onClick={() => setSelectedAction('ban')}
+          onClick={handleBanUser}
+          style={{ opacity: isBanned ? 0.5 : 1, cursor: isBanning ? 'not-allowed' : 'pointer' }}
         >
-          <div className="action-card-label">Ban User</div>
+          <div className="action-card-label">{isBanned ? 'Banned' : isBanning ? 'Banning…' : 'Ban User'}</div>
           <div className="action-card-value">⛔</div>
         </div>
       </section>

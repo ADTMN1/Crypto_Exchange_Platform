@@ -31,15 +31,14 @@ export default function AdminAudit() {
     }
   };
 
-  const fetchAudits = useCallback(async () => {
+  const fetchAudits = useCallback(async (currentPage: number, currentSearch: string) => {
     setIsLoading(true);
     setError(null);
-
     try {
       const response = await adminService.getAuditLogs({
-        page,
+        page:   currentPage,
         limit,
-        search: searchQuery || undefined,
+        search: currentSearch || undefined,
       });
       setAudits(response.data);
       setTotalCount(response.totalCount);
@@ -50,19 +49,21 @@ export default function AdminAudit() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, searchQuery]);
+  }, [limit]);
 
+  // Fetch when page changes (immediate)
   useEffect(() => {
-    fetchAudits();
-  }, [fetchAudits]);
+    fetchAudits(page, searchQuery);
+  }, [page]);
 
+  // Debounce search — reset to page 1 then fetch
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
-      fetchAudits();
+      fetchAudits(1, searchQuery);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery, fetchAudits]);
+  }, [searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
@@ -103,7 +104,7 @@ export default function AdminAudit() {
             >
               {error}
               <button
-                onClick={fetchAudits}
+              onClick={() => fetchAudits(page, searchQuery)}
                 style={{
                   marginLeft: "1rem",
                   textDecoration: "underline",
@@ -217,9 +218,7 @@ export default function AdminAudit() {
                   type="button"
                   className="btn-outline"
                   disabled={page >= totalPages}
-                  onClick={() =>
-                    setPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                 >
                   Next
                 </button>

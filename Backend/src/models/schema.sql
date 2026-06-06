@@ -201,17 +201,42 @@ CREATE TABLE audit_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 🔔 12. Notifications Table
+-- -- 🔔 12. Notifications Table
+-- CREATE TABLE notifications (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+--     type VARCHAR(30) NOT NULL,
+--     title VARCHAR(100) NOT NULL,
+--     body TEXT NOT NULL,
+--     is_read BOOLEAN NOT NULL DEFAULT FALSE,
+--     metadata JSONB,
+--     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- 1. Notification Content (one record per message)
 CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(30) NOT NULL,
-    title VARCHAR(100) NOT NULL,
-    body TEXT NOT NULL,
-    is_read BOOLEAN NOT NULL DEFAULT FALSE,
-    metadata JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+type VARCHAR(30) NOT NULL,
+title VARCHAR(100) NOT NULL,
+body TEXT NOT NULL,
+metadata JSONB,
+created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 2. Notification Recipients (who gets it)
+CREATE TABLE notification_recipients (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+notification_id UUID REFERENCES notifications(id) ON DELETE CASCADE,
+user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+is_read BOOLEAN NOT NULL DEFAULT FALSE,
+read_at TIMESTAMPTZ,
+created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+
 
 -- ============================================================================
 -- ⚡ OPTIMIZED PRODUCTION INDEXES
@@ -236,4 +261,17 @@ CREATE INDEX idx_candles_aggregation ON candles(pair_id, interval, timestamp DES
 
 CREATE INDEX idx_audit_logs_user ON audit_logs(user_id, created_at DESC);
 
-CREATE INDEX idx_notifications_unread ON notifications(user_id, is_read) WHERE is_read = FALSE;
+-- Optimized index for fetching unread notifications per user
+CREATE INDEX idx_notification_recipients_unread
+ON notification_recipients(user_id)
+WHERE is_read = FALSE;
+
+-- General indexes
+CREATE INDEX idx_notification_recipients_user_id
+ON notification_recipients(user_id);
+
+CREATE INDEX idx_notification_recipients_notification_id
+ON notification_recipients(notification_id);
+
+CREATE INDEX idx_notification_recipients_is_read
+ON notification_recipients(is_read);
