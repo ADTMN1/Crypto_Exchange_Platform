@@ -71,6 +71,32 @@ export interface GetAuditLogsParams {
   search?: string;
 }
 
+
+export interface AdminNotification {
+  notification_id: string;
+  title: string;
+  type: string;
+  created_at: string;
+  total_recipients: number;
+  read_count: number;
+  unread_count: number;
+}
+
+export interface AdminNotificationsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    notifications: AdminNotification[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface GetAdminNotificationsParams {
+  page?: number;
+  limit?: number;
+}
 const adminService = {
   /**
    * Get all users (paginated with filters)
@@ -148,6 +174,28 @@ const adminService = {
     });
     return response.data;
   },
+/**
+ * Get admin notifications (paginated)
+ */
+async getAdminNotifications(
+  params: GetAdminNotificationsParams = {}
+): Promise<AdminNotificationsResponse> {
+  const response = await api.get<AdminNotificationsResponse>(
+    API_ENDPOINTS.ADMIN.Notifications,
+    { params }
+  );
+
+  return response.data;
+},
 };
 
+
+
+
 export default adminService;
+
+
+
+
+
+

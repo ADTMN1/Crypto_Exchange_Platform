@@ -34,6 +34,7 @@ import AdminProfilePage from "../pages/admin/ProfilePage";
 import AdminSectionPage from "../pages/admin/AdminSectionPage";
 import AdminManageUsersPage from "../pages/admin/ManageUsersPage";
 import HistoryPage from "../pages/user/HistoryPage";
+import NotificationHistoryPage from "../pages/user/NotificationHistoryPage";
 
 const adminSectionRoutes = [
   {
@@ -286,11 +287,11 @@ const adminSectionRoutes = [
     title: "Login History",
     description: "Review user login activity and access history.",
   },
-  {
-    path: "/admin/notification-history",
-    title: "Notification History",
-    description: "Review sent notification history.",
-  },
+  // {
+  //   path: "/admin/notification-history",
+  //   title: "Notification History",
+  //   description: "Review sent notification history.",
+  // },
   {
     path: "/admin/subscribers",
     title: "Subscribers",
@@ -417,6 +418,8 @@ export default function Router() {
           <Route path="transactions" element={<AdminTransactionsPage />} />
           <Route path="pairs" element={<AdminPairsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="notification-history" element={<NotificationHistoryPage />} />
+
         </Route>
       </Route>
 
