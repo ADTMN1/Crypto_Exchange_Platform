@@ -9,39 +9,40 @@ export default function NotificationHistoryPage() {
   const [totalNotifications, setTotalNotifications] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+const fetchNotifications = useCallback(async () => {
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      const response = await adminService.getAdminNotifications({
-        page: 1,
-        limit: 20,
-        search: searchQuery || undefined,
-      });
+  try {
+    const response = await adminService.getAdminNotifications(); // ✅ no params
 
-      setNotifications(response.data.notifications);
-      setTotalNotifications(response.data.total);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message || "Failed to fetch notifications";
+    setNotifications(response.data.notifications);
+    setTotalNotifications(response.data.total);
+  } catch (err: any) {
+    const msg = err?.response?.data?.message || "Failed to fetch notifications";
 
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery]);
+    setError(msg);
+    toast.error(msg);
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => fetchNotifications(), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+const filteredNotifications = notifications.filter((n) => {
+  if (!searchQuery) return true;
+
+  const q = searchQuery.toLowerCase();
+
+  return (
+    n.title.toLowerCase().includes(q) ||
+    n.type.toLowerCase().includes(q) ||
+    n.notification_id.toLowerCase().includes(q)
+  );
+});
 
   const formatDate = (dateString: string) =>
     new Intl.DateTimeFormat("en-US", {
@@ -151,7 +152,7 @@ export default function NotificationHistoryPage() {
                 </thead>
 
                 <tbody>
-                  {notifications.length === 0 ? (
+                  {filteredNotifications.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="nex-empty-state">
                         <div>
@@ -160,7 +161,7 @@ export default function NotificationHistoryPage() {
                       </td>
                     </tr>
                   ) : (
-                    notifications.map((n) => (
+                    filteredNotifications.map((n) => (
                       <tr key={n.notification_id}>
                         {/* Title */}
                         <td>
@@ -223,7 +224,7 @@ export default function NotificationHistoryPage() {
                 fontSize: "14px",
               }}
             >
-              Showing {notifications.length} of {totalNotifications}{" "}
+              Showing {filteredNotifications.length} of {totalNotifications}{" "}
               notifications
             </div>
           )}
