@@ -7,6 +7,10 @@ import supportRouter from './support.routes.js';
 import auditRouter from './audit.routes.js';
 import marketRouter from './market.routes.js';
 import notificationRouter from './notification.routes.js';
+import walletRouter from './wallet.routes.js';
+import binaryRouter from './binary.routes.js';
+import p2pRouter from './p2p.routes.js';
+import currencyRouter from './currency.routes.js';
 
 const router = express.Router();
 router.use('/auth',          authRouter);
@@ -17,6 +21,10 @@ router.use('/audit',         auditRouter);
 router.use('/market',        marketRouter);
 router.use('/admin',         adminRouter);
 router.use('/admin',         auditRouter);
+router.use('/admin',         currencyRouter);
 router.use('/notifications', notificationRouter);
+router.use('/wallet',        walletRouter);
+router.use('/binary',        binaryRouter);
+router.use('/p2p',           p2pRouter);
 
 export default router;
