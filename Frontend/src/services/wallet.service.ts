@@ -1,53 +1,61 @@
-import api from './api.service'
+import axios from 'axios';
 
-interface Balance {
-  currency: string
-  available: number
-  locked: number
-  total: number
-}
-
-interface Transaction {
-  id: string
-  type: 'deposit' | 'withdrawal'
-  currency: string
-  amount: string
-  status: 'pending' | 'completed' | 'failed'
-  created_at: string
-}
+const API_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api`;
 
 const walletService = {
+  // ─── USER ENDPOINTS ─────────────────────────────────────────────────────────
+
   /**
-   * Get wallet balances
+   * Get user's wallet balances for all currencies
    */
-  async getBalance(): Promise<Balance[]> {
-    const response = await api.get('/wallet/balance')
-    return response.data
+  getBalance: async () => {
+    const response = await axios.get(`${API_URL}/wallet/balance`, {
+      withCredentials: true,
+    });
+    return response.data;
   },
 
   /**
-   * Deposit funds
+   * Get user's transaction history
+   * @param page - Page number
    */
-  async deposit(data: { amount: number; currency: string }): Promise<any> {
-    const response = await api.post('/wallet/deposit', data)
-    return response.data
+  getTransactions: async (page: number = 1) => {
+    const response = await axios.get(`${API_URL}/wallet/transactions`, {
+      params: { page },
+      withCredentials: true,
+    });
+    return response.data;
+  },
+
+  // ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────
+
+  /**
+   * Admin: Get all wallets
+   * @param page - Page number
+   * @param limit - Items per page
+   */
+  getAllWallets: async (page: number = 1, limit: number = 50) => {
+    const response = await axios.get(`${API_URL}/wallet/admin/wallets`, {
+      params: { page, limit },
+      withCredentials: true,
+    });
+    return response.data;
   },
 
   /**
-   * Withdraw funds
+   * Admin: Top up user wallet (dev only)
+   * @param userId - User UUID
+   * @param currency - Currency code (BTC, ETH, USDT, etc.)
+   * @param amount - Amount to credit
    */
-  async withdraw(data: { amount: number; currency: string; address: string }): Promise<any> {
-    const response = await api.post('/wallet/withdraw', data)
-    return response.data
+  adminTopup: async (userId: string, currency: string, amount: number) => {
+    const response = await axios.post(
+      `${API_URL}/wallet/admin/topup`,
+      { userId, currency, amount },
+      { withCredentials: true }
+    );
+    return response.data;
   },
+};
 
-  /**
-   * Get transaction history
-   */
-  async getTransactions(): Promise<Transaction[]> {
-    const response = await api.get('/wallet/transactions')
-    return response.data
-  },
-}
-
-export default walletService
+export default walletService;

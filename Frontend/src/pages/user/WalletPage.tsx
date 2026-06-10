@@ -1,8 +1,38 @@
 import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import walletService from '../../services/wallet.service';
 
 export default function WalletPage() {
   const [showBalance, setShowBalance] = useState(true);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchWalletData();
+  }, []);
+
+  const fetchWalletData = async () => {
+    try {
+      setLoading(true);
+      const balanceRes = await walletService.getBalance();
+      setWallets(balanceRes.data);
+
+      const txRes = await walletService.getTransactions(1);
+      setTransactions(txRes.data.transactions || []);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load wallet data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotalUSD = () => {
+    // Simplified: just sum up balances (you'd normally convert to USD with real prices)
+    const total = wallets.reduce((sum, wallet) => sum + parseFloat(wallet.balance || 0), 0);
+    return total.toFixed(4);
+  };
 
   const cryptoData = [
     { symbol: 'BTCUSDT', volume: '1813011074362.9M', price: '$73405.92', change: '+4.34%', positive: true },
@@ -40,6 +70,9 @@ export default function WalletPage() {
 
   return (
     <main className="wallet-page">
+      {loading && <div style={{ padding: '20px' }}>Loading wallet data...</div>}
+      {error && <div style={{ padding: '20px', color: 'red' }}>Error: {error}</div>}
+      
       {/* Total Assets Card */}
       <div className="assets-card">
         <div className="assets-header">
@@ -47,7 +80,7 @@ export default function WalletPage() {
             <h3 className="assets-label">Total Assets</h3>
             <div className="assets-amount-container">
               <h1 className="assets-amount">
-                {showBalance ? '$1,078.6084 USD' : '***********'}
+                {showBalance ? `$${calculateTotalUSD()} USD` : '***********'}
               </h1>
               <button 
                 className="toggle-balance-btn" 
@@ -58,12 +91,72 @@ export default function WalletPage() {
               </button>
             </div>
             <p className="assets-change positive">
-              <FaArrowUp /> 2.4% this week
+              <FaArrowUp /> {wallets.length} currencies
             </p>
           </div>
           <button className="btn-deposit">Deposit</button>
         </div>
       </div>
+
+      {/* Wallet Balances */}
+      {!loading && wallets.length > 0 && (
+        <div className="top-cryptos-section">
+          <div className="section-header">
+            <h2 className="section-title">Your Wallets</h2>
+          </div>
+          <div className="crypto-table">
+            {wallets.map((wallet, index) => (
+              <div key={index} className="crypto-row">
+                <div className="crypto-info">
+                  <span className="crypto-symbol">{wallet.currency}</span>
+                  <span className="crypto-volume">
+                    Locked: {parseFloat(wallet.locked_balance).toFixed(8)}
+                  </span>
+                </div>
+                <div className="crypto-stats">
+                  <span className="crypto-price">
+                    {parseFloat(wallet.balance).toFixed(8)}
+                  </span>
+                  <span className="crypto-change positive">
+                    Available
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Transactions */}
+      {!loading && transactions.length > 0 && (
+        <div className="market-insights-section">
+          <div className="section-header">
+            <h2 className="section-title">Recent Transactions</h2>
+          </div>
+          <div className="news-list">
+            {transactions.slice(0, 5).map((tx, index) => (
+              <div key={index} className="news-item">
+                <span 
+                  className="news-tag" 
+                  style={{ 
+                    backgroundColor: tx.type === 'deposit' ? '#28a745' : '#dc3545' 
+                  }}
+                >
+                  {tx.type.toUpperCase()}
+                </span>
+                <div className="news-content">
+                  <h4 className="news-title">
+                    {tx.amount} {tx.currency} - {tx.status}
+                  </h4>
+                  <p className="news-meta">
+                    {new Date(tx.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="quick-actions-section">
