@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api`;
+import api from './api.service';
 
 export interface Currency {
   id: string;
@@ -37,9 +35,8 @@ const currencyService = {
    * @param includeDisabled - Include disabled currencies
    */
   getAllCurrencies: async (includeDisabled: boolean = true) => {
-    const response = await axios.get(`${API_URL}/admin/currencies`, {
+    const response = await api.get('/admin/currencies', {
       params: { includeDisabled: includeDisabled ? 'true' : 'false' },
-      withCredentials: true,
     });
     return response.data;
   },
@@ -51,9 +48,7 @@ const currencyService = {
    * @param id - Currency UUID
    */
   getCurrency: async (id: string) => {
-    const response = await axios.get(`${API_URL}/admin/currencies/${id}`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`/admin/currencies/${id}`);
     return response.data;
   },
 
@@ -69,11 +64,7 @@ const currencyService = {
     logo?: string;
     status?: 'enabled' | 'disabled';
   }) => {
-    const response = await axios.post(
-      `${API_URL}/admin/currencies`,
-      data,
-      { withCredentials: true }
-    );
+    const response = await api.post('/admin/currencies', data);
     return response.data;
   },
 
@@ -93,11 +84,7 @@ const currencyService = {
       status?: 'enabled' | 'disabled';
     }
   ) => {
-    const response = await axios.put(
-      `${API_URL}/admin/currencies/${id}`,
-      data,
-      { withCredentials: true }
-    );
+    const response = await api.put(`/admin/currencies/${id}`, data);
     return response.data;
   },
 
@@ -109,11 +96,9 @@ const currencyService = {
    * @param status - New status
    */
   updateStatus: async (id: string, status: 'enabled' | 'disabled') => {
-    const response = await axios.patch(
-      `${API_URL}/admin/currencies/${id}/status`,
-      { status },
-      { withCredentials: true }
-    );
+    const response = await api.patch(`/admin/currencies/${id}/status`, {
+      status,
+    });
     return response.data;
   },
 
@@ -124,9 +109,7 @@ const currencyService = {
    * @param id - Currency UUID
    */
   deleteCurrency: async (id: string) => {
-    const response = await axios.delete(`${API_URL}/admin/currencies/${id}`, {
-      withCredentials: true,
-    });
+    const response = await api.delete(`/admin/currencies/${id}`);
     return response.data;
   },
 
@@ -137,11 +120,9 @@ const currencyService = {
    * @param symbols - Array of symbols to import
    */
   bulkImport: async (symbols: string[]) => {
-    const response = await axios.post(
-      `${API_URL}/admin/currencies/import`,
-      { symbols },
-      { withCredentials: true }
-    );
+    const response = await api.post('/admin/currencies/import', {
+      symbols,
+    });
     return response.data;
   },
 
@@ -151,9 +132,7 @@ const currencyService = {
    * Get list of supported symbols for import
    */
   getSupportedSymbols: async () => {
-    const response = await axios.get(`${API_URL}/admin/currencies/supported`, {
-      withCredentials: true,
-    });
+    const response = await api.get('/admin/currencies/supported');
     return response.data;
   },
 };
