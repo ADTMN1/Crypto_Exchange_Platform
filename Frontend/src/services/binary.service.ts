@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api`;
+import api from './api.service';
 
 export interface PlaceTradeRequest {
   pair: string;
@@ -33,11 +31,7 @@ const binaryService = {
    * @param tradeData - Trade parameters
    */
   placeTrade: async (tradeData: PlaceTradeRequest) => {
-    const response = await axios.post(
-      `${API_URL}/binary/trade`,
-      tradeData,
-      { withCredentials: true }
-    );
+    const response = await api.post('/binary/trade', tradeData);
     return response.data;
   },
 
@@ -47,9 +41,8 @@ const binaryService = {
    * @param page - Page number
    */
   getMyTrades: async (status?: string, page: number = 1) => {
-    const response = await axios.get(`${API_URL}/binary/my-trades`, {
+    const response = await api.get('/binary/my-trades', {
       params: { status, page },
-      withCredentials: true,
     });
     return response.data;
   },
@@ -62,9 +55,8 @@ const binaryService = {
    * @param page - Page number
    */
   getAdminTrades: async (status: string, page: number = 1) => {
-    const response = await axios.get(`${API_URL}/binary/admin/trades/${status}`, {
+    const response = await api.get(`/binary/admin/trades/${status}`, {
       params: { page },
-      withCredentials: true,
     });
     return response.data;
   },

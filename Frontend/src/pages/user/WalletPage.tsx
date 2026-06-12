@@ -1,10 +1,45 @@
 import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DepositModal from '../../components/common/DepositModal';
+import walletService from '../../services/wallet.service';
 
 export default function WalletPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  // Calculate total USD value of all assets (simplified version)
+  const calculateTotalUSD = () => {
+    const walletArray = Array.isArray(wallets) ? wallets : [];
+    const total = walletArray.reduce((sum, wallet) => {
+      return sum + parseFloat(wallet.balance || 0) + parseFloat(wallet.locked_balance || 0);
+    }, 0);
+    return total.toFixed(2);
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [balanceData, transactionsData] = await Promise.all([
+          walletService.getBalance(),
+          walletService.getTransactions()
+        ]);
+        // The API returns { success: true, data: wallets }
+        setWallets(balanceData?.data || []);
+        setTransactions(transactionsData?.data?.transactions || transactionsData?.data || []);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load wallet data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const cryptoData = [
     { symbol: 'BTCUSDT', volume: '1813011074362.9M', price: '$73405.92', change: '+4.34%', positive: true },

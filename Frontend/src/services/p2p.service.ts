@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api`;
+import api from './api.service';
 
 export interface CreateOfferRequest {
   type: 'buy' | 'sell';
@@ -64,11 +62,7 @@ const p2pService = {
    * @param offerData - Offer parameters
    */
   createOffer: async (offerData: CreateOfferRequest) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/offer`,
-      offerData,
-      { withCredentials: true }
-    );
+    const response = await api.post('/p2p/offer', offerData);
     return response.data;
   },
 
@@ -78,9 +72,8 @@ const p2pService = {
    * @param page - Page number
    */
   getOffers: async (filters?: { type?: string; pair?: string }, page: number = 1) => {
-    const response = await axios.get(`${API_URL}/p2p/offers`, {
+    const response = await api.get('/p2p/offers', {
       params: { ...filters, page },
-      withCredentials: true,
     });
     return response.data;
   },
@@ -92,11 +85,7 @@ const p2pService = {
    * @param orderData - Order parameters
    */
   placeOrder: async (orderData: PlaceOrderRequest) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/order`,
-      orderData,
-      { withCredentials: true }
-    );
+    const response = await api.post('/p2p/order', orderData);
     return response.data;
   },
 
@@ -105,9 +94,8 @@ const p2pService = {
    * @param page - Page number
    */
   getMyOrders: async (page: number = 1) => {
-    const response = await axios.get(`${API_URL}/p2p/orders`, {
+    const response = await api.get('/p2p/orders', {
       params: { page },
-      withCredentials: true,
     });
     return response.data;
   },
@@ -117,11 +105,7 @@ const p2pService = {
    * @param orderId - Order UUID
    */
   markAsPaid: async (orderId: string) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/order/${orderId}/paid`,
-      {},
-      { withCredentials: true }
-    );
+    const response = await api.post(`/p2p/order/${orderId}/paid`, {});
     return response.data;
   },
 
@@ -130,11 +114,7 @@ const p2pService = {
    * @param orderId - Order UUID
    */
   releaseCrypto: async (orderId: string) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/order/${orderId}/release`,
-      {},
-      { withCredentials: true }
-    );
+    const response = await api.post(`/p2p/order/${orderId}/release`, {});
     return response.data;
   },
 
@@ -143,11 +123,7 @@ const p2pService = {
    * @param orderId - Order UUID
    */
   cancelOrder: async (orderId: string) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/order/${orderId}/cancel`,
-      {},
-      { withCredentials: true }
-    );
+    const response = await api.post(`/p2p/order/${orderId}/cancel`, {});
     return response.data;
   },
 
@@ -156,11 +132,7 @@ const p2pService = {
    * @param orderId - Order UUID
    */
   raiseDispute: async (orderId: string) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/order/${orderId}/dispute`,
-      {},
-      { withCredentials: true }
-    );
+    const response = await api.post(`/p2p/order/${orderId}/dispute`, {});
     return response.data;
   },
 
@@ -171,9 +143,8 @@ const p2pService = {
    * @param page - Page number
    */
   getAllOrders: async (page: number = 1) => {
-    const response = await axios.get(`${API_URL}/p2p/admin/orders`, {
+    const response = await api.get('/p2p/admin/orders', {
       params: { page },
-      withCredentials: true,
     });
     return response.data;
   },
@@ -183,9 +154,8 @@ const p2pService = {
    * @param page - Page number
    */
   getDisputes: async (page: number = 1) => {
-    const response = await axios.get(`${API_URL}/p2p/admin/disputes`, {
+    const response = await api.get('/p2p/admin/disputes', {
       params: { page },
-      withCredentials: true,
     });
     return response.data;
   },
@@ -197,11 +167,10 @@ const p2pService = {
    * @param adminNote - Optional admin note
    */
   resolveDispute: async (orderId: string, decision: string, adminNote?: string) => {
-    const response = await axios.post(
-      `${API_URL}/p2p/admin/dispute/${orderId}/resolve`,
-      { decision, adminNote },
-      { withCredentials: true }
-    );
+    const response = await api.post(`/p2p/admin/dispute/${orderId}/resolve`, {
+      decision,
+      adminNote,
+    });
     return response.data;
   },
 };
