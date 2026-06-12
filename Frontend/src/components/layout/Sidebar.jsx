@@ -1,77 +1,79 @@
-import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaBolt } from 'react-icons/fa'
+
+import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaBolt, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store'
 
-function Sidebar() {
+function Sidebar({ collapsed, onToggle }) {
   const navigate = useNavigate()
   const logout = useAuthStore((state) => state.logout)
   const iconStyle = { color: '#F7931A' }
 
   const handleLogout = () => {
-    // Clear authentication state
     logout()
-    // Clear authentication tokens/data
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
-    // Clear any cookies if needed
     document.cookie.split(";").forEach((c) => {
       document.cookie = c
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
     })
-    // Redirect to login page
     navigate('/login')
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <button className="sidebar-toggle" onClick={onToggle}>
+          {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
+        </button>
+      </div>
       <nav className="sidebar-nav">
         <div className="nav-section">
-          <div className="nav-title">BROWSE</div>
+          <div className="nav-title">{!collapsed && 'BROWSE'}</div>
           <Link to="/" className="nav-item">
             <FaFire style={iconStyle} className="nav-icon" />
-            Home
+            {!collapsed && 'Home'}
           </Link>
           <Link to="/markets" className="nav-item">
             <FaChartBar style={iconStyle} className="nav-icon" />
-            Markets
+            {!collapsed && 'Markets'}
           </Link>
           <Link to="/market-dashboard" className="nav-item">
             <FaBolt style={iconStyle} className="nav-icon" />
-            Live Chart
+            {!collapsed && 'Live Chart'}
           </Link>
           <Link to="/trade" className="nav-item">
             <FaChartLine style={iconStyle} className="nav-icon" />
-            Trade
+            {!collapsed && 'Trade'}
           </Link>
           <Link to="/news" className="nav-item">
             <FaUser style={iconStyle} className="nav-icon" />
-            News
+            {!collapsed && 'News'}
           </Link>
         </div>
         <div className="nav-section">
-          <div className="nav-title">MY WALLET</div>
+          <div className="nav-title">{!collapsed && 'MY WALLET'}</div>
           <Link to="/assets" className="nav-item">
             <FaWallet style={iconStyle} className="nav-icon" />
-            Assets
+            {!collapsed && 'Assets'}
           </Link>
           <Link to="/history" className="nav-item">
             <FaHistory style={iconStyle} className="nav-icon" />
-            History
+            {!collapsed && 'History'}
           </Link>
         </div>
         <div className="nav-section">
-          <div className="nav-title">HELP & SUPPORT</div>
+          <div className="nav-title">{!collapsed && 'HELP & SUPPORT'}</div>
           <Link to="/support" className="nav-item">
             <FaHeadset style={iconStyle} className="nav-icon" />
-            Contact Support
+            {!collapsed && 'Contact Support'}
           </Link>
         </div>
         <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '20px 0' }} />
         <div className="nav-section">
-          <button onClick={handleLogout} className="nav-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={handleLogout} className="nav-item" style={{ width: '100%', textAlign: collapsed ? 'center' : 'left', background: 'none', border: 'none', cursor: 'pointer' }}>
             <FaSignOutAlt style={{ color: '#ef4444' }} className="nav-icon" />
-            Logout
+            {!collapsed && 'Logout'}
           </button>
         </div>
       </nav>
