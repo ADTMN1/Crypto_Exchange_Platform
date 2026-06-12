@@ -1,38 +1,10 @@
 import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
-import walletService from '../../services/wallet.service';
+import { useState } from 'react';
+import DepositModal from '../../components/common/DepositModal';
 
 export default function WalletPage() {
   const [showBalance, setShowBalance] = useState(true);
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchWalletData();
-  }, []);
-
-  const fetchWalletData = async () => {
-    try {
-      setLoading(true);
-      const balanceRes = await walletService.getBalance();
-      setWallets(balanceRes.data);
-
-      const txRes = await walletService.getTransactions(1);
-      setTransactions(txRes.data.transactions || []);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load wallet data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateTotalUSD = () => {
-    // Simplified: just sum up balances (you'd normally convert to USD with real prices)
-    const total = wallets.reduce((sum, wallet) => sum + parseFloat(wallet.balance || 0), 0);
-    return total.toFixed(4);
-  };
+  const [open, setOpen] = useState(false);
 
   const cryptoData = [
     { symbol: 'BTCUSDT', volume: '1813011074362.9M', price: '$73405.92', change: '+4.34%', positive: true },
@@ -94,7 +66,8 @@ export default function WalletPage() {
               <FaArrowUp /> {wallets.length} currencies
             </p>
           </div>
-          <button className="btn-deposit">Deposit</button>
+          <button className="btn-deposit" onClick={() => setOpen(true)}>Deposit</button>
+          <DepositModal open={open} onClose={() => setOpen(false)} />
         </div>
       </div>
 

@@ -4,10 +4,9 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import app from './app.js';
 import { query } from './src/config/db.config.js';
-import attachMarketSocket from './src/websocket/market.socket.js';
+import { initializeWebSocket } from './src/websocket/socket.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -21,17 +20,8 @@ async function startServer() {
 		// Wrap Express app in an HTTP server so Socket.IO can share the same port
 		const httpServer = createServer(app);
 
-		const io = new Server(httpServer, {
-			cors: {
-				origin: process.env.ALLOWED_ORIGINS
-					? process.env.ALLOWED_ORIGINS.split(',')
-					: '*',
-				methods: ['GET', 'POST'],
-			},
-		});
-
-		// Attach real-time market data streaming
-		attachMarketSocket(io);
+		// Initialize WebSocket with enhanced trading features
+		const io = initializeWebSocket(httpServer);
 
 		httpServer.listen(PORT, () => {
 			console.log(`🚀 Production runtime active on port [${PORT}] under [${process.env.NODE_ENV || 'development'}] mode.`);

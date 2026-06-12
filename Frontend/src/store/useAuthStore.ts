@@ -18,41 +18,58 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       accessToken: null,
       refreshToken: null,
       isLoading: true,
-      login: (user, accessToken = null, refreshToken = null) =>
-        set({ user, isAuthenticated: true, accessToken, refreshToken, isLoading: false }),
+      login: (user, accessToken = null, refreshToken = null) => {
+        if (!user) {
+          console.error('Cannot login with undefined user');
+          return;
+        }
+        set({ user, isAuthenticated: true, accessToken, refreshToken, isLoading: false });
+      },
       logout: () =>
         set({ user: null, isAuthenticated: false, accessToken: null, refreshToken: null, isLoading: false }),
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      updateUser: (updates) =>
+      updateUser: (updates) => {
+        const currentState = get();
+        if (!currentState.user) {
+          console.error('Cannot update user: user is null');
+          return;
+        }
         set((state) => ({
           user: state.user ? { ...state.user, ...updates } : null,
-        })),
+        }));
+      },
       initialize: () => {
-        const storedUser = localStorage.getItem('user')
-        const storedAccessToken = localStorage.getItem('token')
-        const storedRefreshToken = localStorage.getItem('refreshToken')
-        
-        if (storedUser && storedAccessToken && storedRefreshToken) {
-          try {
-            const user = JSON.parse(storedUser)
-            set({
-              user,
-              isAuthenticated: true,
-              accessToken: storedAccessToken,
-              refreshToken: storedRefreshToken,
-              isLoading: false,
-            })
-          } catch {
-            set({ isLoading: false })
+        try {
+          const storedUser = localStorage.getItem('user');
+          const storedAccessToken = localStorage.getItem('token');
+          const storedRefreshToken = localStorage.getItem('refreshToken');
+          
+          if (storedUser && storedAccessToken && storedRefreshToken) {
+            const user = JSON.parse(storedUser);
+            if (user && typeof user === 'object') {
+              set({
+                user,
+                isAuthenticated: true,
+                accessToken: storedAccessToken,
+                refreshToken: storedRefreshToken,
+                isLoading: false,
+              });
+            } else {
+              console.warn('Invalid user data in localStorage');
+              set({ isLoading: false });
+            }
+          } else {
+            set({ isLoading: false });
           }
-        } else {
-          set({ isLoading: false })
+        } catch (error) {
+          console.error('Error initializing auth store:', error);
+          set({ isLoading: false });
         }
       },
       setLoading: (loading) => set({ isLoading: loading }),
@@ -62,9 +79,16 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.isLoading = false
+          state.isLoading = false;
         }
       },
+      // Add partialize to prevent circular reference issues
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
     }
   )
 )

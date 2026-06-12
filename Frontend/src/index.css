@@ -1006,24 +1006,52 @@ body {
   width: 280px;
   background: var(--surface);
   height: calc(100vh - 73px);
-  padding: 24px 0;
+  padding: 16px 0;
   border-right: 1px solid var(--border);
   position: fixed;
   top: 73px;
   left: 0;
-  overflow-y: auto;
+  overflow: hidden; /* Hide all scrollbars */
   box-shadow: 1px 0 3px rgba(0, 0, 0, 0.04);
+  transition: width 0.3s ease;
+  /* Hide scrollbars for all browsers */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar-header {
+  padding: 0 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.sidebar.collapsed .sidebar-header {
+  padding: 0 8px 16px;
+  justify-content: center;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  height: 100%;
+  height: calc(100% - 48px); /* Subtract header height */
 }
 
 .nav-section {
   padding: 0 16px;
+}
+
+.sidebar.collapsed .nav-section {
+  padding: 0 8px;
 }
 
 .nav-title {
@@ -1034,6 +1062,9 @@ body {
   letter-spacing: 1px;
   margin-bottom: 8px;
   padding: 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-item {
@@ -1047,6 +1078,15 @@ body {
   font-size: 15px;
   font-weight: 600;
   transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  gap: 0;
+  padding: 12px 8px;
 }
 
 .nav-item:hover {
@@ -1062,12 +1102,38 @@ body {
   font-size: 20px;
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.sidebar-toggle:hover {
+  background: var(--surface-hover);
+  transform: scale(1.1);
 }
 
 .content {
   flex: 1;
   padding: 32px;
   margin-left: 280px;
+  transition: margin-left 0.3s ease;
+}
+
+.content.collapsed {
+  margin-left: 80px;
 }
 
 .hero {

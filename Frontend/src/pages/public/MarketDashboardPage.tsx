@@ -3,11 +3,9 @@ import marketApi, { MarketOverview, MarketPrice } from '../../services/market.ap
 import marketSocket from '../../socket/market.socket';
 import PriceCard from '../../components/market/PriceCard';
 import MarketTable, { MarketRow } from '../../components/market/MarketTable';
-import TradingChart, { ChartPoint } from '../../components/market/TradingChart';
 
 const TOP_CARDS    = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'];
 const TABLE_COINS  = ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT','ADAUSDT','DOGEUSDT','AVAXUSDT','DOTUSDT','MATICUSDT','LTCUSDT','LINKUSDT','UNIUSDT','ATOMUSDT','TRXUSDT'];
-const CHART_SYMBOL = 'BTCUSDT';
 const MAX_POINTS   = 100;
 
 interface PricePayload {
@@ -23,7 +21,6 @@ export default function MarketDashboardPage() {
   const [volumes, setVolumes]     = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError]         = useState<string | null>(null);
-  const [chartData, setChartData] = useState<ChartPoint[]>([]);
 
   // ── 1. Load initial data from REST API ───────────────────────────────────
   useEffect(() => {
@@ -54,10 +51,6 @@ export default function MarketDashboardPage() {
         setPrices(priceMap);
         setChanges(changeMap);
         setVolumes(volumeMap);
-
-        if (priceMap[CHART_SYMBOL]) {
-          setChartData([{ time: Date.now(), price: priceMap[CHART_SYMBOL] }]);
-        }
       } catch (err: any) {
         setError(err?.response?.data?.message || 'Failed to load market data.');
       } finally {
@@ -72,16 +65,8 @@ export default function MarketDashboardPage() {
 
   priceHandlerRef.current = useCallback((payload: PricePayload) => {
     const { symbol, price } = payload;
-    const ts = payload.tradeTime ?? payload.timestamp ?? Date.now();
 
     setPrices(prev => ({ ...prev, [symbol]: price }));
-
-    if (symbol === CHART_SYMBOL) {
-      setChartData(prev => {
-        const next = [...prev, { time: ts, price }];
-        return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
-      });
-    }
   }, []);
 
   // ── 3. Connect to /market namespace + subscribe ──────────────────────────
@@ -159,13 +144,6 @@ export default function MarketDashboardPage() {
           />
         ))}
       </div>
-
-      {/* Live chart */}
-      <TradingChart
-        data={chartData}
-        symbol={CHART_SYMBOL}
-        currentPrice={prices[CHART_SYMBOL] ?? null}
-      />
 
       {/* Market table */}
       <div>

@@ -142,25 +142,98 @@ const binanceService = {
     /**
      * GET /api/v3/klines?symbol=BTCUSDT&interval=1m&limit=100
      * Fetches full OHLCV candlestick data for charting.
+     * For 30s interval, fetches 1s klines and aggregates them.
      */
     getHistory: async (symbol = 'BTCUSDT', interval = '1m', limit = 100) => {
         const upper = binanceService.validateSymbol(symbol);
-        const url   = `${BINANCE_REST_BASE}/klines?symbol=${upper}&interval=${interval}&limit=${limit}`;
-        const data  = await binanceFetch(url);
+        
+        // Handle 30s interval by fetching 1s klines and aggregating
+        if (interval === '30s') {
+            const oneSecondLimit = limit * 30;
+            const url = `${BINANCE_REST_BASE}/klines?symbol=${upper}&interval=1s&limit=${oneSecondLimit}`;
+            const data = await binanceFetch(url);
+
+            if (!Array.isArray(data)) {
+                throw new AppError('Unexpected response structure from Binance klines endpoint.', 502);
+            }
+
+            const oneSecondCandles = data.map((k) => ({
+                time: Math.floor(k[0] / 1000),
+                open: parseFloat(k[1]),
+                high: parseFloat(k[2]),
+                low: parseFloat(k[3]),
+                close: parseFloat(k[4]),
+                volume: parseFloat(k[5]),
+            }));
+
+            return binanceService.aggregateCandles(oneSecondCandles, 30);
+        }
+
+        // Normal case for Binance-supported intervals
+        const url = `${BINANCE_REST_BASE}/klines?symbol=${upper}&interval=${interval}&limit=${limit}`;
+        const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {
             throw new AppError('Unexpected response structure from Binance klines endpoint.', 502);
         }
 
-        // Kline array: [openTime, open, high, low, close, volume, closeTime, ...]
         return data.map((k) => ({
-            time:   Math.floor(k[0] / 1000), // UTC seconds for lightweight-charts
-            open:   parseFloat(k[1]),
-            high:   parseFloat(k[2]),
-            low:    parseFloat(k[3]),
-            close:  parseFloat(k[4]),
+            time: Math.floor(k[0] / 1000), // UTC seconds for lightweight-charts
+            open: parseFloat(k[1]),
+            high: parseFloat(k[2]),
+            low: parseFloat(k[3]),
+            close: parseFloat(k[4]),
             volume: parseFloat(k[5]),
         }));
+    },
+
+    /**
+     * Aggregates small-interval candles into larger intervals.
+     * @param {Array} candles - Array of smaller-interval candles
+     * @param {number} factor - Number of small candles per large candle (e.g., 30 for 1s → 30s)
+     * @returns {Array} Aggregated candles
+     */
+    aggregateCandles: (candles, factor) => {
+        if (!candles || candles.length === 0) return [];
+        
+        const aggregated = [];
+        let currentCandle = null;
+        let count = 0;
+
+        for (const candle of candles) {
+            // Calculate which 30s bucket this candle belongs to
+            const bucketTime = Math.floor(candle.time / factor) * factor;
+            
+            if (!currentCandle || currentCandle.time !== bucketTime) {
+                // Start a new aggregated candle
+                if (currentCandle) {
+                    aggregated.push(currentCandle);
+                }
+                currentCandle = {
+                    time: bucketTime,
+                    open: candle.open,
+                    high: candle.high,
+                    low: candle.low,
+                    close: candle.close,
+                    volume: candle.volume,
+                };
+                count = 1;
+            } else {
+                // Update the current aggregated candle
+                currentCandle.high = Math.max(currentCandle.high, candle.high);
+                currentCandle.low = Math.min(currentCandle.low, candle.low);
+                currentCandle.close = candle.close;
+                currentCandle.volume += candle.volume;
+                count++;
+            }
+        }
+
+        // Add the last candle if we have one
+        if (currentCandle) {
+            aggregated.push(currentCandle);
+        }
+
+        return aggregated;
     },
 
     /**
@@ -168,6 +241,13 @@ const binanceService = {
      */
     getStreamUrl: (symbol = 'BTCUSDT') => {
         return `${BINANCE_WS_BASE}/${symbol.toLowerCase()}@trade`;
+    },
+    /**
+     * Returns the Binance WebSocket kline stream URL for a symbol+interval.
+     * Example interval: '1m', '5m', '1h'
+     */
+    getKlineStreamUrl: (symbol = 'BTCUSDT', interval = '1m') => {
+        return `${BINANCE_WS_BASE}/${symbol.toLowerCase()}@kline_${interval}`;
     },
 };
 

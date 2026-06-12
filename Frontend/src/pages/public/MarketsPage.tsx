@@ -30,22 +30,32 @@ export default function MarketsPage() {
   // ── Load real 24h data from Binance via backend ──────────────────────────
   useEffect(() => {
     marketApi.getMarketOverview().then((overview) => {
+      // Add safety check for the response
+      if (!overview || !Array.isArray(overview)) {
+        console.warn('Invalid market overview response:', overview);
+        setIsLoading(false);
+        return;
+      }
+
       const loaded: Market[] = overview.map((item, idx) => ({
         id:            String(idx + 1),
-        symbol:        item.symbol,
-        baseCurrency:  item.symbol.replace('USDT', ''),
+        symbol:        item?.symbol || 'UNKNOWN',
+        baseCurrency:  item?.symbol?.replace('USDT', '') || 'UNKNOWN',
         quoteCurrency: 'USDT',
-        lastPrice:     item.price,
-        change24h:     item.change24h  ?? 0,
-        high24h:       (item as any).high24h   ?? 0,
-        low24h:        (item as any).low24h    ?? 0,
-        volume24h:     item.volume24h  ?? 0,
+        lastPrice:     item?.price || 0,
+        change24h:     item?.change24h  ?? 0,
+        high24h:       (item as any)?.high24h   ?? 0,
+        low24h:        (item as any)?.low24h    ?? 0,
+        volume24h:     item?.volume24h  ?? 0,
         isFavorite:    false,
       }));
       setMarkets(loaded);
       setFilteredMarkets(loaded);
       setIsLoading(false);
-    }).catch(() => setIsLoading(false));
+    }).catch((error) => {
+      console.error('Error loading market overview:', error);
+      setIsLoading(false);
+    });
   }, []);
 
   // ── Live price updates from root namespace "market:price_update" ──────────
