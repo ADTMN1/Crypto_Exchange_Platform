@@ -36,6 +36,22 @@ import AdminProfilePage from "../pages/admin/ProfilePage";
 import AdminSectionPage from "../pages/admin/AdminSectionPage";
 import AdminManageUsersPage from "../pages/admin/ManageUsersPage";
 import HistoryPage from "../pages/user/HistoryPage";
+import NotificationHistoryPage from "../pages/user/NotificationHistoryPage";
+import BinaryTradesPage from "../pages/admin/BinaryTradesPage";
+import P2POrdersPage from "../pages/admin/P2POrdersPage";
+import P2PDisputesPage from "../pages/admin/P2PDisputesPage";
+import CryptoCurrencyPage from "../pages/admin/CryptoCurrencyPage";
+import FiatCryptoCurrencyPage from "../pages/admin/FiatCrptoCurrencyPage";
+import OpenOrdersPage from "../pages/admin/OpenOrdersPage";
+import OrderHistoryPage from "../pages/admin/OrderHistoryPage";
+import TradeHistoryPage from "../pages/admin/TradeHistoryPage";
+import RunningP2PTradesPage from "../pages/admin/RunningP2PTradesPage";
+import RunningBinaryTradesPage from "../pages/admin/RunningBinaryTradesPage";
+import MarketListPage from "../pages/admin/MarketListPage";
+import CoinPairsPage from "../pages/admin/CoinPairsPage";
+import CompletedP2PTradesPage from "../pages/admin/CompletedP2PTradesPage";
+import SystemSettingsPage from "../pages/admin/SystemSettingsPage";
+import GeneralSettingsPage from "../pages/admin/GeneralSettingsPage";
 
 const adminSectionRoutes = [
   {
@@ -406,6 +422,180 @@ export default function Router() {
           {adminSectionRoutes && adminSectionRoutes.length > 0 && adminSectionRoutes.map((section) => {
             const sectionPath = section.path.replace("/admin/", "");
             const isManageUsersSection = section.path.startsWith("/admin/users/");
+            
+            // Crypto Currency page
+            if (section.path === "/admin/manage-currency/crypto-currency") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<CryptoCurrencyPage />}
+                />
+              );
+            }
+
+            // Fiat Currency page
+            if (section.path === "/admin/manage-currency/fiat-currency") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<FiatCryptoCurrencyPage />}
+                />
+              );
+            }
+
+            // Market List page
+            if (section.path === "/admin/manage-market") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<MarketListPage />}
+                />
+              );
+            }
+
+            // Coin Pairs page
+            if (section.path === "/admin/manage-coin-pair") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<CoinPairsPage />}
+                />
+              );
+            }
+
+            // Order Management pages
+            if (section.path === "/admin/manage-order/open-order") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<OpenOrdersPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/manage-order/order-history") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<OrderHistoryPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/manage-order/trade-history") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<TradeHistoryPage />}
+                />
+              );
+            }
+
+            // Binary trading pages
+            if (section.path === "/admin/manage-binary/running-trades") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<RunningBinaryTradesPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/manage-binary/win-trades") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={
+                    <BinaryTradesPage
+                      status="win"
+                      title={section.title}
+                      description={section.description}
+                    />
+                  }
+                />
+              );
+            }
+            if (section.path === "/admin/manage-binary/lose-trades") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={
+                    <BinaryTradesPage
+                      status="lose"
+                      title={section.title}
+                      description={section.description}
+                    />
+                  }
+                />
+              );
+            }
+            if (section.path === "/admin/manage-binary/all-trades") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={
+                    <BinaryTradesPage
+                      status="all"
+                      title={section.title}
+                      description={section.description}
+                    />
+                  }
+                />
+              );
+            }
+
+            // P2P pages
+            if (section.path === "/admin/manage-p2p/running-trade") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<RunningP2PTradesPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/manage-p2p/completed-trade") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<CompletedP2PTradesPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/manage-p2p/report-trade") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={
+                    <P2PDisputesPage
+                      title={section.title}
+                      description={section.description}
+                    />
+                  }
+                />
+              );
+            }
+
+            // System Settings page
+            if (section.path === "/admin/system-settings") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<SystemSettingsPage />}
+                />
+              );
+            }
 
             return (
               <Route
@@ -433,6 +623,7 @@ export default function Router() {
           <Route path="transactions" element={<AdminTransactionsPage />} />
           <Route path="pairs" element={<AdminPairsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="settings/general" element={<GeneralSettingsPage />} />
         </Route>
       </Route>
 

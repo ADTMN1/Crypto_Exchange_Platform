@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SettingCard } from '../../components/admin/SettingCard';
 import { toast } from 'sonner';
 import '../../styles/settings-grid.css';
@@ -208,6 +209,7 @@ const settingsConfig = [
 ];
 
 export default function SystemSettingsPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -228,8 +230,14 @@ export default function SystemSettingsPage() {
   }, [searchQuery, selectedCategory]);
 
   const handleSettingClick = (setting: any) => {
-    toast.info(`Opening ${setting.title} configuration...`);
-    console.log('Navigate to:', setting.route);
+    if (setting.id === 'general') {
+      // Navigate to the General Settings page
+      navigate('/admin/settings/general');
+    } else {
+      // For other settings, show a placeholder message
+      toast.info(`Opening ${setting.title} configuration...`);
+      console.log('Navigate to:', setting.route);
+    }
   };
 
   return (
