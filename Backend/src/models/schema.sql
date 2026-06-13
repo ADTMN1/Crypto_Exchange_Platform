@@ -234,7 +234,12 @@ created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 
-
+CREATE TABLE IF NOT EXISTS trading_gate (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  changed_by VARCHAR(100),
+  changed_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 
 
@@ -275,3 +280,5 @@ ON notification_recipients(notification_id);
 
 CREATE INDEX idx_notification_recipients_is_read
 ON notification_recipients(is_read);
+
+CREATE INDEX idx_trading_gate_status ON trading_gate(status);

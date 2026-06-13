@@ -1,6 +1,7 @@
 import express from 'express';
 import binaryController from '../controllers/binary.controller.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.midlware.js';
+import { checkTradingGateWithAdminBypass } from '../middleware/gate.middleware.js';
 
 const binaryRouter = express.Router();
 
@@ -8,7 +9,7 @@ const binaryRouter = express.Router();
 binaryRouter.use(authenticateToken);
 
 // ─── USER ROUTES ────────────────────────────────────────────────────────────
-binaryRouter.post('/trade',         binaryController.placeTrade);
+binaryRouter.post('/trade',         checkTradingGateWithAdminBypass, binaryController.placeTrade);
 binaryRouter.get('/my-trades',      binaryController.getMyTrades);
 
 // ─── ADMIN ROUTES ───────────────────────────────────────────────────────────

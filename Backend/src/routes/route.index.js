@@ -11,6 +11,7 @@ import walletRouter from './wallet.routes.js';
 import binaryRouter from './binary.routes.js';
 import p2pRouter from './p2p.routes.js';
 import currencyRouter from './currency.routes.js';
+import tradingGateRouter from './trading-gate.routes.js';
 
 const router = express.Router();
 router.use('/auth',          authRouter);
@@ -26,5 +27,6 @@ router.use('/notifications', notificationRouter);
 router.use('/wallet',        walletRouter);
 router.use('/binary',        binaryRouter);
 router.use('/p2p',           p2pRouter);
+router.use('/trading-gate',  tradingGateRouter);
 
 export default router;
