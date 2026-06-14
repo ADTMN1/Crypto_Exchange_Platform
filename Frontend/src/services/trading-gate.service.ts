@@ -3,12 +3,13 @@ import api from './api.service';
 export interface TradingGateStatus {
   id: string;
   status: 'open' | 'closed';
-  changed_by: string;
-  changed_at: string;
+  changedBy: string;
+  changedAt: string;
 }
 
 export interface TradingGateDetails extends TradingGateStatus {
-  // Additional fields if needed
+  isOpen: boolean;
+  createdAt?: string;
 }
 
 class TradingGateService {
@@ -27,7 +28,7 @@ class TradingGateService {
    */
   async getDetails(): Promise<TradingGateDetails> {
     const response = await api.get(`${this.baseURL}/details`);
-    return response.data;
+    return response.data.data; // Extract from nested data property
   }
 
   /**
@@ -35,7 +36,7 @@ class TradingGateService {
    */
   async openGate(): Promise<TradingGateDetails> {
     const response = await api.post(`${this.baseURL}/open`);
-    return response.data;
+    return response.data.data; // Extract from nested data property
   }
 
   /**
@@ -43,7 +44,7 @@ class TradingGateService {
    */
   async closeGate(): Promise<TradingGateDetails> {
     const response = await api.post(`${this.baseURL}/close`);
-    return response.data;
+    return response.data.data; // Extract from nested data property
   }
 }
 

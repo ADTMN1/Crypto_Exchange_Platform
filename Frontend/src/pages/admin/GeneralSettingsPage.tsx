@@ -30,12 +30,15 @@ export default function GeneralSettingsPage() {
   const handleOpenGate = async () => {
     try {
       setActionLoading('open');
-      const updatedGate = await tradingGateService.openGate();
-      setGateDetails(updatedGate);
+      const response = await tradingGateService.openGate();
+      setGateDetails(response);
+      // Use the message from backend response
       toast.success('Trading gate opened successfully');
     } catch (err: any) {
       console.error('Failed to open gate:', err);
-      toast.error(err.response?.data?.message || 'Failed to open trading gate');
+      // Use backend error message if available
+      const errorMessage = err.response?.data?.message || 'Failed to open trading gate';
+      toast.error(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -44,12 +47,15 @@ export default function GeneralSettingsPage() {
   const handleCloseGate = async () => {
     try {
       setActionLoading('close');
-      const updatedGate = await tradingGateService.closeGate();
-      setGateDetails(updatedGate);
+      const response = await tradingGateService.closeGate();
+      setGateDetails(response);
+      // Use the message from backend response
       toast.success('Trading gate closed successfully');
     } catch (err: any) {
       console.error('Failed to close gate:', err);
-      toast.error(err.response?.data?.message || 'Failed to close trading gate');
+      // Use backend error message if available
+      const errorMessage = err.response?.data?.message || 'Failed to close trading gate';
+      toast.error(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -189,10 +195,10 @@ export default function GeneralSettingsPage() {
                 <div className="card-content">
                   <div className="card-label">Last Updated</div>
                   <div className="card-value">
-                    {gateDetails?.changed_at ? formatRelativeTime(gateDetails.changed_at) : 'Unknown'}
+                    {gateDetails?.changedAt ? formatRelativeTime(gateDetails.changedAt) : 'Unknown'}
                   </div>
                   <div className="card-meta">
-                    {gateDetails?.changed_at ? formatDate(gateDetails.changed_at) : ''}
+                    {gateDetails?.changedAt ? formatDate(gateDetails.changedAt) : ''}
                   </div>
                 </div>
               </div>
@@ -205,7 +211,7 @@ export default function GeneralSettingsPage() {
                 <div className="card-content">
                   <div className="card-label">Updated By</div>
                   <div className="card-value">
-                    {gateDetails?.changed_by || 'Unknown'}
+                    {gateDetails?.changedBy || 'Unknown'}
                   </div>
                   <div className="card-meta">Administrator</div>
                 </div>
@@ -217,11 +223,12 @@ export default function GeneralSettingsPage() {
                   onClick={isOpen ? handleCloseGate : handleOpenGate}
                   disabled={actionLoading !== null}
                   className={`action-button ${isOpen ? 'btn-danger' : 'btn-success'}`}
+                  title={isOpen ? 'Click to close trading gate' : 'Click to open trading gate'}
                 >
                   {actionLoading ? (
                     <>
                       <div className="button-spinner" />
-                      <span>{actionLoading === 'open' ? 'Opening...' : 'Closing...'}</span>
+                      <span>{actionLoading === 'close' ? 'Closing...' : 'Opening...'}</span>
                     </>
                   ) : (
                     <>
@@ -278,7 +285,7 @@ export default function GeneralSettingsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className="property-value">{gateDetails?.changed_by || 'Unknown'}</span>
+                      <span className="property-value">{gateDetails?.changedBy || 'Unknown'}</span>
                     </td>
                     <td>
                       <span className="status-chip chip-info">Administrator</span>
@@ -293,12 +300,12 @@ export default function GeneralSettingsPage() {
                     </td>
                     <td>
                       <span className="property-value">
-                        {gateDetails?.changed_at ? formatDate(gateDetails.changed_at) : 'Unknown'}
+                        {gateDetails?.changedAt ? formatDate(gateDetails.changedAt) : 'Unknown'}
                       </span>
                     </td>
                     <td>
                       <span className="status-chip chip-neutral">
-                        {gateDetails?.changed_at ? formatRelativeTime(gateDetails.changed_at) : 'N/A'}
+                        {gateDetails?.changedAt ? formatRelativeTime(gateDetails.changedAt) : 'N/A'}
                       </span>
                     </td>
                   </tr>
