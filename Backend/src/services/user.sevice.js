@@ -299,6 +299,57 @@ const userService = {
     );
     if (result.rows.length === 0) throw new AppError('User not found', 404);
   },
+
+  // ─── ADMIN: USER TRANSACTIONS ────────────────────────────────────────────────
+
+  getUserTransactions: async (targetUserId, page = 1, limit = 20) => {
+    // Verify user exists
+    const userCheck = await query(
+      'SELECT id FROM users WHERE id = $1 AND is_deleted = FALSE',
+      [targetUserId]
+    );
+    if (userCheck.rows.length === 0) throw new AppError('User not found', 404);
+
+    const offset = (page - 1) * limit;
+    const result = await query(
+      `SELECT id, type, currency, amount, fee, status, tx_hash,
+              from_address, to_address, created_at, confirmed_at
+       FROM transactions
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [targetUserId, limit, offset]
+    );
+    const countResult = await query(
+      'SELECT COUNT(*) FROM transactions WHERE user_id = $1',
+      [targetUserId]
+    );
+    return {
+      transactions: result.rows,
+      total: parseInt(countResult.rows[0].count),
+      page,
+      limit,
+    };
+  },
+
+  // ─── ADMIN: USER WALLETS ─────────────────────────────────────────────────────
+
+  getUserWallets: async (targetUserId) => {
+    const userCheck = await query(
+      'SELECT id FROM users WHERE id = $1 AND is_deleted = FALSE',
+      [targetUserId]
+    );
+    if (userCheck.rows.length === 0) throw new AppError('User not found', 404);
+
+    const result = await query(
+      `SELECT id, currency, balance, locked_balance, created_at
+       FROM wallets
+       WHERE user_id = $1
+       ORDER BY currency`,
+      [targetUserId]
+    );
+    return result.rows;
+  },
 };
 
 export default userService;

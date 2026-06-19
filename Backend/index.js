@@ -19,7 +19,7 @@ async function startServer() {
 		console.log('✅ Database synchronization verified successfully.');
 
 		console.log('🔄 Connecting to Redis...');
-		await redisClient.connect();
+		await redisClient.ping();
 		console.log('✅ Redis connection established successfully.');
 
 		// Wrap Express app in an HTTP server so Socket.IO can share the same port

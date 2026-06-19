@@ -225,6 +225,71 @@ if(!req.user || !req.user.id) {
       next(error);
     }
   },
+
+  getUserTransactions: async (req, res, next) => {
+    try {
+      const { page, limit } = req.query;
+      const result = await userService.getUserTransactions(
+        req.params.userId,
+        parseInt(page) || 1,
+        parseInt(limit) || 20
+      );
+      res.status(200).json({ success: true, data: result });
+      auditController.auditingSave(req, 'Viewed user transactions', 'admin_user_management', req.params.userId)
+          .catch((err) => console.error('Audit save failed:', err));
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  getUserWallets: async (req, res, next) => {
+    try {
+      const wallets = await userService.getUserWallets(req.params.userId);
+      res.status(200).json({ success: true, data: wallets });
+      auditController.auditingSave(req, 'Viewed user wallets', 'admin_user_management', req.params.userId)
+          .catch((err) => console.error('Audit save failed:', err));
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  impersonateUser: async (req, res, next) => {
+    try {
+      const { generateToken, refreshToken: genRefreshToken } = await import('../utils/generateToken.js');
+      const AppError = (await import('../utils/errorHandling.js')).default;
+
+      // Fetch user to impersonate
+      const targetUser = await userService.getUserById(req.params.userId);
+      if (!targetUser) return next(new AppError('User not found', 404));
+      if (targetUser.account_status === 'banned') {
+        return next(new AppError('Cannot impersonate a banned user', 403));
+      }
+
+      const impersonationToken = await generateToken(targetUser.id, targetUser.email, targetUser.role || 'user');
+      const impersonationRefreshToken = await genRefreshToken(targetUser.id, targetUser.email, targetUser.role || 'user');
+
+      res.status(200).json({
+        success: true,
+        message: `Impersonation token generated for ${targetUser.username}`,
+        data: {
+          accessToken: impersonationToken,
+          refreshToken: impersonationRefreshToken,
+          user: targetUser,
+        },
+      });
+
+      auditController.auditingSave(
+        req, `Admin impersonated user: ${targetUser.username}`,
+        'admin_impersonation', targetUser.id,
+        { adminId: req.user.id, adminEmail: req.user.email }
+      ).catch((err) => console.error('Audit save failed:', err));
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
 export default userController;

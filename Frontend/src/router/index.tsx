@@ -53,6 +53,7 @@ import CoinPairsPage from "../pages/admin/CoinPairsPage";
 import CompletedP2PTradesPage from "../pages/admin/CompletedP2PTradesPage";
 import SystemSettingsPage from "../pages/admin/SystemSettingsPage";
 import GeneralSettingsPage from "../pages/admin/GeneralSettingsPage";
+import ImpersonatePage from "../pages/admin/ImpersonatePage";
 
 const adminSectionRoutes = [
   {
@@ -598,6 +599,17 @@ export default function Router() {
               );
             }
 
+            // Transaction History page
+            if (section.path === "/admin/transaction-history") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<AdminTransactionsPage />}
+                />
+              );
+            }
+
             return (
               <Route
                 key={section.path}
@@ -620,6 +632,7 @@ export default function Router() {
           })} 
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="users/:id/view" element={<ImpersonatePage />} />
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="transactions" element={<AdminTransactionsPage />} />
           <Route path="pairs" element={<AdminPairsPage />} />

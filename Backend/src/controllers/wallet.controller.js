@@ -104,6 +104,33 @@ const walletController = {
       next(error);
     }
   },
+
+  adminDebit: async (req, res, next) => {
+    try {
+      const { userId, currency, amount } = req.body;
+
+      if (!userId || !currency || !amount) {
+        return next(new AppError('userId, currency, and amount are required', 400));
+      }
+
+      if (amount <= 0) {
+        return next(new AppError('Amount must be positive', 400));
+      }
+
+      await walletService.adminDebit(userId, currency, parseFloat(amount));
+
+      res.status(200).json({ 
+        success: true, 
+        message: `Successfully debited ${amount} ${currency} from user wallet` 
+      });
+
+      auditController.auditingSave(req, 'Admin wallet debit', 'admin_wallet', userId, { currency, amount })
+        .catch((err) => console.error('Audit save failed:', err));
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
 export default walletController;
