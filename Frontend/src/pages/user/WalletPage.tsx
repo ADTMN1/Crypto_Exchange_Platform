@@ -1,6 +1,7 @@
 import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import DepositModal from '../../components/common/DepositModal';
+import LoadingOverlay from '../../components/common/LoadingOverlay';
 import walletService from '../../services/wallet.service';
 
 export default function WalletPage() {
@@ -76,12 +77,14 @@ export default function WalletPage() {
   ];
 
   return (
-    <main className="wallet-page">
-      {loading && <div style={{ padding: '20px' }}>Loading wallet data...</div>}
+    <main className="wallet-page" style={{ position: 'relative', minHeight: '80vh' }}>
+      {loading && <LoadingOverlay message="Loading wallet data..." fullPage={false} />}
       {error && <div style={{ padding: '20px', color: 'red' }}>Error: {error}</div>}
       
-      {/* Total Assets Card */}
-      <div className="assets-card">
+      {!loading && (
+        <>
+          {/* Total Assets Card */}
+          <div className="assets-card">
         <div className="assets-header">
           <div>
             <h3 className="assets-label">Total Assets</h3>
@@ -235,6 +238,8 @@ export default function WalletPage() {
           ))}
         </div>
       </div>
+      </>
+      )}
     </main>
   );
 }

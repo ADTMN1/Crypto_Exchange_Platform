@@ -44,8 +44,9 @@ export default function ProfilePage() {
       const last = nameParts.slice(1).join(' ') || '';
       
       // Set profile image from user object only if it's a valid URL
-      if (user.profile_image && isValidImageUrl(user.profile_image)) {
-        setProfileImage(user.profile_image);
+      const profileImg = user.profile_image || user.profile_picture_url;
+      if (profileImg && isValidImageUrl(profileImg)) {
+        setProfileImage(profileImg);
         setImageError(false);
       } else {
         setProfileImage(null);

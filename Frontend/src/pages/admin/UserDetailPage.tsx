@@ -122,7 +122,7 @@ export default function UserDetail() {
           <h1>User Detail – {user.handle}</h1>
           <p>Review and manage the full account profile for {user.name}.</p>
         </div>
-        <Link to="/" className="btn-primary btn-login-user">
+        <Link to="/dashboard" className="btn-primary btn-login-user">
           Login as User
         </Link>
       </section>

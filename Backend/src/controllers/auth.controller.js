@@ -8,18 +8,56 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const AuthController = {
     /**
+     * Send OTP to email for registration
+     */
+    sendOTP: async (req, res, next) => {
+        const { email } = req.body;
+        if (!email) {
+            throw new AppError('Email is required', 400);
+        }
+        try {
+            const result = await authService.sendOTP(email);
+            res.status(200).json({
+                success: true,
+                message: result.message
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Verify OTP
+     */
+    verifyOTP: async (req, res, next) => {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            throw new AppError('Email and OTP are required', 400);
+        }
+        try {
+            const result = await authService.verifyOTP(email, otp);
+            res.status(200).json({
+                success: true,
+                message: result.message
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
      * Controller bridge managing user registration routing signatures.
      */
     register: async (req, res, next) => {
-        const { email, username, phone_number, password } = req.body;
+        const { email, username, phone_number, password, otp } = req.body;
         // Don't allow role_id from request body for security - always use 'user' role
-        if(!email || !username || !password || !phone_number) {
+        if(!email || !username || !password || !phone_number || !otp) {
            throw new AppError('Missing required fields', 400);
 
         }
 // console.log('Received registration request:', { email, username, phone_number }); // Debug log
         try {
-            const newUser = await authService.register(email, username, phone_number, password);
+            const newUser = await authService.register(email, username, phone_number, password, otp);
             if (!newUser) {
                 throw new AppError('Registration failed. Please try again.', 400);
             }
@@ -215,6 +253,44 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
                     message: 'Invalid or expired refresh token. Please login again.'
                 });
             }
+            next(error);
+        }
+    },
+
+    /**
+     * Send password reset email
+     */
+    forgotPassword: async (req, res, next) => {
+        const { email } = req.body;
+        if (!email) {
+            throw new AppError('Email is required', 400);
+        }
+        try {
+            const result = await authService.forgotPassword(email);
+            res.status(200).json({
+                success: true,
+                message: result.message
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Reset password
+     */
+    resetPassword: async (req, res, next) => {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            throw new AppError('Token and new password are required', 400);
+        }
+        try {
+            const result = await authService.resetPassword(token, password);
+            res.status(200).json({
+                success: true,
+                message: result.message
+            });
+        } catch (error) {
             next(error);
         }
     }

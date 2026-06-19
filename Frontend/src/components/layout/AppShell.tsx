@@ -10,7 +10,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Topbar />
       <div className="main-container">
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
-        <div className={`content ${collapsed ? 'collapsed' : ''}`}>{children}</div>
+        <div className={`content ${collapsed ? 'collapsed' : ''}`} style={{ position: 'relative' }}>{children}</div>
       </div>
     </div>
   );

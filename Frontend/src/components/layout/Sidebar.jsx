@@ -9,6 +9,9 @@ function Sidebar({ collapsed, onToggle }) {
   const iconStyle = { color: '#F7931A' }
 
   const handleLogout = () => {
+    // Navigate first to avoid route guard redirect
+    navigate('/')
+    // Then update auth state and clear storage
     logout()
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
@@ -17,7 +20,6 @@ function Sidebar({ collapsed, onToggle }) {
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
     })
-    navigate('/login')
   }
 
   return (
@@ -30,7 +32,7 @@ function Sidebar({ collapsed, onToggle }) {
       <nav className="sidebar-nav">
         <div className="nav-section">
           <div className="nav-title">{!collapsed && 'BROWSE'}</div>
-          <Link to="/" className="nav-item">
+          <Link to="/dashboard" className="nav-item">
             <FaFire style={iconStyle} className="nav-icon" />
             {!collapsed && 'Home'}
           </Link>

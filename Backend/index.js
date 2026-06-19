@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 import { createServer } from 'http';
 import app from './app.js';
 import { query } from './src/config/db.config.js';
+import redisClient from './src/config/redis.config.js';
 import { initializeWebSocket } from './src/websocket/socket.js';
 
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,10 @@ async function startServer() {
 
 		await query('SELECT 1');
 		console.log('✅ Database synchronization verified successfully.');
+
+		console.log('🔄 Connecting to Redis...');
+		await redisClient.connect();
+		console.log('✅ Redis connection established successfully.');
 
 		// Wrap Express app in an HTTP server so Socket.IO can share the same port
 		const httpServer = createServer(app);

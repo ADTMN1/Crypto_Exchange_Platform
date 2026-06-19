@@ -25,6 +25,6 @@ export default function GuestRoute() {
   }
 
   return (
-    <Navigate to={user?.role === "admin" ? "/admin" : "/"} replace />
+    <Navigate to={user?.role === "admin" ? "/admin" : "/dashboard"} replace />
   );
 }

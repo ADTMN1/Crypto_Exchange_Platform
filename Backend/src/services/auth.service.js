@@ -1,13 +1,32 @@
 import bcrypt from 'bcrypt';
 import pool, { query } from '../config/db.config.js';
 import AppError from '../utils/errorHandling.js';
+import redisClient from '../config/redis.config.js';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const authService = {
     /**
      * Executes account creation and lifecycle tracking maps.
      */
-    register: async (email, username, phone_number, password) => {
-        // 1. Structural check for conflicting existing identities
+    register: async (email, username, phone_number, password, otp) => {
+        // 1. Verify OTP first
+        if (!otp) {
+            throw new AppError('OTP is required for registration.', 400);
+        }
+
+        const storedOTP = await redisClient.get(`otp:${email}`);
+        
+        if (!storedOTP) {
+            throw new AppError('OTP expired or not found. Please request a new one.', 400);
+        }
+        
+        if (storedOTP !== otp) {
+            throw new AppError('Invalid OTP. Please try again.', 400);
+        }
+
+        // 2. Structural check for conflicting existing identities
         const existingUserCheck = await query(
             'SELECT 1 FROM users WHERE email = $1 OR phone_number = $2',
             [email, phone_number]
@@ -56,7 +75,11 @@ const authService = {
             await client.query(statusInsertQuery, [newUser.id]);
 
             await client.query('COMMIT');
-            return newUser;
+
+        // Delete OTP after successful registration
+        await redisClient.del(`otp:${email}`);
+
+        return newUser;
 
         } catch (error) {
             await client.query('ROLLBACK');
@@ -82,6 +105,8 @@ const authService = {
                 u.is_active,
                 u.is_deleted,
                 u.password_hash,
+                u.profile_image,
+                u.profile_picture_url,
                 r.id AS role_id,
                         r.name AS role_name
         FROM users u
@@ -113,7 +138,8 @@ const authService = {
             id: user.id,
             email: user.email,
             username: user.username,
-            profile_image: user.profile_image,
+            profile_image: user.profile_image || user.profile_picture_url,
+            profile_picture_url: user.profile_picture_url || user.profile_image,
             role: user.role_name
         };
     },
@@ -293,6 +319,164 @@ const authService = {
         } finally {
             client.release();
         }
+    },
+
+    /**
+     * Generates and sends OTP for registration
+     */
+    sendOTP: async (email) => {
+        // Check if user already exists
+        const existingUserCheck = await query(
+            'SELECT 1 FROM users WHERE email = $1',
+            [email]
+        );
+
+        if (existingUserCheck.rows.length > 0) {
+            throw new AppError('An account with this email already exists.', 409);
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Store OTP in Redis with 5-minute expiration
+        await redisClient.setEx(`otp:${email}`, 300, otp);
+        
+        // Send OTP via Resend
+        try {
+            const { data, error } = await resend.emails.send({
+                from: 'Crypto Exchange <onboarding@resend.dev>',
+                to: [email],
+                subject: 'Your OTP for Crypto Exchange Registration',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #333;">Welcome to Crypto Exchange!</h2>
+                        <p style="font-size: 16px; color: #666;">
+                            Thank you for registering. Your One-Time Password (OTP) is:
+                        </p>
+                        <div style="font-size: 32px; font-weight: bold; color: #1a73e8; padding: 20px; background: #f0f7ff; text-align: center; margin: 20px 0; border-radius: 8px;">
+                            ${otp}
+                        </div>
+                        <p style="font-size: 14px; color: #888;">
+                            This OTP is valid for 5 minutes. Please don't share it with anyone.
+                        </p>
+                    </div>
+                `,
+            });
+
+            if (error) {
+                console.error('Resend error:', error);
+                throw new AppError('Failed to send OTP email', 500);
+            }
+        } catch (err) {
+            console.error('Error sending OTP:', err);
+            // Fallback to logging OTP if email fails
+            console.log(`🔐 OTP for ${email}: ${otp}`);
+        }
+        
+        return { message: 'OTP sent successfully' };
+    },
+
+    /**
+     * Verifies OTP
+     */
+    verifyOTP: async (email, otp) => {
+        const storedOTP = await redisClient.get(`otp:${email}`);
+        
+        if (!storedOTP) {
+            throw new AppError('OTP expired or not found. Please request a new one.', 400);
+        }
+        
+        if (storedOTP !== otp) {
+            throw new AppError('Invalid OTP. Please try again.', 400);
+        }
+        
+        // Delete OTP after successful verification
+        await redisClient.del(`otp:${email}`);
+        
+        return { message: 'OTP verified successfully' };
+    },
+
+    /**
+     * Sends password reset link to email
+     */
+    forgotPassword: async (email) => {
+        // Check if user exists
+        const userResult = await query(
+            'SELECT id FROM users WHERE email = $1',
+            [email]
+        );
+
+        if (userResult.rows.length === 0) {
+            // Don't reveal whether email exists for security
+            return { message: 'If an account exists for this email, we have sent password reset instructions.' };
+        }
+
+        // Generate reset token
+        const crypto = await import('crypto');
+        const resetToken = crypto.randomBytes(32).toString('hex');
+
+        // Store reset token in Redis with 1 hour expiration
+        await redisClient.setEx(`reset-token:${resetToken}`, 3600, JSON.stringify({ email, userId: userResult.rows[0].id }));
+
+        // Send email with reset link
+        try {
+            const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+            const { error } = await resend.emails.send({
+                from: 'Crypto Exchange <onboarding@resend.dev>',
+                to: [email],
+                subject: 'Reset Your Password',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #333;">Reset Your Password</h2>
+                        <p style="font-size: 16px; color: #666;">
+                            You requested to reset your password. Click the button below to set a new password.
+                        </p>
+                        <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0;">
+                            Reset Password
+                        </a>
+                        <p style="font-size: 14px; color: #888;">
+                            This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.
+                        </p>
+                    </div>
+                `,
+            });
+
+            if (error) {
+                console.error('Resend error:', error);
+            }
+        } catch (err) {
+            console.error('Error sending reset email:', err);
+        }
+
+        return { message: 'If an account exists for this email, we have sent password reset instructions.' };
+    },
+
+    /**
+     * Resets password using reset token
+     */
+    resetPassword: async (token, newPassword) => {
+        // Get reset token from Redis
+        const storedData = await redisClient.get(`reset-token:${token}`);
+        
+        if (!storedData) {
+            throw new AppError('Reset token expired or invalid. Please request a new password reset.', 400);
+        }
+
+        const { email, userId } = JSON.parse(storedData);
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        // Update user's password
+        await query(
+            'UPDATE users SET password_hash = $1 WHERE id = $2',
+            [hashedPassword, userId]
+        );
+
+        // Delete reset token from Redis
+        await redisClient.del(`reset-token:${token}`);
+
+        return { message: 'Password reset successfully. You can now login with your new password.' };
     }
 };
 
