@@ -4,15 +4,17 @@ import type { LoginFormData, SignUpFormData } from '../types/auth.types'
 interface LoginResponse {
   success: boolean
   message: string
-  user: {
-    id: string
-    email: string
-    username: string
-    profile_image?: string
-    role?: string
+  data: {
+    user: {
+      id: string
+      email: string
+      username: string
+      profile_picture_url?: string
+      role?: string
+    }
+    accessToken?: string
+    refreshToken?: string
   }
-  accessToken?: string
-  refreshToken?: string
 }
 
 interface RegisterResponse {
@@ -25,25 +27,59 @@ interface RegisterResponse {
   }
 }
 
+interface OTPResponse {
+  success: boolean
+  message: string
+}
+
 const authService = {
   /**
    * Login user with email and password
    */
-  async login(credentials: LoginFormData): Promise<LoginResponse> {
+  async login(credentials: LoginFormData): Promise<{
+    success: boolean
+    message: string
+    user: any
+  }> {
     const response = await api.post('/auth/login', credentials)
+    const { user, success, message } = response.data
+    return {
+      success,
+      message,
+      user: {
+        ...user,
+        profile_image: user.profile_image || user.profile_picture_url
+      }
+    }
+  },
+
+  /**
+   * Send OTP to email
+   */
+  async sendOTP(email: string): Promise<OTPResponse> {
+    const response = await api.post('/auth/send-otp', { email })
+    return response.data
+  },
+
+  /**
+   * Verify OTP
+   */
+  async verifyOTP(email: string, otp: string): Promise<OTPResponse> {
+    const response = await api.post('/auth/verify-otp', { email, otp })
     return response.data
   },
 
   /**
    * Register new user
    */
-  async register(userData: SignUpFormData): Promise<RegisterResponse> {
+  async register(userData: SignUpFormData, otp: string): Promise<RegisterResponse> {
     const username = `${userData.firstName} ${userData.lastName}`
     const payload = {
       username,
       email: userData.email,
       phone_number: userData.phone_number,
       password: userData.password,
+      otp,
     }
     const response = await api.post('/auth/register', payload)
     return response.data
@@ -52,9 +88,21 @@ const authService = {
   /**
    * Google OAuth login
    */
-  async googleLogin(token: string): Promise<LoginResponse> {
+  async googleLogin(token: string): Promise<{
+    success: boolean
+    message: string
+    user: any
+  }> {
     const response = await api.post('/auth/google', { token })
-    return response.data
+    const { user, success, message } = response.data
+    return {
+      success,
+      message,
+      user: {
+        ...user,
+        profile_image: user.profile_image || user.profile_picture_url
+      }
+    }
   },
 
   /**

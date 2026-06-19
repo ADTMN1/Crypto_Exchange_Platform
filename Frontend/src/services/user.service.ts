@@ -37,7 +37,7 @@ const userService = {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response.data
+    return response.data.data
   },
 
   async deleteProfileImage(): Promise<void> {

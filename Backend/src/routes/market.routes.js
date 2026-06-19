@@ -19,6 +19,7 @@ marketRouter.get('/klines/:symbol', getKlines);
 marketRouter.get('/orderbook/:symbol', getOrderBook);
 marketRouter.get('/trades/:symbol', getRecentTrades);
 marketRouter.get('/tickers', getAllTickers);
+marketRouter.get('/overview', getAllTickers);
 marketRouter.get('/exchangeinfo', getExchangeInfo);
 
 // Protected routes (require authentication)

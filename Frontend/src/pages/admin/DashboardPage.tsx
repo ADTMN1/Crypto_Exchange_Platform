@@ -255,6 +255,9 @@ export default function AdminOverviewPage() {
   }, []);
 
   const handleLogout = () => {
+    // Navigate first to avoid route guard redirect
+    navigate("/", { replace: true });
+    // Then update auth state and clear storage
     logout();
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
@@ -263,7 +266,6 @@ export default function AdminOverviewPage() {
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
-    navigate("/login", { replace: true });
   };
 
   return (

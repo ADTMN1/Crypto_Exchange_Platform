@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import AuthForm from "../../components/auth/AuthForm";
+import { authService } from "../../services";
+import { toast } from "sonner";
+import Spinner from "../../components/ui/Spinner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -12,17 +15,15 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Replace with actual API call to send password reset email
-      // const response = await authService.sendPasswordResetEmail(email);
-      // Example: await fetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
-
-      // Temporarily using setTimeout for now
-      setTimeout(() => {
-        setIsSubmitted(true);
-        setIsLoading(false);
-      }, 1500);
-    } catch (error) {
-      console.error("Failed to send password reset email:", error);
+      const response = await authService.forgotPassword(email);
+      toast.success(response.message);
+      setIsSubmitted(true);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || "Failed to send password reset email. Please try again.";
+      toast.error("Error", {
+        description: errorMessage,
+      });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -148,8 +149,15 @@ export default function ForgotPasswordPage() {
             />
           </div>
 
-          <button type="submit" className="auth-btn" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Send Reset Link"}
+          <button type="submit" className="auth-btn flex items-center justify-center gap-2" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Spinner />
+                Sending...
+              </>
+            ) : (
+              "Send Reset Link"
+            )}
           </button>
 
           <p className="auth-footer">

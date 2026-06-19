@@ -5,6 +5,7 @@ import AdminRoute from "./AdminRoute";
 import { useAuthStore } from "../store";
 import DebugPage from "../pages/DebugPage";
 import HomePage from "../pages/public/HomePage";
+import LandingPage from "../pages/public/LandingPage";
 import MarketsPage from "../pages/public/MarketsPage";
 import MarketDashboardPage from "../pages/public/MarketDashboardPage";
 import SupportPage from "../pages/public/SupportPage";
@@ -384,7 +385,7 @@ function RootRoute() {
 export default function Router() {
   return (
     <Routes>
-      <Route path="/" element={<RootRoute />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/dashboard" element={<RootRoute />} />
 
       <Route element={<GuestRoute />}>
