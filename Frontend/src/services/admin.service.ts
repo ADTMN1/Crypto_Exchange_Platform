@@ -17,6 +17,53 @@ export interface AdminUser {
   last_login_at?: string;
 }
 
+export interface AdminUserTransaction {
+  id: string;
+  type: string;
+  currency: string;
+  amount: string;
+  fee?: string;
+  status: string;
+  tx_hash?: string;
+  from_address?: string;
+  to_address?: string;
+  created_at: string;
+  confirmed_at?: string;
+}
+
+export interface AdminUserWallet {
+  id: string;
+  currency: string;
+  balance: string;
+  locked_balance: string;
+  created_at: string;
+}
+
+export interface AdminUserTransactionsResponse {
+  success: boolean;
+  data: {
+    transactions: AdminUserTransaction[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface AdminUserWalletsResponse {
+  success: boolean;
+  data: AdminUserWallet[];
+}
+
+export interface ImpersonateResponse {
+  success: boolean;
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    user: AdminUser;
+  };
+}
+
 export interface AdminUsersResponse {
   success: boolean;
   data: {
@@ -187,6 +234,28 @@ async getAdminNotifications(
 
   return response.data;
 },
+
+  async getUserTransactions(userId: string, page = 1, limit = 20): Promise<AdminUserTransactionsResponse> {
+    const response = await api.get<AdminUserTransactionsResponse>(
+      API_ENDPOINTS.ADMIN.USER_TRANSACTIONS(userId),
+      { params: { page, limit } }
+    );
+    return response.data;
+  },
+
+  async getUserWallets(userId: string): Promise<AdminUserWalletsResponse> {
+    const response = await api.get<AdminUserWalletsResponse>(
+      API_ENDPOINTS.ADMIN.USER_WALLETS(userId)
+    );
+    return response.data;
+  },
+
+  async impersonateUser(userId: string): Promise<ImpersonateResponse> {
+    const response = await api.post<ImpersonateResponse>(
+      API_ENDPOINTS.ADMIN.IMPERSONATE_USER(userId)
+    );
+    return response.data;
+  },
 };
 
 

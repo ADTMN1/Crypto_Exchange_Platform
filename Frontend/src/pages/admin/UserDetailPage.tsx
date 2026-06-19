@@ -1,319 +1,321 @@
-import { useMemo, useState } from "react"
-import { Link, useParams } from "react-router-dom"
-import { toast } from "sonner"
-import adminService from "../../services/admin.service"
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import api, { API_ENDPOINTS } from '../../services/api.service'
+import adminService, {
+  AdminUser,
+  AdminUserTransaction,
+  AdminUserWallet,
+} from '../../services/admin.service'
+import { useAuthStore } from '../../store'
+import UserProfileHeader from '../../components/admin/user-detail/UserProfileHeader'
+import UserStatsBar from '../../components/admin/user-detail/UserStatsBar'
+import UserTransactionsTable from '../../components/admin/user-detail/UserTransactionsTable'
 
-const users = [
-  {
-    id: "rahase1219",
-    name: "Rahase Amine",
-    firstName: "Rahase",
-    lastName: "Amine",
-    handle: "@rahase1219",
-    email: "rahasezemichael@gmail.com",
-    mobile: "+1 403-637-25",
-    country: "Canada",
-    joinedAt: "2026-03-21 06:54 AM",
-    totalOrder: 0,
-    totalTrade: 0,
-    totalDeposit: 2,
-    transactions: 12,
-    status: "Normal Trading User",
-    statusDescription:
-      "This user trades normally based on market conditions. No outcome control is applied.",
-    address: "4383 38 St NE",
-  },
-  {
-    id: "ava_collins",
-    name: "Ava Collins",
-    firstName: "Ava",
-    lastName: "Collins",
-    handle: "@ava_collins",
-    email: "ava.collins@example.com",
-    mobile: "+1 415-555-0123",
-    country: "United States",
-    joinedAt: "2026-04-08 09:22 AM",
-    totalOrder: 4,
-    totalTrade: 8,
-    totalDeposit: 6,
-    transactions: 18,
-    status: "Active Trading User",
-    statusDescription: "User has an active profile and is fully verified for trading.",
-    address: "198 Market St.",
-  },
-]
+// ─── inline wallet panel ────────────────────────────────────────────────────
+const CURRENCY_COLORS: Record<string, string> = {
+  USDT: 'linear-gradient(135deg,rgba(18,188,126,.96),rgba(12,168,104,.96))',
+  BTC:  'linear-gradient(135deg,rgba(242,144,6,.96),rgba(215,94,12,.96))',
+  ETH:  'linear-gradient(135deg,rgba(98,126,234,.96),rgba(70,100,200,.96))',
+  BNB:  'linear-gradient(135deg,rgba(240,185,11,.96),rgba(200,150,5,.96))',
+}
+function fmtNum(n: string | number) {
+  return parseFloat(String(n)).toLocaleString('en-US', { maximumFractionDigits: 8 })
+}
 
-export default function UserDetail() {
+export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const user = useMemo(
-    () => users.find((item) => item.id === id) ?? users[0],
-    [id]
-  )
+  const navigate = useNavigate()
+  const login = useAuthStore((s) => s.login)
 
-  const [verification, setVerification] = useState({
-    email: true,
-    mobile: true,
-    twoFA: false,
-    kyc: true,
+  const [user, setUser]               = useState<AdminUser | null>(null)
+  const [wallets, setWallets]         = useState<AdminUserWallet[]>([])
+  const [transactions, setTx]         = useState<AdminUserTransaction[]>([])
+  const [txTotal, setTxTotal]         = useState(0)
+  const [loadingUser, setLoadingUser] = useState(true)
+  const [loadingTx, setLoadingTx]     = useState(true)
+  const [error, setError]             = useState<string | null>(null)
+  const [impersonating, setImpersonating] = useState(false)
+
+  // balance modal state — lifted so wallet cards AND action cards share it
+  const [modal, setModal] = useState<{ open: boolean; type: 'add' | 'subtract'; currency: string }>({
+    open: false, type: 'add', currency: 'USDT',
   })
+  const [modalAmount, setModalAmount] = useState('')
+  const [saving, setSaving]           = useState(false)
 
-  const [balanceModal, setBalanceModal] = useState<{ isOpen: boolean; type: 'add' | 'subtract' | null }>({ 
-    isOpen: false, 
-    type: null 
-  })
-  const [balanceAmount, setBalanceAmount] = useState('')
-  const [selectedAction, setSelectedAction] = useState<string | null>(null)
+  // ── fetch user + wallets ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return
+    setLoadingUser(true)
+    setError(null)
+    Promise.all([adminService.getUserById(id), adminService.getUserWallets(id)])
+      .then(([uRes, wRes]) => {
+        setUser(uRes.data)
+        setWallets(wRes.data)
+      })
+      .catch((err) => {
+        const msg = err?.response?.data?.message ?? 'Failed to load user'
+        setError(msg)
+        toast.error(msg)
+      })
+      .finally(() => setLoadingUser(false))
+  }, [id])
 
-  const toggleVerification = (key: keyof typeof verification) => {
-    setVerification((current) => ({
-      ...current,
-      [key]: !current[key],
-    }))
-  }
+  // ── fetch transactions ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return
+    setLoadingTx(true)
+    adminService.getUserTransactions(id)
+      .then((res) => { setTx(res.data.transactions); setTxTotal(res.data.total) })
+      .catch(() => {})
+      .finally(() => setLoadingTx(false))
+  }, [id])
 
-  const openBalanceModal = (type: 'add' | 'subtract') => {
-    setBalanceModal({ isOpen: true, type })
-    setBalanceAmount('')
-  }
+  const refreshWallets = () =>
+    adminService.getUserWallets(id!).then((r) => setWallets(r.data))
 
-  const closeBalanceModal = () => {
-    setBalanceModal({ isOpen: false, type: null })
-    setBalanceAmount('')
-    setSelectedAction(null)
-  }
+  // ── open modal helpers ────────────────────────────────────────────────────
+  const openAdd      = (currency: string) => { setModal({ open: true, type: 'add',      currency }); setModalAmount('') }
+  const openSubtract = (currency: string) => { setModal({ open: true, type: 'subtract', currency }); setModalAmount('') }
+  const closeModal   = () => setModal((m) => ({ ...m, open: false }))
 
-  const handleBalanceSubmit = (e: React.FormEvent) => {
+  // ── balance submit ────────────────────────────────────────────────────────
+  const handleBalanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log(`${balanceModal.type === 'add' ? 'Adding' : 'Subtracting'} balance: ${balanceAmount}`)
-    closeBalanceModal()
-  }
-
-  const [isBanning, setIsBanning] = useState(false)
-  const [isBanned, setIsBanned]   = useState(false)
-
-  const handleActionClick = (action: string) => {
-    if (action === 'add-balance') {
-      openBalanceModal('add')
-    } else if (action === 'subtract-balance') {
-      openBalanceModal('subtract')
-    }
-    setSelectedAction(action)
-  }
-
-  const handleBanUser = async () => {
-    if (isBanned) return
-    if (!window.confirm(`Ban user ${user.name}? They will lose access immediately.`)) return
-    setIsBanning(true)
+    const amount = parseFloat(modalAmount)
+    if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return }
+    setSaving(true)
     try {
-      await adminService.banUser(id!)
-      setIsBanned(true)
-      toast.success(`${user.name} has been banned.`)
+      const endpoint = modal.type === 'add' ? API_ENDPOINTS.WALLET.ADMIN_TOPUP : API_ENDPOINTS.WALLET.ADMIN_DEBIT
+      await api.post(endpoint, { userId: id, currency: modal.currency, amount })
+      toast.success(`${modal.type === 'add' ? 'Added' : 'Subtracted'} ${amount} ${modal.currency}`)
+      closeModal()
+      await refreshWallets()
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to ban user.')
+      toast.error(err?.response?.data?.message ?? 'Balance update failed')
     } finally {
-      setIsBanning(false)
+      setSaving(false)
     }
   }
+
+  // ── impersonate ───────────────────────────────────────────────────────────
+  const handleImpersonate = async () => {
+    if (!id) return
+    setImpersonating(true)
+    try {
+      const adminToken   = localStorage.getItem('token') ?? ''
+      const adminRefresh = localStorage.getItem('refreshToken') ?? ''
+      const adminUser    = useAuthStore.getState().user
+
+      const res = await adminService.impersonateUser(id)
+      const { accessToken, refreshToken, user: targetUser } = res.data
+
+      // Persist admin credentials so we can restore on exit
+      localStorage.setItem('adminToken', adminToken)
+      localStorage.setItem('adminRefreshToken', adminRefresh)
+      localStorage.setItem('adminUser', JSON.stringify(adminUser))
+
+      localStorage.setItem('token', accessToken)
+      localStorage.setItem('refreshToken', refreshToken)
+      login(targetUser as any, accessToken, refreshToken)
+
+      toast.success(`Viewing as @${targetUser.username}`)
+      navigate(`/admin/users/${id}/view`, {
+        state: { username: targetUser.username, userId: id },
+      })
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Impersonation failed')
+    } finally {
+      setImpersonating(false)
+    }
+  }
+
+  // ── ban / unban ───────────────────────────────────────────────────────────
+  const handleBan = async () => {
+    if (!user || !id) return
+    if (!window.confirm(`Ban ${user.username}?`)) return
+    try {
+      await adminService.banUser(id)
+      setUser((u) => u ? { ...u, account_status: 'banned', is_active: false } : u)
+      toast.success('User banned')
+    } catch (err: any) { toast.error(err?.response?.data?.message ?? 'Failed') }
+  }
+
+  const handleUnban = async () => {
+    if (!id) return
+    try {
+      await adminService.unbanUser(id)
+      setUser((u) => u ? { ...u, account_status: 'active', is_active: true } : u)
+      toast.success('User unbanned')
+    } catch (err: any) { toast.error(err?.response?.data?.message ?? 'Failed') }
+  }
+
+  // ── guards ────────────────────────────────────────────────────────────────
+  if (loadingUser) {
+    return (
+      <main className="nex-admin-section-page">
+        <div className="nex-loading"><div className="nex-spinner" /><p>Loading user…</p></div>
+      </main>
+    )
+  }
+  if (error || !user) {
+    return (
+      <main className="nex-admin-section-page">
+        <div style={{ padding: '2rem', color: 'var(--danger)' }}>
+          {error ?? 'User not found.'}
+          <button onClick={() => navigate(-1)} style={{ marginLeft: 16, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}>Go back</button>
+        </div>
+      </main>
+    )
+  }
+
+  const isBanned = user.account_status === 'banned'
 
   return (
     <main className="nex-admin-section-page">
-      <section className="nex-section-header">
-        <div>
-          <h1>User Detail – {user.handle}</h1>
-          <p>Review and manage the full account profile for {user.name}.</p>
-        </div>
-        <Link to="/dashboard" className="btn-primary btn-login-user">
-          Login as User
-        </Link>
-      </section>
 
-      <section className="nex-user-metrics-grid">
-        <div className="nex-user-metric-card">
-          <div className="metric-label">Total Order</div>
-          <div className="metric-value">{user.totalOrder}</div>
-        </div>
-        <div className="nex-user-metric-card">
-          <div className="metric-label">Total Trade</div>
-          <div className="metric-value">{user.totalTrade}</div>
-        </div>
-        <div className="nex-user-metric-card nex-user-metric-card-accent">
-          <div className="metric-label">Total Deposit</div>
-          <div className="metric-value">{user.totalDeposit}</div>
-        </div>
-        <div className="nex-user-metric-card nex-user-metric-card-dark">
-          <div className="metric-label">Transactions</div>
-          <div className="metric-value">{user.transactions}</div>
-        </div>
-      </section>
+      {/* 1. Header */}
+      <UserProfileHeader user={user} impersonating={impersonating} onImpersonate={handleImpersonate} />
 
-      <section className="nex-user-status-bar">
-        <div>
-          <strong>{user.status}</strong>
-          <p>{user.statusDescription}</p>
-        </div>
-      </section>
-
-      <section className="nex-user-outcome-row">
-        <div className="nex-user-outcome-card">
-          <div className="nex-user-outcome-header">
-            <span>Trade Outcome Control</span>
-            <small>Control this user's trade outcomes. This affects both binary trades and position trades.</small>
-          </div>
-          <select defaultValue="normal">
-            <option value="normal">Normal Trading</option>
-            <option value="always-win">Always Win</option>
-            <option value="always-lose">Always Lose</option>
-          </select>
-          <div className="nex-user-outcome-note">
-            <strong>Note:</strong>
-            <p>
-              "Always Win" mode gives user profits regardless of market movement.
-              "Always Lose" mode takes user's investment regardless of market movement.
-              Normal mode uses real market conditions for trade outcomes.
-              This setting affects both time-based (binary) and position trading.
-            </p>
-          </div>
-        </div>
-
-        <div className="nex-user-current-status-card">
-          <div className="nex-user-current-title">Current Status:</div>
-          <div className="nex-user-current-badge">Normal Trading</div>
-          <div className="nex-user-current-description">Trades based on market conditions</div>
-        </div>
-      </section>
-
-      <section className="nex-user-verification-row">
+      {/* View as User link */}
+      <section style={{ display: 'flex', gap: 10 }}>
         <button
-          type="button"
-          className={`nex-verification-button ${verification.email ? "verified" : "disabled"}`}
-          onClick={() => toggleVerification("email")}
+          onClick={() => navigate(`/admin/users/${id}/view`)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 20px', borderRadius: 10,
+            border: '1px solid rgba(167,139,250,0.35)',
+            background: 'linear-gradient(135deg,rgba(124,58,237,0.2),rgba(109,40,217,0.1))',
+            color: '#c4b5fd', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          }}
         >
-          <span>Email Verification</span>
-          <strong>{verification.email ? "Verified" : "Disabled"}</strong>
-        </button>
-        <button
-          type="button"
-          className={`nex-verification-button ${verification.mobile ? "verified" : "disabled"}`}
-          onClick={() => toggleVerification("mobile")}
-        >
-          <span>Mobile Verification</span>
-          <strong>{verification.mobile ? "Verified" : "Disabled"}</strong>
-        </button>
-        <button
-          type="button"
-          className={`nex-verification-button ${verification.twoFA ? "verified" : "disabled"}`}
-          onClick={() => toggleVerification("twoFA")}
-        >
-          <span>2FA Verification</span>
-          <strong>{verification.twoFA ? "Verified" : "Disable"}</strong>
-        </button>
-        <button
-          type="button"
-          className={`nex-verification-button ${verification.kyc ? "verified" : "disabled"}`}
-          onClick={() => toggleVerification("kyc")}
-        >
-          <span>KYC</span>
-          <strong>{verification.kyc ? "Verified" : "Disabled"}</strong>
+          👁 View User Dashboard
         </button>
       </section>
 
-      <section className="nex-user-update-button-row">
-        <button className="btn-primary btn-update-user">Update User</button>
+      {/* 2. Stats + verification */}
+      <UserStatsBar user={user} txTotal={txTotal} walletCount={wallets.length} />
+
+      {/* 3. Wallets – real DB data */}
+      <section className="nex-card">
+        <div className="nex-card-title">
+          <h2>Spot Wallets</h2>
+          <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{wallets.length} wallet{wallets.length !== 1 ? 's' : ''}</span>
+        </div>
+        {wallets.length === 0 ? (
+          <div className="nex-empty-state"><p>No wallets found</p></div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 14 }}>
+            {wallets.map((w) => (
+              <div key={w.id} className="nex-wallet-card" style={{ gap: 12 }}>
+                <div className="wallet-icon"
+                  style={{ background: CURRENCY_COLORS[w.currency] ?? 'linear-gradient(135deg,rgba(34,139,123,.96),rgba(38,211,171,.92))' }}>
+                  {w.currency.slice(0, 4)}
+                </div>
+                <div className="wallet-details">
+                  <strong>{fmtNum(w.balance)} {w.currency}</strong>
+                  <span>Locked: {fmtNum(w.locked_balance)}</span>
+                </div>
+                <div className="wallet-tag">SPOT</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => openAdd(w.currency)}
+                    style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'rgba(34,211,171,0.15)', color: '#6fffe4', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                    + Add
+                  </button>
+                  <button onClick={() => openSubtract(w.currency)}
+                    style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'rgba(239,68,68,0.15)', color: '#ff8585', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                    − Subtract
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="nex-user-wallet-grid">
-        <div className="nex-wallet-card">
-          <div className="wallet-icon wallet-usdt">USDT</div>
-          <div className="wallet-details">
-            <strong>652.8565 USDT</strong>
-            <span>Total Balance</span>
-          </div>
-          <div className="wallet-tag">SPOT</div>
-        </div>
-        <div className="nex-wallet-card">
-          <div className="wallet-icon wallet-btc">BTC</div>
-          <div className="wallet-details">
-            <strong>0.0001 BTC</strong>
-            <span>Total Balance</span>
-          </div>
-          <div className="wallet-tag">SPOT</div>
-        </div>
-      </section>
-
+      {/* 4. Actions */}
       <section className="nex-user-actions-row">
-        <div 
-          className="nex-action-card nex-action-card-add-balance"
-          onClick={() => handleActionClick('add-balance')}
-        >
+        <div className="nex-action-card nex-action-card-add-balance"
+          onClick={() => openAdd(wallets[0]?.currency ?? 'USDT')}>
           <div className="action-card-label">Add Balance</div>
           <div className="action-card-value">+</div>
         </div>
-        <div 
-          className="nex-action-card nex-action-card-subtract-balance"
-          onClick={() => handleActionClick('subtract-balance')}
-        >
+        <div className="nex-action-card nex-action-card-subtract-balance"
+          onClick={() => openSubtract(wallets[0]?.currency ?? 'USDT')}>
           <div className="action-card-label">Subtract Balance</div>
           <div className="action-card-value">−</div>
         </div>
-        <div 
-          className="nex-action-card nex-action-card-logins"
-          onClick={() => setSelectedAction('logins')}
-        >
-          <div className="action-card-label">Logins</div>
-          <div className="action-card-value">👤</div>
-        </div>
-        <div 
-          className="nex-action-card nex-action-card-notifications"
-          onClick={() => setSelectedAction('notifications')}
-        >
-          <div className="action-card-label">Notifications</div>
-          <div className="action-card-value">🔔</div>
-        </div>
-        <div 
-          className="nex-action-card nex-action-card-kyc"
-          onClick={() => setSelectedAction('kyc')}
-        >
-          <div className="action-card-label">KYC Data</div>
-          <div className="action-card-value">📋</div>
-        </div>
-        <div 
-          className="nex-action-card nex-action-card-ban"
-          onClick={handleBanUser}
-          style={{ opacity: isBanned ? 0.5 : 1, cursor: isBanning ? 'not-allowed' : 'pointer' }}
-        >
-          <div className="action-card-label">{isBanned ? 'Banned' : isBanning ? 'Banning…' : 'Ban User'}</div>
-          <div className="action-card-value">⛔</div>
+        <div className={`nex-action-card ${isBanned ? 'nex-action-card-add-balance' : 'nex-action-card-ban'}`}
+          onClick={isBanned ? handleUnban : handleBan}>
+          <div className="action-card-label">{isBanned ? 'Unban User' : 'Ban User'}</div>
+          <div className="action-card-value">{isBanned ? '✅' : '⛔'}</div>
         </div>
       </section>
 
-      {/* Balance Modal */}
-      {balanceModal.isOpen && (
-        <div className="nex-modal-overlay" onClick={closeBalanceModal}>
+      {/* 5. Account info */}
+      <section className="nex-card nex-user-details-card">
+        <div className="nex-profile-section-title"><h2>Account Information</h2></div>
+        <div className="nex-user-details-grid">
+          <div className="nex-form-grid">
+            <label>Username</label>
+            <input readOnly value={user.username} />
+            <label>Email</label>
+            <input readOnly value={user.email} />
+            <label>Role</label>
+            <input readOnly value={user.role ?? 'user'} />
+          </div>
+          <div className="nex-form-grid">
+            <label>Phone</label>
+            <input readOnly value={user.phone_number ?? '—'} />
+            <label>Joined</label>
+            <input readOnly value={new Date(user.created_at).toLocaleDateString()} />
+            <label>Last Login</label>
+            <input readOnly value={user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : '—'} />
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Transactions */}
+      <UserTransactionsTable transactions={transactions} total={txTotal} loading={loadingTx} />
+
+      {/* 7. Balance modal */}
+      {modal.open && (
+        <div className="nex-modal-overlay" onClick={closeModal}>
           <div className="nex-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="nex-modal-header">
-              <h2>{balanceModal.type === 'add' ? 'Add Balance' : 'Subtract Balance'}</h2>
-              <button className="nex-modal-close" onClick={closeBalanceModal}>×</button>
+              <h2>{modal.type === 'add' ? 'Add Balance' : 'Subtract Balance'}</h2>
+              <button className="nex-modal-close" onClick={closeModal}>×</button>
             </div>
             <form onSubmit={handleBalanceSubmit} className="nex-modal-form">
               <div className="nex-form-group">
-                <label htmlFor="balance-amount">Amount</label>
+                <label>Currency</label>
+                <select
+                  value={modal.currency}
+                  onChange={(e) => setModal((m) => ({ ...m, currency: e.target.value }))}
+                  style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.05)', color: '#fff', fontSize: 14 }}
+                >
+                  {wallets.length > 0
+                    ? wallets.map((w) => <option key={w.currency} value={w.currency}>{w.currency}</option>)
+                    : <option value="USDT">USDT</option>}
+                </select>
+              </div>
+              <div className="nex-form-group">
+                <label>Amount</label>
                 <input
-                  id="balance-amount"
                   type="number"
                   placeholder="Enter amount"
-                  value={balanceAmount}
-                  onChange={(e) => setBalanceAmount(e.target.value)}
+                  value={modalAmount}
+                  onChange={(e) => setModalAmount(e.target.value)}
                   required
-                  step="0.01"
-                  min="0"
+                  step="0.00000001"
+                  min="0.00000001"
                 />
               </div>
               <div className="nex-modal-actions">
-                <button type="button" className="btn-cancel" onClick={closeBalanceModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-submit">
-                  {balanceModal.type === 'add' ? 'Add' : 'Subtract'}
+                <button type="button" className="btn-cancel" onClick={closeModal}>Cancel</button>
+                <button type="submit" className="btn-submit" disabled={saving}>
+                  {saving ? 'Processing…' : modal.type === 'add' ? 'Add' : 'Subtract'}
                 </button>
               </div>
             </form>
@@ -321,31 +323,6 @@ export default function UserDetail() {
         </div>
       )}
 
-      <section className="nex-card nex-user-details-card">
-        <div className="nex-profile-section-title">
-          <h2>Information of {user.name}</h2>
-        </div>
-        <div className="nex-user-details-grid">
-          <div className="nex-form-grid">
-            <label htmlFor="first-name">First Name</label>
-            <input id="first-name" type="text" defaultValue={user.firstName} />
-
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" defaultValue={user.email} />
-
-            <label htmlFor="address">Address</label>
-            <input id="address" type="text" defaultValue={user.address} />
-          </div>
-
-          <div className="nex-form-grid">
-            <label htmlFor="last-name">Last Name</label>
-            <input id="last-name" type="text" defaultValue={user.lastName} />
-
-            <label htmlFor="mobile">Mobile Number</label>
-            <input id="mobile" type="tel" defaultValue={user.mobile} />
-          </div>
-        </div>
-      </section>
     </main>
   )
 }

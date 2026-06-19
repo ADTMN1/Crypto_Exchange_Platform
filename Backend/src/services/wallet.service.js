@@ -316,6 +316,20 @@ const walletService = {
       client.release();
     }
   },
+
+  adminDebit: async (userId, currency, amount) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await walletService.debit(userId, currency, amount, 'ADMIN_DEBIT', client);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
 };
 
 export default walletService;

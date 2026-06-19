@@ -91,6 +91,8 @@ export const API_ENDPOINTS = {
     DEPOSIT: '/wallet/deposit',
     WITHDRAW: '/wallet/withdraw',
     TRANSACTIONS: '/wallet/transactions',
+    ADMIN_TOPUP: '/wallet/admin/topup',
+    ADMIN_DEBIT: '/wallet/admin/debit',
   },
   // Trade endpoints
   TRADE: {
@@ -106,6 +108,9 @@ export const API_ENDPOINTS = {
     ACTIVE_USERS: '/admin/users/active',
     BANNED_USERS: '/admin/users/banned',
     USER_DETAILS: (userId: string) => `/admin/users/${userId}`,
+    USER_TRANSACTIONS: (userId: string) => `/admin/users/${userId}/transactions`,
+    USER_WALLETS: (userId: string) => `/admin/users/${userId}/wallets`,
+    IMPERSONATE_USER: (userId: string) => `/admin/users/${userId}/impersonate`,
     UPDATE_USER_STATUS: (userId: string) => `/admin/users/${userId}/status`,
     BAN_USER: (userId: string) => `/admin/users/${userId}/ban`,
     UNBAN_USER: (userId: string) => `/admin/users/${userId}/unban`,
@@ -113,6 +118,8 @@ export const API_ENDPOINTS = {
     AUDIT_LOGS: '/admin/audit-logs',
     SYSTEM_STATS: '/admin/stats',
     Notifications: '/notifications/admin',
+    TRANSACTIONS: '/admin/transactions',
+    TRANSACTION_DETAIL: (id: string) => `/admin/transactions/${id}`,
   },
 }
 

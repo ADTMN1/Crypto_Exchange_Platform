@@ -22,6 +22,9 @@ adminRouter.get('/users',                requireAdmin,  userController.getAllUse
 adminRouter.get('/users/active',                requireAdmin,  userController.getActiveUsers);
 adminRouter.get('/users/banned',                requireAdmin,  userController.getBannedUsers);
 adminRouter.get('/users/:userId',                requireAdmin,  userController.getUserById);
+adminRouter.get('/users/:userId/transactions',    requireAdmin,  userController.getUserTransactions);
+adminRouter.get('/users/:userId/wallets',         requireAdmin,  userController.getUserWallets);
+adminRouter.post('/users/:userId/impersonate',    requireAdmin,  userController.impersonateUser);
 adminRouter.patch('/users/:userId/status',          requireAdmin,  userController.setUserStatus);
 adminRouter.patch('/users/:userId/ban',           requireAdmin,  userController.banUser);
 adminRouter.patch('/users/:userId/unban',          requireAdmin,  userController.unbanUser);
