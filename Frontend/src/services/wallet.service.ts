@@ -21,6 +21,14 @@ export interface PendingDepositsResponse {
 }
 
 const walletService = {
+  getBalance: async () => {
+    return api.get(API_ENDPOINTS.WALLET.BALANCE);
+  },
+
+  getTransactions: async (page = 1, limit = 20) => {
+    return api.get(`${API_ENDPOINTS.WALLET.TRANSACTIONS}?page=${page}&limit=${limit}`);
+  },
+
   getPendingDeposits: async (page = 1, limit = 50) => {
     return api.get<PendingDepositsResponse>(
       `${API_ENDPOINTS.WALLET.ADMIN_PENDING_DEPOSITS}?page=${page}&limit=${limit}`
