@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   FaHeadset, 
   FaEnvelope, 
@@ -22,6 +23,7 @@ interface FAQItem {
 }
 
 export default function SupportPage() {
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [contactForm, setContactForm] = useState({
@@ -130,7 +132,14 @@ export default function SupportPage() {
         message: '',
       });
 
-      setTimeout(() => setSubmitSuccess(false), 5000);
+      // Navigate to ticket details page
+      if (data.data?.ticketId) {
+        setTimeout(() => {
+          navigate(`/support/tickets/${data.data.ticketId}`);
+        }, 1500);
+      } else {
+        setTimeout(() => setSubmitSuccess(false), 5000);
+      }
     } catch (error) {
       console.error('Failed to submit support ticket:', error);
       alert('Failed to submit ticket. Please try again or contact us via email at support@cryptoexchange.com');
@@ -167,7 +176,9 @@ export default function SupportPage() {
             <FaComments className="card-icon" />
             <h3>Live Chat</h3>
             <p>Chat with our support team</p>
-            <button className="btn-primary">Start Chat</button>
+            <button className="btn-primary" onClick={() => navigate('/support/tickets')}>
+              View My Tickets
+            </button>
           </div>
           <div className="contact-card">
             <FaBook className="card-icon" />

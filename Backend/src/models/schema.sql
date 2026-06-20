@@ -236,11 +236,71 @@ CREATE TABLE IF NOT EXISTS trading_gate (
   changed_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 🎫 Ticket Status
+CREATE TYPE ticket_status_enum AS ENUM (
+    'open',
+    'in_progress',
+    'resolved',
+    'closed'
+);
 
+-- 🚨 Ticket Priority
+CREATE TYPE ticket_priority_enum AS ENUM (
+    'low',
+    'medium',
+    'high',
+    'urgent'
+);
+
+CREATE TABLE support_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    ticket_number VARCHAR(20) NOT NULL UNIQUE,
+
+    user_id UUID NOT NULL
+        REFERENCES users(id) ON DELETE RESTRICT,
+
+    subject VARCHAR(255) NOT NULL,
+
+    description TEXT,
+
+    status ticket_status_enum NOT NULL DEFAULT 'open',
+
+    priority ticket_priority_enum NOT NULL DEFAULT 'medium',
+
+    assigned_to UUID
+        REFERENCES users(id) ON DELETE SET NULL,
+
+    last_reply_at TIMESTAMPTZ,
+
+    last_reply_by UUID
+        REFERENCES users(id) ON DELETE SET NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    closed_at TIMESTAMPTZ
+);
 
 -- ============================================================================
 -- ⚡ OPTIMIZED PRODUCTION INDEXES
 -- ============================================================================
+
+CREATE INDEX idx_support_tickets_user
+ON support_tickets(user_id);
+
+CREATE INDEX idx_support_tickets_status
+ON support_tickets(status);
+
+CREATE INDEX idx_support_tickets_priority
+ON support_tickets(priority);
+
+CREATE INDEX idx_support_tickets_assigned_to
+ON support_tickets(assigned_to);
+
+CREATE INDEX idx_support_tickets_last_reply
+ON support_tickets(last_reply_at DESC);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_phone ON users(phone_number);
 CREATE INDEX idx_users_role ON users(role_id);
