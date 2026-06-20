@@ -1,5 +1,7 @@
+import dotenv from 'dotenv';
 import cloudinary from 'cloudinary';
 
+dotenv.config();
 const cloudinaryV2 = cloudinary.v2;
 
 // Configure Cloudinary

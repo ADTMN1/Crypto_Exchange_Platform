@@ -10,10 +10,14 @@ export default function TradeMarketList() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set(['BTCUSDT', 'ETHUSDT']));
 
   const filtered = useMemo(() => {
+    const searchTerm = search.toLowerCase();
     return tickers
       .filter((t) => t.symbol.endsWith(quote))
-      .filter((t) => t.symbol.toLowerCase().includes(search.toLowerCase()))
-      .slice(0, 30);
+      .filter((t) => {
+        const base = t.symbol.replace(quote, '').toLowerCase();
+        return t.symbol.toLowerCase().includes(searchTerm) || base.includes(searchTerm);
+      })
+      .slice(0, 50);
   }, [tickers, search, quote]);
 
   const toggleFav = (sym: string, e: React.MouseEvent) => {

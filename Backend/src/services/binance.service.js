@@ -1,13 +1,15 @@
 import AppError from '../utils/errorHandling.js';
 
-const BINANCE_REST_BASE  = process.env.BINANCE_REST_BASEURL
-const BINANCE_WS_BASE    = process.env.BINANCE_WS_BASEURL
+const BINANCE_REST_BASE  = process.env.BINANCE_REST_BASEURL || 'https://fapi.binance.com'
+const BINANCE_WS_BASE    = process.env.BINANCE_WS_BASEURL || 'wss://fstream.binance.com/ws'
 const REQUEST_TIMEOUT_MS = 8000;
 
 export const SUPPORTED_SYMBOLS = [
     'BTCUSDT',  'ETHUSDT',  'BNBUSDT',  'SOLUSDT',  'XRPUSDT',
     'ADAUSDT',  'DOGEUSDT', 'AVAXUSDT', 'DOTUSDT',  'MATICUSDT',
     'LTCUSDT',  'LINKUSDT', 'UNIUSDT',  'ATOMUSDT', 'TRXUSDT',
+    'XAUUSDT', // Gold
+    'XAUTUSDT', // Tether Gold
 ];
 
 /**
@@ -82,7 +84,7 @@ const binanceService = {
      */
     getPrice: async (symbol = 'BTCUSDT') => {
         const upper = binanceService.validateSymbol(symbol);
-        const url   = `${BINANCE_REST_BASE}/ticker/price?symbol=${upper}`;
+        const url   = `${BINANCE_REST_BASE}/fapi/v1/ticker/price?symbol=${upper}`;
         const data  = await binanceFetch(url);
 
         if (!data?.symbol || data?.price === undefined) {
@@ -96,11 +98,11 @@ const binanceService = {
     },
 
     /**
-     * GET /api/v3/ticker/price (all symbols)
+     * GET /fapi/v1/ticker/price (all symbols)
      * Fetches prices for all supported symbols in one request.
      */
     getAllPrices: async () => {
-        const url  = `${BINANCE_REST_BASE}/ticker/price`;
+        const url  = `${BINANCE_REST_BASE}/fapi/v1/ticker/price`;
         const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {
@@ -116,11 +118,11 @@ const binanceService = {
     },
 
     /**
-     * GET /api/v3/ticker/24hr
+     * GET /fapi/v1/ticker/24hr
      * Fetches 24h stats (price change %, volume) for all supported symbols.
      */
     getOverview: async () => {
-        const url  = `${BINANCE_REST_BASE}/ticker/24hr`;
+        const url  = `${BINANCE_REST_BASE}/fapi/v1/ticker/24hr`;
         const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {
@@ -147,30 +149,48 @@ const binanceService = {
     getHistory: async (symbol = 'BTCUSDT', interval = '1m', limit = 100) => {
         const upper = binanceService.validateSymbol(symbol);
         
-        // Handle 30s interval by fetching 1s klines and aggregating
+        // Handle 30s interval by fetching 1m klines and splitting into two 30s pseudo-candles
         if (interval === '30s') {
-            const oneSecondLimit = limit * 30;
-            const url = `${BINANCE_REST_BASE}/klines?symbol=${upper}&interval=1s&limit=${oneSecondLimit}`;
+            const oneMinuteLimit = limit;
+            const url = `${BINANCE_REST_BASE}/fapi/v1/klines?symbol=${upper}&interval=1m&limit=${oneMinuteLimit}`;
             const data = await binanceFetch(url);
 
             if (!Array.isArray(data)) {
                 throw new AppError('Unexpected response structure from Binance klines endpoint.', 502);
             }
 
-            const oneSecondCandles = data.map((k) => ({
-                time: Math.floor(k[0] / 1000),
-                open: parseFloat(k[1]),
-                high: parseFloat(k[2]),
-                low: parseFloat(k[3]),
-                close: parseFloat(k[4]),
-                volume: parseFloat(k[5]),
-            }));
+            const pseudo30s = [];
+            for (const k of data) {
+                const time = Math.floor(k[0] / 1000);
+                const open = parseFloat(k[1]);
+                const high = parseFloat(k[2]);
+                const low = parseFloat(k[3]);
+                const close = parseFloat(k[4]);
+                const volume = parseFloat(k[5]) / 2;
 
-            return binanceService.aggregateCandles(oneSecondCandles, 30);
+                pseudo30s.push({
+                    time,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
+                });
+                pseudo30s.push({
+                    time: time + 30,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
+                });
+            }
+
+            return pseudo30s.slice(0, limit);
         }
 
         // Normal case for Binance-supported intervals
-        const url = `${BINANCE_REST_BASE}/klines?symbol=${upper}&interval=${interval}&limit=${limit}`;
+        const url = `${BINANCE_REST_BASE}/fapi/v1/klines?symbol=${upper}&interval=${interval}&limit=${limit}`;
         const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {

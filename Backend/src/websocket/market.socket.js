@@ -106,11 +106,11 @@ const attachMarketSocket = (io) => {
 
 const GLOBAL_SYMBOLS = ['btcusdt', 'ethusdt', 'bnbusdt', 'solusdt', 'xrpusdt',
     'adausdt', 'dogeusdt', 'avaxusdt', 'dotusdt', 'maticusdt',
-    'ltcusdt', 'linkusdt', 'uniusdt', 'atomusdt', 'trxusdt'];
+    'ltcusdt', 'linkusdt', 'uniusdt', 'atomusdt', 'trxusdt', 'xauusdt', 'xautusdt'];
 
 const _openGlobalStream = (io, retries = 0) => {
     const streams = GLOBAL_SYMBOLS.map(s => `${s}@trade`).join('/');
-    const url = `wss://stream.binance.com:9443/stream?streams=${streams}`;
+    const url = `wss://fstream.binance.com/stream?streams=${streams}`;
     const ws  = new WebSocket(url);
 
     ws.on('open', () => {

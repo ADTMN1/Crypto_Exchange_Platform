@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { mockTradeHistory } from '../../data/mockData';
+import adminService, { AdminTrade } from '../../services/admin.service';
 import { toast } from 'sonner';
 
 export default function TradeHistoryPage() {
-  const [trades, setTrades] = useState(mockTradeHistory);
+  const [trades, setTrades] = useState<AdminTrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -12,10 +12,10 @@ export default function TradeHistoryPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      // In real implementation: const response = await tradeService.getTradeHistory();
-      // setTrades(response.data.trades);
+      const response = await adminService.getAllTrades();
+      if (response.success) {
+        setTrades(response.data);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load trade history';
       setError(msg);
@@ -31,23 +31,21 @@ export default function TradeHistoryPage() {
 
   const filteredTrades = trades.filter(trade =>
     trade.pair.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trade.id.toLowerCase().includes(searchQuery.toLowerCase())
+    trade.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    trade.buyer_username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    trade.seller_username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatNumber = (num: number) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  const formatNumber = (num: string | number) => {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  };
+
   const formatDate = (dateString: string) =>
     new Intl.DateTimeFormat('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     }).format(new Date(dateString));
-
-  const getSideBadge = (side: string) => {
-    return (
-      <span className={`nex-badge ${side === 'buy' ? 'nex-badge-success' : 'nex-badge-danger'}`}>
-        {side.toUpperCase()}
-      </span>
-    );
-  };
 
   return (
     <main className="nex-admin-section-page">
@@ -65,7 +63,7 @@ export default function TradeHistoryPage() {
             <div className="nex-search-box">
               <input
                 type="text"
-                placeholder="Search by pair or trade ID..."
+                placeholder="Search by pair, trade ID, or usernames..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="nex-search-input"
@@ -92,20 +90,22 @@ export default function TradeHistoryPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Order Date</th>
-                    <th>Trade Date</th>
+                    <th>Executed At</th>
+                    <th>Buyer</th>
+                    <th>Seller</th>
                     <th>Pair</th>
-                    <th>Side</th>
-                    <th>Rate</th>
+                    <th>Price</th>
                     <th>Amount</th>
                     <th>Total</th>
+                    <th>Buyer Fee</th>
+                    <th>Seller Fee</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTrades.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="nex-empty-state">
+                      <td colSpan={10} className="nex-empty-state">
                         <div>
                           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -117,16 +117,18 @@ export default function TradeHistoryPage() {
                   ) : (
                     filteredTrades.map((trade) => (
                       <tr key={trade.id}>
-                        <td>{formatDate(trade.orderDate)}</td>
-                        <td>{formatDate(trade.tradeDate)}</td>
+                        <td>{formatDate(trade.executed_at)}</td>
+                        <td>{trade.buyer_username}</td>
+                        <td>{trade.seller_username}</td>
                         <td><strong>{trade.pair}</strong></td>
-                        <td>{getSideBadge(trade.side)}</td>
-                        <td>${formatNumber(trade.rate)}</td>
-                        <td>{formatNumber(trade.amount)}</td>
-                        <td><strong>${formatNumber(trade.rate * trade.amount)}</strong></td>
+                        <td>{formatNumber(trade.price)}</td>
+                        <td>{formatNumber(trade.quantity)}</td>
+                        <td><strong>{formatNumber(trade.total)}</strong></td>
+                        <td>{formatNumber(trade.buyer_fee)}</td>
+                        <td>{formatNumber(trade.seller_fee)}</td>
                         <td>
                           <button 
-                            onClick={() => console.log('View trade:', trade.id)}
+                            onClick={() => console.log('View trade:', trade)}
                             className="nex-btn-xs nex-btn-primary"
                           >
                             View

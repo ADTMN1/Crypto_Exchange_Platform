@@ -1,13 +1,16 @@
 import axios from 'axios';
 import { query } from '../config/db.config.js';
+import { SUPPORTED_SYMBOLS } from '../services/binance.service.js';
+
+const BINANCE_FUTURES_BASE = 'https://fapi.binance.com';
 
 // Get market statistics for a symbol
 export const getMarketStats = async (req, res) => {
   try {
     const { symbol } = req.params;
     
-    // Fetch 24hr ticker statistics from Binance
-    const response = await axios.get(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol.toUpperCase()}`);
+    // Fetch 24hr ticker statistics from Binance Futures
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr?symbol=${symbol.toUpperCase()}`);
     const data = response.data;
     
     const marketStats = {
@@ -62,7 +65,7 @@ async function fetchKlinesByDays(symbol, interval, days, beforeTime = null) {
   const maxBatches = 25;
 
   for (let i = 0; i < maxBatches; i++) {
-    const url = `https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${interval}&limit=1000&endTime=${fetchEnd}`;
+    const url = `${BINANCE_FUTURES_BASE}/fapi/v1/klines?symbol=${sym}&interval=${interval}&limit=1000&endTime=${fetchEnd}`;
     const response = await axios.get(url);
     const batch = response.data;
     if (!batch.length) break;
@@ -100,7 +103,7 @@ export const getKlines = async (req, res) => {
         before ? parseInt(before, 10) : null
       );
     } else {
-      let url = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${Math.min(parseInt(limit, 10) || 500, 1000)}`;
+      let url = `${BINANCE_FUTURES_BASE}/fapi/v1/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${Math.min(parseInt(limit, 10) || 500, 1000)}`;
       if (startTime) url += `&startTime=${startTime}`;
       if (endTime) url += `&endTime=${endTime}`;
 
@@ -129,7 +132,7 @@ export const getOrderBook = async (req, res) => {
     const { symbol } = req.params;
     const { limit = 100 } = req.query;
     
-    const response = await axios.get(`https://api.binance.com/api/v3/depth?symbol=${symbol.toUpperCase()}&limit=${limit}`);
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/depth?symbol=${symbol.toUpperCase()}&limit=${limit}`);
     const data = response.data;
     
     const orderBook = {
@@ -165,7 +168,7 @@ export const getRecentTrades = async (req, res) => {
     const { symbol } = req.params;
     const { limit = 100 } = req.query;
     
-    const response = await axios.get(`https://api.binance.com/api/v3/trades?symbol=${symbol.toUpperCase()}&limit=${limit}`);
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/trades?symbol=${symbol.toUpperCase()}&limit=${limit}`);
     const trades = response.data;
     
     const formattedTrades = trades.map(trade => ({
@@ -193,7 +196,7 @@ export const getRecentTrades = async (req, res) => {
 // Get all tickers (market overview)
 export const getAllTickers = async (req, res) => {
   try {
-    const response = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr`);
     const tickers = response.data;
     
     // Filter for USDT pairs and format
@@ -208,13 +211,23 @@ export const getAllTickers = async (req, res) => {
         low24h: parseFloat(ticker.lowPrice),
         volume24h: parseFloat(ticker.volume),
         volumeQuote24h: parseFloat(ticker.quoteVolume)
-      }))
-      .sort((a, b) => b.volumeQuote24h - a.volumeQuote24h) // Sort by volume
-      .slice(0, 50); // Top 50 pairs
+      }));
+
+    // Split into supported and other pairs
+    const supportedPairs = SUPPORTED_SYMBOLS.map(sym => 
+      usdtPairs.find(t => t.symbol === sym) || null
+    ).filter(Boolean);
+    
+    const otherPairs = usdtPairs
+      .filter(t => !SUPPORTED_SYMBOLS.includes(t.symbol))
+      .sort((a, b) => b.volumeQuote24h - a.volumeQuote24h);
+
+    // Combine: supported first, then other top pairs, total 50
+    const finalPairs = [...supportedPairs, ...otherPairs].slice(0, 50);
 
     res.status(200).json({
       success: true,
-      data: usdtPairs
+      data: finalPairs
     });
   } catch (error) {
     console.error('Error fetching all tickers:', error);
@@ -229,7 +242,7 @@ export const getAllTickers = async (req, res) => {
 // Get exchange information
 export const getExchangeInfo = async (req, res) => {
   try {
-    const response = await axios.get('https://api.binance.com/api/v3/exchangeInfo');
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/exchangeInfo`);
     const data = response.data;
     
     // Filter for active USDT pairs
@@ -358,14 +371,15 @@ const aggregateCandles = (candles, factor = 30) => {
 async function fetch30sKlines(symbol, limit = 500, beforeTime = null) {
   const sym = symbol.toUpperCase();
   const requestedLimit = Math.min(parseInt(limit, 10) || 500, 1000);
-  const oneSecondLimit = requestedLimit * 30 + 60;
+  const oneMinuteLimit = requestedLimit;
   const endTime = beforeTime ? beforeTime - 1 : Date.now();
   const maxBatches = 30;
   const candlesByTime = new Map();
   let fetchEnd = endTime;
 
+  // Binance Futures doesn't have 1s klines, so fetch 1m klines and split them into two 30s pseudo-candles
   for (let i = 0; i < maxBatches; i++) {
-    const url = `https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1s&limit=1000&endTime=${fetchEnd}`;
+    const url = `${BINANCE_FUTURES_BASE}/fapi/v1/klines?symbol=${sym}&interval=1m&limit=1000&endTime=${fetchEnd}`;
     const response = await axios.get(url);
     const batch = response.data;
 
@@ -378,60 +392,38 @@ async function fetch30sKlines(symbol, limit = 500, beforeTime = null) {
     }
 
     const oldest = batch[0][0];
-    if (batch.length < 1000 || candlesByTime.size >= oneSecondLimit) break;
+    if (batch.length < 1000 || candlesByTime.size >= oneMinuteLimit) break;
     fetchEnd = oldest - 1;
   }
 
-  const oneSecondCandles = [...candlesByTime.values()]
+  const oneMinuteCandles = [...candlesByTime.values()]
     .sort((a, b) => a.time - b.time);
 
-  // Aggregate 1s candles into 30s buckets
-  let agg30 = aggregateCandles(oneSecondCandles, 30);
-
-  // If we didn't retrieve sufficient 1s historical data (Binance may not provide 1s far back),
-  // fetch 1m klines and split them into two 30s pseudo-candles to backfill older history.
-  if (agg30.length < requestedLimit) {
-    try {
-      const need = requestedLimit - agg30.length;
-      const minuteLimit = Math.min(Math.ceil(need / 2) + 40, 1000);
-      const minUrl = `https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1m&limit=${minuteLimit}&endTime=${fetchEnd}`;
-      const minResp = await axios.get(minUrl);
-      const minuteBatch = (Array.isArray(minResp.data) ? minResp.data : []).map(formatKlineRow)
-        .sort((a, b) => a.openTime - b.openTime);
-
-      const pseudo30 = [];
-      for (const m of minuteBatch) {
-        const first = {
-          openTime: m.openTime,
-          open: m.open,
-          high: m.high,
-          low: m.low,
-          close: m.close,
-          volume: m.volume / 2,
-          closeTime: m.closeTime - 30000,
-          time: Math.floor(m.openTime / 1000),
-        };
-        const second = {
-          openTime: m.openTime + 30000,
-          open: m.open,
-          high: m.high,
-          low: m.low,
-          close: m.close,
-          volume: m.volume / 2,
-          closeTime: m.closeTime,
-          time: Math.floor((m.openTime + 30000) / 1000),
-        };
-        pseudo30.push(first, second);
-      }
-
-      // Merge existing aggregated 30s and pseudo30, dedupe by time (prefer real if present)
-      const byTime = new Map();
-      for (const c of [...agg30, ...pseudo30]) byTime.set(c.time, c);
-      agg30 = [...byTime.values()].sort((a, b) => a.time - b.time);
-    } catch (err) {
-      console.warn('fetch30sKlines fallback to 1m conversion failed:', err?.message || err);
-    }
+  // Split 1m klines into two 30s pseudo-candles
+  const pseudo30 = [];
+  for (const m of oneMinuteCandles) {
+    const first = {
+      openTime: m.openTime,
+      open: m.open,
+      high: m.high,
+      low: m.low,
+      close: m.close,
+      volume: m.volume / 2,
+      closeTime: m.closeTime - 30000,
+      time: Math.floor(m.openTime / 1000),
+    };
+    const second = {
+      openTime: m.openTime + 30000,
+      open: m.open,
+      high: m.high,
+      low: m.low,
+      close: m.close,
+      volume: m.volume / 2,
+      closeTime: m.closeTime,
+      time: Math.floor((m.openTime + 30000) / 1000),
+    };
+    pseudo30.push(first, second);
   }
 
-  return agg30.slice(0, requestedLimit);
+  return pseudo30.slice(0, requestedLimit);
 }
