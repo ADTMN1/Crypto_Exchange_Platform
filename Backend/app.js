@@ -17,10 +17,11 @@ const app = express();
 // CSRF Protection Setup
 const {
   invalidCsrfTokenError, // This is just for convenience if you plan on making your own middleware.
-  generateToken, // Use this in your routes to provide a CSRF token.
+  generateCsrfToken, // Use this in your routes to provide a CSRF token.
   doubleCsrfProtection, // This is the default CSRF protection middleware.
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'fallback-secret-change-in-production',
+  getSessionIdentifier: () => 'static-identifier', // Required for csrf-csrf v4.x
   cookieName: 'x-csrf-token',
   cookieOptions: {
     httpOnly: true,
@@ -28,7 +29,7 @@ const {
     secure: process.env.NODE_ENV === "production",
   },
   size: 64,
-  getTokenFromRequest: (req) => req.headers['x-csrf-token'],
+  getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'], // Note: v4 uses getCsrfTokenFromRequest, not getTokenFromRequest!
 });
 
 // Log all incoming requests
@@ -98,7 +99,7 @@ app.get('/health', (req, res) => {
 
 // Endpoint to get CSRF token
 app.get('/api/csrf-token', (req, res) => {
-  const csrfToken = generateToken(req, res);
+  const csrfToken = generateCsrfToken(req, res);
   res.json({ csrfToken });
 });
 
