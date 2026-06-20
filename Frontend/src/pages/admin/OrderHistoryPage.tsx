@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { mockOrderHistory } from '../../data/mockData';
+import adminService, { AdminOrder } from '../../services/admin.service';
 import { toast } from 'sonner';
 
 export default function OrderHistoryPage() {
-  const [orders, setOrders] = useState(mockOrderHistory);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -12,10 +12,10 @@ export default function OrderHistoryPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      // In real implementation: const response = await orderService.getOrderHistory();
-      // setOrders(response.data.orders);
+      const response = await adminService.getOrderHistory();
+      if (response.success) {
+        setOrders(response.data);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load order history';
       setError(msg);
@@ -31,10 +31,14 @@ export default function OrderHistoryPage() {
 
   const filteredOrders = orders.filter(order =>
     order.pair.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.status.toLowerCase().includes(searchQuery.toLowerCase())
+    order.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatNumber = (num: number) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  const formatNumber = (num: string | number) => {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  };
   const formatDate = (dateString: string) =>
     new Intl.DateTimeFormat('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
@@ -59,13 +63,14 @@ export default function OrderHistoryPage() {
 
   const getStatusBadge = (status: string) => {
     const map: Record<string, string> = {
-      completed: 'nex-badge-success',
+      filled: 'nex-badge-success',
       cancelled: 'nex-badge-danger',
-      pending: 'nex-badge-warning',
+      open: 'nex-badge-warning',
+      partially_filled: 'nex-badge-info',
     };
     return (
       <span className={`nex-badge ${map[status] || 'nex-badge-warning'}`}>
-        {status.toUpperCase()}
+        {status.toUpperCase().replace('_', ' ')}
       </span>
     );
   };
@@ -86,7 +91,7 @@ export default function OrderHistoryPage() {
             <div className="nex-search-box">
               <input
                 type="text"
-                placeholder="Search by pair or status..."
+                placeholder="Search by pair, status or username..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="nex-search-input"
@@ -114,6 +119,7 @@ export default function OrderHistoryPage() {
                 <thead>
                   <tr>
                     <th>Date</th>
+                    <th>User</th>
                     <th>Pair</th>
                     <th>Side</th>
                     <th>Type</th>
@@ -127,36 +133,43 @@ export default function OrderHistoryPage() {
                 <tbody>
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="nex-empty-state">
+                      <td colSpan={10} className="nex-empty-state">
                         <div>
                           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                           </svg>
                           <p>No order history found</p>
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => (
-                      <tr key={order.id}>
-                        <td>{formatDate(order.date)}</td>
-                        <td><strong>{order.pair}</strong></td>
-                        <td>{getSideBadge(order.side)}</td>
-                        <td>{getTypeBadge(order.type)}</td>
-                        <td>{formatNumber(order.amount)}</td>
-                        <td>${formatNumber(order.rate)}</td>
-                        <td><strong>${formatNumber(order.total)}</strong></td>
-                        <td>{getStatusBadge(order.status)}</td>
-                        <td>
-                          <button 
-                            onClick={() => console.log('View order:', order.id)}
-                            className="nex-btn-xs nex-btn-primary"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    filteredOrders.map((order) => {
+                      const quantity = parseFloat(order.quantity);
+                      const price = parseFloat(order.price || '0');
+                      const total = quantity * price;
+
+                      return (
+                        <tr key={order.id}>
+                          <td>{formatDate(order.created_at)}</td>
+                          <td>{order.username}</td>
+                          <td><strong>{order.pair}</strong></td>
+                          <td>{getSideBadge(order.side)}</td>
+                          <td>{getTypeBadge(order.type)}</td>
+                          <td>{formatNumber(quantity)}</td>
+                          <td>${formatNumber(price)}</td>
+                          <td><strong>${formatNumber(total)}</strong></td>
+                          <td>{getStatusBadge(order.status)}</td>
+                          <td>
+                            <button
+                              onClick={() => console.log('View order:', order.id)}
+                              className="nex-btn-xs nex-btn-primary"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

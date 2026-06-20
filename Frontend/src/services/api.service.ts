@@ -158,6 +158,13 @@ export const API_ENDPOINTS = {
     Notifications: '/notifications/admin',
     TRANSACTIONS: '/admin/transactions',
     TRANSACTION_DETAIL: (id: string) => `/admin/transactions/${id}`,
+    // Admin order endpoints
+    ORDERS: '/admin/orders',
+    TRADES: '/admin/orders/trades',
+    OPEN_ORDERS: '/admin/orders/open',
+    ORDER_HISTORY: '/admin/orders/history',
+    ORDER_DETAIL: (orderId: string) => `/admin/orders/${orderId}`,
+    CANCEL_ORDER: (orderId: string) => `/admin/orders/${orderId}/cancel`,
   },
 }
 

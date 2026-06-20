@@ -19,6 +19,8 @@ const SYMBOL_NAME_MAP = {
     'UNIUSDT': 'Uniswap',
     'ATOMUSDT': 'Cosmos',
     'TRXUSDT': 'TRON',
+    'XAUUSDT': 'Gold',
+    'XAUTUSDT': 'Tether Gold',
 };
 
 const currencyService = {
