@@ -68,6 +68,19 @@ const binaryController = {
     }
   },
 
+  getSettings: async (req, res, next) => {
+    try {
+      const settings = await binaryService.getSettings();
+      res.status(200).json({
+        success: true,
+        message: 'Binary settings retrieved successfully',
+        data: settings,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────
 
   getAdminTrades: async (req, res, next) => {
@@ -88,6 +101,29 @@ const binaryController = {
       });
 
       auditController.auditingSave(req, 'Viewed admin binary trades', 'admin_binary', null, { status })
+        .catch((err) => console.error('Audit save failed:', err));
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  updateSettings: async (req, res, next) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return next(new AppError('Authenticated user information is missing', 401));
+      }
+
+      const settings = req.body;
+      const updatedSettings = await binaryService.updateSettings(settings, req.user.id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Binary settings updated successfully',
+        data: updatedSettings,
+      });
+
+      auditController.auditingSave(req, 'Updated binary settings', 'binary_settings', null, settings)
         .catch((err) => console.error('Audit save failed:', err));
       return;
     } catch (error) {

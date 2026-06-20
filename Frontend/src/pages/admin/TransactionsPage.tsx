@@ -5,8 +5,16 @@ import { toast } from 'sonner';
 interface AdminTransactionsProps {
   title?: string;
   description?: string;
-  type?: 'all' | 'pending-deposits';
+  type?: string;
 }
+
+// Map the menu item types to actual transaction statuses
+const typeToStatusMap: Record<string, string> = {
+  'pending-deposits': 'pending',
+  'approved-deposits': 'completed',
+  'rejected-deposits': 'failed',
+  'all': 'all'
+};
 
 export default function AdminTransactions({ 
   title = "Transactions", 
@@ -21,15 +29,13 @@ export default function AdminTransactions({
   const [selectedDeposit, setSelectedDeposit] = useState<PendingDeposit | null>(null);
   const [showScreenshotModal, setShowScreenshotModal] = useState(false);
 
+  const status = typeToStatusMap[type] || type;
+
   const fetchDeposits = useCallback(async () => {
-    if (type !== 'pending-deposits') {
-      setIsLoading(false);
-      return;
-    }
     setIsLoading(true);
     setError(null);
     try {
-      const response = await walletService.getPendingDeposits(page);
+      const response = await walletService.getDepositsByStatus(status, page);
       setDeposits(response.data.data.deposits);
       setTotal(response.data.data.total);
     } catch (err: any) {
@@ -39,7 +45,7 @@ export default function AdminTransactions({
     } finally {
       setIsLoading(false);
     }
-  }, [type, page]);
+  }, [status, page]);
 
   useEffect(() => {
     fetchDeposits();
@@ -89,124 +95,124 @@ export default function AdminTransactions({
     );
   };
 
-  if (type === 'pending-deposits') {
-    return (
-      <>
-        <div className="admin-page-header">
-          <div>
-            <h1>{title}</h1>
-            <p>{description}</p>
+  return (
+    <>
+      <div className="admin-page-header">
+        <div>
+          <h1>{title}</h1>
+          <p>{description}</p>
+        </div>
+      </div>
+
+      <div className="admin-panel">
+        <div className="admin-panel-header">
+          <div className="nex-badge nex-badge-info">
+            Total: {total} deposits
           </div>
         </div>
 
-        <div className="admin-panel">
-          <div className="admin-panel-header">
-            <div className="nex-badge nex-badge-info">
-              Total: {total} deposits
-            </div>
+        {error && (
+          <div style={{ padding: '1rem', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444' }}>
+            {error}
+            <button onClick={fetchDeposits} style={{ marginLeft: '1rem', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: '#ef4444' }}>
+              Retry
+            </button>
           </div>
+        )}
 
-          {error && (
-            <div style={{ padding: '1rem', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444' }}>
-              {error}
-              <button onClick={fetchDeposits} style={{ marginLeft: '1rem', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: '#ef4444' }}>
-                Retry
-              </button>
+        {isLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem' }}>
+            <div className="loading-spinner-professional">
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
             </div>
-          )}
-
-          {isLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem' }}>
-              <div className="loading-spinner-professional">
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-              </div>
-              <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Loading deposits...</p>
-            </div>
-          ) : (
-            <div className="nex-table-wrapper">
-              <table>
-                <thead>
+            <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Loading deposits...</p>
+          </div>
+        ) : (
+          <div className="nex-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Currency</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Screenshot</th>
+                  <th>Date</th>
+                  {status === 'pending' && <th>Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {deposits.length === 0 ? (
                   <tr>
-                    <th>User</th>
-                    <th>Currency</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Screenshot</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <td colSpan={status === 'pending' ? 7 : 6} className="nex-empty-state">
+                      <div>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h2a2 2 0 01-2-2z" />
+                        </svg>
+                        <p>No deposits found</p>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {deposits.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="nex-empty-state">
-                        <div>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h2a2 2 0 01-2-2z" />
-                          </svg>
-                          <p>No pending deposits found</p>
+                ) : (
+                  deposits.map((deposit) => (
+                    <tr key={deposit.id}>
+                      <td>
+                        <div className="nex-user-cell">
+                          <div className="nex-avatar-circle">
+                            {(deposit.username?.[0] || deposit.email?.[0] || 'U').toUpperCase()}
+                          </div>
+                          <div>
+                            <strong>{deposit.username || 'User'}</strong>
+                            <div className="nex-table-meta">{deposit.email}</div>
+                          </div>
                         </div>
                       </td>
-                    </tr>
-                  ) : (
-                    deposits.map((deposit) => (
-                      <tr key={deposit.id}>
-                        <td>
-                          <div className="nex-user-cell">
-                            <div className="nex-avatar-circle">
-                              {(deposit.username?.[0] || deposit.email?.[0] || 'U').toUpperCase()}
-                            </div>
-                            <div>
-                              <strong>{deposit.username || 'User'}</strong>
-                              <div className="nex-table-meta">{deposit.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <strong>{deposit.currency}</strong>
-                        </td>
-                        <td>
-                          <strong>{parseFloat(deposit.amount).toFixed(4)} {deposit.currency}</strong>
-                        </td>
-                        <td>{getStatusBadge(deposit.status)}</td>
-                        <td>
-                          {deposit.screenshot_url ? (
-                            <button
-                              onClick={() => {
-                                setSelectedDeposit(deposit);
-                                setShowScreenshotModal(true);
-                              }}
-                              style={{ 
-                                padding: '0.5rem 1rem', 
-                                fontSize: '0.875rem',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                color: '#fff',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                fontWeight: 500
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                              }}
-                            >
-                              View Screenshot
-                            </button>
-                          ) : (
-                            <span className="nex-table-meta">No screenshot</span>
-                          )}
-                        </td>
-                        <td>
-                          <div>{formatDate(deposit.created_at)}</div>
-                        </td>
+                      <td>
+                        <strong>{deposit.currency}</strong>
+                      </td>
+                      <td>
+                        <strong>{parseFloat(deposit.amount).toFixed(4)} {deposit.currency}</strong>
+                      </td>
+                      <td>{getStatusBadge(deposit.status)}</td>
+                      <td>
+                        {deposit.screenshot_url ? (
+                          <button
+                            onClick={() => {
+                              setSelectedDeposit(deposit);
+                              setShowScreenshotModal(true);
+                            }}
+                            style={{ 
+                              padding: '0.5rem 1rem', 
+                              fontSize: '0.875rem',
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              color: '#fff',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              fontWeight: 500
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                            }}
+                          >
+                            View Screenshot
+                          </button>
+                        ) : (
+                          <span className="nex-table-meta">No screenshot</span>
+                        )}
+                      </td>
+                      <td>
+                        <div>{formatDate(deposit.created_at)}</div>
+                      </td>
+                      {status === 'pending' && (
                         <td>
                           <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button
@@ -259,150 +265,132 @@ export default function AdminTransactions({
                             </button>
                           </div>
                         </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-          {!isLoading && deposits.length > 0 && (
-            <div style={{ marginTop: '1.5rem', padding: '1.25rem 0 0', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                Showing page {page} ({deposits.length} deposits)
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button 
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  style={{ 
-                    padding: '0.6rem 1.25rem', 
-                    fontSize: '0.875rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    background: page === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
-                    color: page === 1 ? 'rgba(255,255,255,0.4)' : '#fff',
-                    cursor: page === 1 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    if (page !== 1) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (page !== 1) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                    }
-                  }}
-                >
-                  Previous
-                </button>
-                <button 
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={deposits.length < 50}
-                  style={{ 
-                    padding: '0.6rem 1.25rem', 
-                    fontSize: '0.875rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    background: deposits.length < 50 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
-                    color: deposits.length < 50 ? 'rgba(255,255,255,0.4)' : '#fff',
-                    cursor: deposits.length < 50 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    if (deposits.length >= 50) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (deposits.length >= 50) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                    }
-                  }}
-                >
-                  Next
-                </button>
-              </div>
+        {!isLoading && deposits.length > 0 && (
+          <div style={{ marginTop: '1.5rem', padding: '1.25rem 0 0', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              Showing page {page} ({deposits.length} deposits)
             </div>
-          )}
-        </div>
-
-        {showScreenshotModal && selectedDeposit && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            backdropFilter: 'blur(4px)'
-          }} onClick={() => setShowScreenshotModal(false)}>
-            <div style={{
-              background: 'var(--surface)',
-              borderRadius: '16px',
-              padding: '2rem',
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
-            }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.5rem' }}>Deposit Screenshot</h3>
-                <button 
-                  onClick={() => setShowScreenshotModal(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '2rem', cursor: 'pointer', padding: '0.25rem' }}
-                >
-                  ×
-                </button>
-              </div>
-              {selectedDeposit.screenshot_url && (
-                <img 
-                  src={selectedDeposit.screenshot_url} 
-                  alt="Deposit Screenshot" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '75vh', 
-                    borderRadius: '12px',
-                    objectFit: 'contain',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-                  }} 
-                />
-              )}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{ 
+                  padding: '0.6rem 1.25rem', 
+                  fontSize: '0.875rem', 
+                  borderRadius: '8px', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  background: page === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                  color: page === 1 ? 'rgba(255,255,255,0.4)' : '#fff',
+                  cursor: page === 1 ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontWeight: 500
+                }}
+                onMouseEnter={(e) => {
+                  if (page !== 1) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (page !== 1) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  }
+                }}
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setPage(p => p + 1)}
+                disabled={deposits.length < 50}
+                style={{ 
+                  padding: '0.6rem 1.25rem', 
+                  fontSize: '0.875rem', 
+                  borderRadius: '8px', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  background: deposits.length < 50 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                  color: deposits.length < 50 ? 'rgba(255,255,255,0.4)' : '#fff',
+                  cursor: deposits.length < 50 ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontWeight: 500
+                }}
+                onMouseEnter={(e) => {
+                  if (deposits.length >= 50) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (deposits.length >= 50) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  }
+                }}
+              >
+                Next
+              </button>
             </div>
           </div>
         )}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="admin-page-header">
-        <div>
-          <h1>{title}</h1>
-          <p>{description}</p>
-        </div>
       </div>
 
-      <div className="admin-panel">
-        <div className="admin-panel-header">
-          <h2>Transaction History</h2>
+      {showScreenshotModal && selectedDeposit && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }} onClick={() => setShowScreenshotModal(false)}>
+          <div style={{
+            background: 'var(--surface)',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            position: 'relative',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.5rem' }}>Deposit Screenshot</h3>
+              <button 
+                onClick={() => setShowScreenshotModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '2rem', cursor: 'pointer', padding: '0.25rem' }}
+              >
+                ×
+              </button>
+            </div>
+            {selectedDeposit.screenshot_url && (
+              <img 
+                src={selectedDeposit.screenshot_url} 
+                alt="Deposit Screenshot" 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '75vh', 
+                  borderRadius: '12px',
+                  objectFit: 'contain',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                }} 
+              />
+            )}
+          </div>
         </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Coming soon...</p>
-      </div>
+      )}
     </>
   );
 }

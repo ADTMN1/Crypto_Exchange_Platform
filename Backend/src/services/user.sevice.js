@@ -42,7 +42,9 @@ const userService = {
          u.is_active, u.created_at, u.updated_at, u.last_login_at,
          r.name AS role,
          us.account_status, us.email_verified,
-         us.phone_verified, us.two_fa_enabled
+         us.phone_verified, us.two_fa_enabled,
+         us.kyc_status, us.kyc_submitted_at, us.kyc_verified_at,
+         us.kyc_rejected_at, us.kyc_rejection_reason
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN user_status us ON us.user_id = u.id
@@ -235,7 +237,10 @@ const userService = {
          u.id, u.email, u.username, u.phone_number,
          u.is_active, u.created_at, u.last_login_at,
          r.name AS role,
-         us.account_status, us.email_verified, us.two_fa_enabled
+         us.account_status, us.email_verified, us.phone_verified,
+         us.two_fa_enabled,
+         us.kyc_status, us.kyc_submitted_at, us.kyc_verified_at,
+         us.kyc_rejected_at, us.kyc_rejection_reason
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN user_status us ON us.user_id = u.id
@@ -274,7 +279,9 @@ const userService = {
          u.is_active, u.created_at, u.last_login_at,
          r.name AS role,
          us.account_status, us.email_verified,
-         us.phone_verified, us.two_fa_enabled
+         us.phone_verified, us.two_fa_enabled,
+         us.kyc_status, us.kyc_submitted_at, us.kyc_verified_at,
+         us.kyc_rejected_at, us.kyc_rejection_reason
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN user_status us ON us.user_id = u.id

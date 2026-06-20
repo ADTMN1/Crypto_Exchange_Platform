@@ -35,6 +35,12 @@ const walletService = {
     );
   },
 
+  getDepositsByStatus: async (status: string, page = 1, limit = 50) => {
+    return api.get<PendingDepositsResponse>(
+      `${API_ENDPOINTS.WALLET.ADMIN_DEPOSITS(status)}?page=${page}&limit=${limit}`
+    );
+  },
+
   approveDeposit: async (transactionId: string) => {
     return api.post(API_ENDPOINTS.WALLET.ADMIN_APPROVE_DEPOSIT(transactionId));
   },

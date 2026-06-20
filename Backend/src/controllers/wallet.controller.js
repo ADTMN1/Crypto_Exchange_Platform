@@ -168,6 +168,31 @@ const walletController = {
     }
   },
 
+  getDepositsByStatus: async (req, res, next) => {
+    try {
+      const { status } = req.params;
+      const { page, limit } = req.query;
+      
+      const result = await walletService.getDepositsByStatus(
+        status,
+        parseInt(page) || 1,
+        parseInt(limit) || 50
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Deposits retrieved successfully',
+        data: result
+      });
+
+      auditController.auditingSave(req, `Viewed ${status} deposits`, 'admin_wallet', null)
+        .catch((err) => console.error('Audit save failed:', err));
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
+
   approveDeposit: async (req, res, next) => {
     try {
       const { transactionId } = req.params;
