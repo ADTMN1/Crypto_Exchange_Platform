@@ -180,16 +180,16 @@ export default function P2PDisputesPage({ title, description }: P2PDisputesPageP
                       <button
                         onClick={() => handleResolve(dispute.id, 'release_to_buyer', 'release crypto to buyer')}
                         disabled={resolvingId === dispute.id}
-                        className="nex-btn-success"
-                        style={{ flex: '1', minWidth: '180px' }}
+                        className="nex-btn-xs nex-btn-success"
+                        style={{ flex: '1', minWidth: '160px' }}
                       >
                         {resolvingId === dispute.id ? 'Processing...' : '✓ Release to Buyer'}
                       </button>
                       <button
                         onClick={() => handleResolve(dispute.id, 'return_to_seller', 'return crypto to seller')}
                         disabled={resolvingId === dispute.id}
-                        className="nex-btn-danger"
-                        style={{ flex: '1', minWidth: '180px' }}
+                        className="nex-btn-xs nex-btn-danger"
+                        style={{ flex: '1', minWidth: '160px' }}
                       >
                         {resolvingId === dispute.id ? 'Processing...' : '✗ Return to Seller'}
                       </button>

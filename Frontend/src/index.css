@@ -7258,3 +7258,71 @@ body {
   font-size: 14px;
   gap: 8px;
 }
+
+/* Icon Button Styles for Admin Actions */
+.nex-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.nex-icon-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.nex-icon-btn:active {
+  transform: translateY(0);
+}
+
+/* Primary - Edit Action */
+.nex-icon-btn-primary {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.nex-icon-btn-primary:hover {
+  background: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+}
+
+/* Success - Enable Action */
+.nex-icon-btn-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.nex-icon-btn-success:hover {
+  background: rgba(34, 197, 94, 0.2);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.25);
+}
+
+/* Warning - Disable Action */
+.nex-icon-btn-warning {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.nex-icon-btn-warning:hover {
+  background: rgba(249, 115, 22, 0.2);
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.25);
+}
+
+/* Danger - Delete Action */
+.nex-icon-btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.nex-icon-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+}

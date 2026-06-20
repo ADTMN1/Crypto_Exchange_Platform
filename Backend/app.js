@@ -14,24 +14,6 @@ import './src/jobs/tradeResolver.js';
 dotenv.config();
 const app = express();
 
-// CSRF Protection Setup
-const {
-  invalidCsrfTokenError, // This is just for convenience if you plan on making your own middleware.
-  generateCsrfToken, // Use this in your routes to provide a CSRF token.
-  doubleCsrfProtection, // This is the default CSRF protection middleware.
-} = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'fallback-secret-change-in-production',
-  getSessionIdentifier: () => 'static-identifier', // Required for csrf-csrf v4.x
-  cookieName: 'x-csrf-token',
-  cookieOptions: {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    secure: process.env.NODE_ENV === "production",
-  },
-  size: 64,
-  getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'], // Note: v4 uses getCsrfTokenFromRequest, not getTokenFromRequest!
-});
-
 // Log all incoming requests
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -44,10 +26,17 @@ app.use(helmet());
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-// 3. Cookie Parsing (Now safely handles signed cookies via initialized secrets)
+// 2. Performance Optimization
+app.use(compression()); 
+
+// 3. Cookie Parsing (MUST be before CSRF setup)
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
-// 4. Cross-Origin Resource Sharing (Production Sanitized)
+// 4. Data Parsers & Strict Sizing Thresholds (MUST be before CSRF setup)
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// 5. Cross-Origin Resource Sharing (Production Sanitized)
 app.use(
 	cors({
 		origin: (origin, callback) => {
@@ -65,9 +54,7 @@ app.use(
 	})
 );
 
-// 2. Performance Optimization
-app.use(compression()); 
-// 5. DDoS & API Abuse Protection
+// 6. DDoS & API Abuse Protection
 const apiLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
 	max: 100, 
@@ -76,18 +63,35 @@ const apiLimiter = rateLimit({
 	message: { error: 'Too many requests from this network. Please try again later.' },
 });
 app.use('/api', apiLimiter);
-// 6. HTTP Traffic Auditing
+
+// 7. HTTP Traffic Auditing
 if (process.env.NODE_ENV !== 'production') {
 	app.use(morgan('dev'));
 } else {
 	app.use(morgan('combined')); 
 }
 
-// 7. Data Parsers & Strict Sizing Thresholds
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// 8. CSRF Protection Setup (AFTER cookie-parser and body parsers)
+const {
+  invalidCsrfTokenError,
+  generateCsrfToken,  // CORRECT NAME
+  validateRequest,
+  doubleCsrfProtection,
+} = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET || 'fallback-secret-change-in-production',
+  cookieName: 'x-csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: '/',
+  },
+  size: 64,
+  getTokenFromRequest: (req) => req.headers['x-csrf-token'],
+  getSessionIdentifier: (req) => req.ip || 'anonymous',  // Required by csrf-csrf v4
+});
 
-// 8. Infrastructure Health Checks & Base Route
+// 9. Infrastructure Health Checks & Base Route
 app.get('/health', (req, res) => {
 	res.status(200).json({
 		status: 'healthy',
@@ -96,16 +100,16 @@ app.get('/health', (req, res) => {
 	});
 });
 
-
-// Endpoint to get CSRF token
+// 10. Endpoint to get CSRF token (MUST be before CSRF protection middleware)
 app.get('/api/csrf-token', (req, res) => {
   const csrfToken = generateCsrfToken(req, res);
   res.json({ csrfToken });
 });
 
-// Apply CSRF protection to state-changing routes
+// 11. Apply CSRF protection to state-changing routes (AFTER token endpoint)
 app.use('/api', (req, res, next) => {
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+  // Skip CSRF for GET, HEAD, OPTIONS, and csrf-token endpoint
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/csrf-token') {
     return next();
   }
   doubleCsrfProtection(req, res, next);

@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import pairService, { TradingPair } from '../../services/pair.service';
 
 export default function CoinPairsPage() {
-  const navigate = useNavigate();
   const [pairs, setPairs] = useState<TradingPair[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,10 +75,6 @@ export default function CoinPairsPage() {
         toast.error(msg);
       }
     }
-  };
-
-  const handleEdit = (id: string) => {
-    navigate(`/admin/manage-coin-pair/edit/${id}`);
   };
 
   return (
@@ -170,12 +164,6 @@ export default function CoinPairsPage() {
                         <td>{getStatusBadge(pair.is_active)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <button 
-                              onClick={() => handleEdit(pair.id)}
-                              className="nex-btn-xs nex-btn-primary"
-                            >
-                              Edit
-                            </button>
                             <button 
                               onClick={() => handleToggleStatus(pair.id, pair.is_active)}
                               className={`nex-btn-xs ${pair.is_active ? 'nex-btn-secondary' : 'nex-btn-success'}`}

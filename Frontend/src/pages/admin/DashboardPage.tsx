@@ -60,19 +60,24 @@ const menuItems = [
       { label: "Trade History", path: "/admin/manage-order/trade-history" },
     ],
   },
-  {
-    label: "Manage P2P",
-    path: "/admin/manage-p2p",
-    icon: FaHandshake,
-    children: [
-      { label: "Running Trade", path: "/admin/manage-p2p/running-trade" },
-      { label: "Report Trade", path: "/admin/manage-p2p/report-trade" },
-      { label: "Completed Trade", path: "/admin/manage-p2p/completed-trade" },
-      { label: "Manage Ad", path: "/admin/manage-p2p/manage-ad" },
-      { label: "Payment Window", path: "/admin/manage-p2p/payment-window" },
-      { label: "Payment Method", path: "/admin/manage-p2p/payment-method" },
-    ],
-  },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Manage P2P
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // {
+  //   label: "Manage P2P",
+  //   path: "/admin/manage-p2p",
+  //   icon: FaHandshake,
+  //   children: [
+  //     { label: "Running Trade", path: "/admin/manage-p2p/running-trade" },
+  //     { label: "Report Trade", path: "/admin/manage-p2p/report-trade" },
+  //     { label: "Completed Trade", path: "/admin/manage-p2p/completed-trade" },
+  //     { label: "Manage Ad", path: "/admin/manage-p2p/manage-ad" },
+  //     { label: "Payment Window", path: "/admin/manage-p2p/payment-window" },
+  //     { label: "Payment Method", path: "/admin/manage-p2p/payment-method" },
+  //   ],
+  // },
   {
     label: "Manage Binary",
     path: "/admin/manage-binary",
@@ -84,18 +89,23 @@ const menuItems = [
       { label: "All Trades", path: "/admin/manage-binary/all-trades" },
     ],
   },
-  {
-    label: "Manage Currency",
-    path: "/admin/manage-currency",
-    icon: FaDollarSign,
-    children: [
-      {
-        label: "Crypto Currency",
-        path: "/admin/manage-currency/crypto-currency",
-      },
-      { label: "Fiat Currency", path: "/admin/manage-currency/fiat-currency" },
-    ],
-  },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Manage Currency
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // {
+  //   label: "Manage Currency",
+  //   path: "/admin/manage-currency",
+  //   icon: FaDollarSign,
+  //   children: [
+  //     {
+  //       label: "Crypto Currency",
+  //       path: "/admin/manage-currency/crypto-currency",
+  //     },
+  //     { label: "Fiat Currency", path: "/admin/manage-currency/fiat-currency" },
+  //   ],
+  // },
   { label: "Manage Market", path: "/admin/manage-market", icon: FaChartBar },
   { label: "Manage Coin Pair", path: "/admin/manage-coin-pair", icon: FaCoins },
   {
@@ -113,11 +123,16 @@ const menuItems = [
       { label: "Send Notification", path: "/admin/users/send-notification" },
     ],
   },
-  {
-    label: "Manage Referral",
-    path: "/admin/manage-referral",
-    icon: FaUserFriends,
-  },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Manage Referral
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // {
+  //   label: "Manage Referral",
+  //   path: "/admin/manage-referral",
+  //   icon: FaUserFriends,
+  // },
   {
     label: "Deposits",
     path: "/admin/deposits",
@@ -172,7 +187,12 @@ const menuItems = [
     ],
   },
 
-  { label: "Report", path: "/admin/report", icon: FaFileAlt },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Report
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // { label: "Report", path: "/admin/report", icon: FaFileAlt },
   {
     label: "Transaction History",
     path: "/admin/transaction-history",
@@ -185,19 +205,29 @@ const menuItems = [
     path: "/admin/notification-history",
     icon: FaBell,
   },
-  { label: "Subscribers", path: "/admin/subscribers", icon: FaBell },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Subscribers
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // { label: "Subscribers", path: "/admin/subscribers", icon: FaBell },
   { label: "System Setting", path: "/admin/system-settings", icon: FaCog },
-  {
-    label: "Extra",
-    path: "/admin/extra",
-    icon: FaEllipsisH,
-    children: [
-      { label: "Application", path: "/admin/extra/application" },
-      { label: "Server", path: "/admin/extra/server" },
-      { label: "Cache", path: "/admin/extra/cache" },
-      { label: "Update", path: "/admin/extra/update" },
-    ],
-  },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Extra
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // {
+  //   label: "Extra",
+  //   path: "/admin/extra",
+  //   icon: FaEllipsisH,
+  //   children: [
+  //     { label: "Application", path: "/admin/extra/application" },
+  //     { label: "Server", path: "/admin/extra/server" },
+  //     { label: "Cache", path: "/admin/extra/cache" },
+  //     { label: "Update", path: "/admin/extra/update" },
+  //   ],
+  // },
   {
     label: "Report & Request",
     path: "/admin/report-request",

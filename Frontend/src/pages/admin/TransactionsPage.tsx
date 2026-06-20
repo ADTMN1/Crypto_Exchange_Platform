@@ -178,25 +178,7 @@ export default function AdminTransactions({
                                 setSelectedDeposit(deposit);
                                 setShowScreenshotModal(true);
                               }}
-                              style={{ 
-                                padding: '0.5rem 1rem', 
-                                fontSize: '0.875rem',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                color: '#fff',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                fontWeight: 500
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                              }}
+                              className="nex-btn-xs nex-btn-secondary"
                             >
                               View Screenshot
                             </button>
@@ -208,52 +190,16 @@ export default function AdminTransactions({
                           <div>{formatDate(deposit.created_at)}</div>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
                               onClick={() => handleApprove(deposit)}
-                              style={{ 
-                                padding: '0.5rem 1.25rem', 
-                                fontSize: '0.875rem',
-                                background: 'var(--success)',
-                                color: '#0d0d0d',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                fontWeight: 600
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-1px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(36, 197, 118, 0.3)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                              }}
+                              className="nex-btn-xs nex-btn-success"
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => handleReject(deposit)}
-                              style={{ 
-                                padding: '0.5rem 1.25rem', 
-                                fontSize: '0.875rem',
-                                background: 'var(--danger)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                fontWeight: 600
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-1px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(229, 57, 53, 0.3)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                              }}
+                              className="nex-btn-xs nex-btn-danger"
                             >
                               Reject
                             </button>
@@ -272,62 +218,18 @@ export default function AdminTransactions({
               <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                 Showing page {page} ({deposits.length} deposits)
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button 
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  style={{ 
-                    padding: '0.6rem 1.25rem', 
-                    fontSize: '0.875rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    background: page === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
-                    color: page === 1 ? 'rgba(255,255,255,0.4)' : '#fff',
-                    cursor: page === 1 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    if (page !== 1) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (page !== 1) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                    }
-                  }}
+                  className="nex-btn-xs nex-btn-secondary"
                 >
                   Previous
                 </button>
                 <button 
                   onClick={() => setPage(p => p + 1)}
                   disabled={deposits.length < 50}
-                  style={{ 
-                    padding: '0.6rem 1.25rem', 
-                    fontSize: '0.875rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    background: deposits.length < 50 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
-                    color: deposits.length < 50 ? 'rgba(255,255,255,0.4)' : '#fff',
-                    cursor: deposits.length < 50 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    if (deposits.length >= 50) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (deposits.length >= 50) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                    }
-                  }}
+                  className="nex-btn-xs nex-btn-secondary"
                 >
                   Next
                 </button>
