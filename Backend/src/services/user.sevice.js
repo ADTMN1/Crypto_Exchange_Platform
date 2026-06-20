@@ -1,8 +1,34 @@
 import bcrypt from 'bcrypt';
-import cloudinary from '../config/cloudinary.config.js';
 import pool, { query } from '../config/db.config.js';
 import AppError from '../utils/errorHandling.js';
 import { Readable } from 'stream';
+
+// Cache for Cloudinary instance
+let cloudinary = null;
+let cloudinaryInitialized = false;
+
+const initCloudinary = async () => {
+  if (cloudinaryInitialized) return cloudinary;
+  
+  try {
+    const cloudinaryConfig = await import('../config/cloudinary.config.js');
+    const cl = cloudinaryConfig.default;
+    
+    // Check if Cloudinary is properly configured
+    const config = cl.config();
+    if (config.cloud_name) {
+      cloudinary = cl;
+    } else {
+      cloudinary = null;
+    }
+  } catch (e) {
+    console.warn('⚠️ Cloudinary not available');
+    cloudinary = null;
+  }
+  
+  cloudinaryInitialized = true;
+  return cloudinary;
+};
 
 const userService = {
 
@@ -81,6 +107,11 @@ const userService = {
   // ─── PROFILE IMAGE ──────────────────────────────────────────────────────────
 
   uploadProfileImage: async (userId, fileBuffer) => {
+    const cloudinary = await initCloudinary();
+    if (!cloudinary) {
+      throw new AppError('Cloudinary not configured', 500);
+    }
+    
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
@@ -122,7 +153,14 @@ const userService = {
 
     const { profile_picture_url } = result.rows[0];
     if (profile_picture_url) {
-      await cloudinary.uploader.destroy(`crypto_exchange/profiles/user_${userId}`);
+      const cloudinary = await initCloudinary();
+      if (cloudinary) {
+        try {
+          await cloudinary.uploader.destroy(`crypto_exchange/profiles/user_${userId}`);
+        } catch (error) {
+          console.warn('Failed to delete profile image from Cloudinary:', error);
+        }
+      }
     }
 
     await query(

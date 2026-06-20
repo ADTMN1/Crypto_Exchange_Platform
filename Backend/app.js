@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import { doubleCsrf } from 'csrf-csrf';
 import router from './src/routes/route.index.js';
 import dotenv from 'dotenv';
 import globalErrorHandler from './src/middleware/errorMiddleware.js';
@@ -13,12 +14,35 @@ import './src/jobs/tradeResolver.js';
 dotenv.config();
 const app = express();
 
+// CSRF Protection Setup
+const {
+  invalidCsrfTokenError, // This is just for convenience if you plan on making your own middleware.
+  generateToken, // Use this in your routes to provide a CSRF token.
+  doubleCsrfProtection, // This is the default CSRF protection middleware.
+} = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET || 'fallback-secret-change-in-production',
+  cookieName: 'x-csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
+  },
+  size: 64,
+  getTokenFromRequest: (req) => req.headers['x-csrf-token'],
+});
+
+// Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Request headers:', req.headers);
+  next();
+});
+
 // 1. Production Security Headers & Footprint Obscurity
 app.use(helmet());
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
 // 3. Cookie Parsing (Now safely handles signed cookies via initialized secrets)
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
@@ -71,6 +95,20 @@ app.get('/health', (req, res) => {
 	});
 });
 
+
+// Endpoint to get CSRF token
+app.get('/api/csrf-token', (req, res) => {
+  const csrfToken = generateToken(req, res);
+  res.json({ csrfToken });
+});
+
+// Apply CSRF protection to state-changing routes
+app.use('/api', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+  doubleCsrfProtection(req, res, next);
+});
 
 app.use('/api',router)
 

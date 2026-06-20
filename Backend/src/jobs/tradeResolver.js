@@ -4,7 +4,7 @@ import priceService from '../services/price.service.js';
 import walletService from '../services/wallet.service.js';
 
 /**
- * Binary Trade Resolver - Runs every 30 seconds
+ * Binary Trade Resolver - Runs every 5 seconds
  * Resolves expired binary trades
  */
 const resolveExpiredTrades = async () => {
@@ -13,7 +13,7 @@ const resolveExpiredTrades = async () => {
   try {
     // Find all running trades that have expired
     const expiredTrades = await query(
-      `SELECT id, user_id, pair, direction, amount, entry_price
+      `SELECT id, user_id, pair, direction, amount, entry_price, duration
        FROM binary_trades
        WHERE status = 'running' AND expires_at <= CURRENT_TIMESTAMP
        ORDER BY expires_at ASC`
@@ -42,26 +42,49 @@ const resolveExpiredTrades = async () => {
         const priceWentUp = closePrice > parseFloat(trade.entry_price);
         const priceWentDown = closePrice < parseFloat(trade.entry_price);
 
+        // Get payout percentage based on duration
+        const getPayoutMultiplier = (duration) => {
+          const durationPercentMap = {
+            30: 1.10,  // 10%
+            60: 1.15,  // 15%
+            90: 1.20,  // 20%
+            120: 1.20, // 20%
+            180: 1.25, // 25%
+            300: 1.30  // 30%
+          };
+          // Fallback to 1.10 if duration not found
+          return durationPercentMap[duration] || 1.10;
+        };
+
         if (
-          (trade.direction === 'UP' && priceWentUp) ||
-          (trade.direction === 'DOWN' && priceWentDown)
+          (trade.direction === 'BUY' && priceWentUp) ||
+          (trade.direction === 'SELL' && priceWentDown)
         ) {
           status = 'win';
-          payout = parseFloat(trade.amount) * 1.85;
+          const multiplier = getPayoutMultiplier(trade.duration);
+          payout = parseFloat(trade.amount) * multiplier;
         }
 
-        // Burn the locked amount
-        await walletService.burn(trade.user_id, 'USDT', parseFloat(trade.amount), client);
-
-        // If won, credit the payout
         if (status === 'win') {
-          await walletService.credit(
-            trade.user_id,
-            'USDT',
-            payout,
-            `BINARY_WIN_${trade.id}`,
-            client
-          );
+          // Release the original locked amount (back to balance)
+          await walletService.release(trade.user_id, 'USDT', parseFloat(trade.amount), client);
+          
+          // Credit the payout (which is total return: principal + profit)
+          // Wait, payout already includes principal, so we need to calculate just profit!
+          // Because release already returns the principal!
+          const profit = payout - parseFloat(trade.amount);
+          if (profit > 0) {
+            await walletService.credit(
+              trade.user_id,
+              'USDT',
+              profit,
+              `BINARY_WIN_${trade.id}`,
+              client
+            );
+          }
+        } else {
+          // Burn the locked amount
+          await walletService.burn(trade.user_id, 'USDT', parseFloat(trade.amount), client);
         }
 
         // Update trade record
@@ -74,7 +97,7 @@ const resolveExpiredTrades = async () => {
 
         await client.query('COMMIT');
 
-        console.log(`✅ Resolved trade ${trade.id}: ${status.toUpperCase()} | Entry: ${trade.entry_price} | Close: ${closePrice} | Payout: ${payout}`);
+        console.log(`✅ Resolved trade ${trade.id}: ${status.toUpperCase()} | Entry: ${trade.entry_price} | Close: ${closePrice} | Duration: ${trade.duration}s | Payout: ${payout}`);
 
       } catch (error) {
         await client.query('ROLLBACK');
@@ -92,9 +115,9 @@ const resolveExpiredTrades = async () => {
   }
 };
 
-// Schedule job to run every 30 seconds
-cron.schedule('*/30 * * * * *', resolveExpiredTrades);
+// Schedule job to run every 5 seconds
+cron.schedule('*/5 * * * * *', resolveExpiredTrades);
 
-console.log('🚀 Binary trade resolver cron job started (runs every 30 seconds)');
+console.log('🚀 Binary trade resolver cron job started (runs every 5 seconds)');
 
 export default resolveExpiredTrades;

@@ -54,13 +54,7 @@ const loginUserInStore = useAuthStore((state) => state.login);
       });
 
       if (response?.user) {
-        if (response.accessToken) {
-          localStorage.setItem('token', response.accessToken)
-        }
-        if (response.refreshToken) {
-          localStorage.setItem('refreshToken', response.refreshToken)
-        }
-
+        // We don't store tokens in localStorage anymore - they're in httpOnly cookies!
         loginUserInStore(response.user, response.accessToken ?? null, response.refreshToken ?? null)
 
         // Redirect based on user role

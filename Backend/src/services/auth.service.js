@@ -74,6 +74,33 @@ const authService = {
             `;
             await client.query(statusInsertQuery, [newUser.id]);
 
+            // 6. Create default wallets for the user
+            const defaultCurrencies = ['USDT', 'BTC', 'ETH', 'BNB', 'SOL'];
+            const isDevelopment = process.env.NODE_ENV !== 'production';
+            const initialUSDTBalance = isDevelopment ? (parseInt(process.env.TEST_INITIAL_USDT || '1000') || 0) : 0;
+            
+            for (const currency of defaultCurrencies) {
+                // Insert wallet (only add test balance in development)
+                const initialBalance = currency === 'USDT' ? initialUSDTBalance : 0;
+                await client.query(
+                    `INSERT INTO wallets (user_id, currency, balance, locked_balance)
+                     VALUES ($1, $2, $3, 0)
+                     ON CONFLICT (user_id, currency) DO NOTHING`,
+                    [newUser.id, currency, initialBalance]
+                );
+
+                // If it's USDT and we added a balance, record the transaction
+                if (currency === 'USDT' && initialBalance > 0) {
+                    await client.query(
+                        `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, status, confirmed_at)
+                         SELECT $1, id, 'deposit', $2, $3, 'completed', CURRENT_TIMESTAMP
+                         FROM wallets 
+                         WHERE user_id = $1 AND currency = $2`,
+                        [newUser.id, currency, initialBalance]
+                    );
+                }
+            }
+
             await client.query('COMMIT');
 
         // Delete OTP after successful registration
@@ -292,6 +319,33 @@ const authService = {
                  VALUES ($1, 'active', TRUE, FALSE, FALSE)`,
                 [newUser.id]
             );
+
+            // Create default wallets for the user
+            const defaultCurrencies = ['USDT', 'BTC', 'ETH', 'BNB', 'SOL'];
+            const isDevelopment = process.env.NODE_ENV !== 'production';
+            const initialUSDTBalance = isDevelopment ? (parseInt(process.env.TEST_INITIAL_USDT || '1000') || 0) : 0;
+            
+            for (const currency of defaultCurrencies) {
+                // Insert wallet (only add test balance in development)
+                const initialBalance = currency === 'USDT' ? initialUSDTBalance : 0;
+                await client.query(
+                    `INSERT INTO wallets (user_id, currency, balance, locked_balance)
+                     VALUES ($1, $2, $3, 0)
+                     ON CONFLICT (user_id, currency) DO NOTHING`,
+                    [newUser.id, currency, initialBalance]
+                );
+
+                // If it's USDT and we added a balance, record the transaction
+                if (currency === 'USDT' && initialBalance > 0) {
+                    await client.query(
+                        `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, status, confirmed_at)
+                         SELECT $1, id, 'deposit', $2, $3, 'completed', CURRENT_TIMESTAMP
+                         FROM wallets 
+                         WHERE user_id = $1 AND currency = $2`,
+                        [newUser.id, currency, initialBalance]
+                    );
+                }
+            }
 
             // Audit log: New account created via OAuth
             await client.query(

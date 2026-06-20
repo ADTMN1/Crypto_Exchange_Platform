@@ -2,6 +2,7 @@ import authService from '../services/auth.service.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
 import { generateToken, refreshToken } from '../utils/generateToken.js';
+import { cookieOptions } from '../utils/cookiesOption.js';
 import { OAuth2Client } from 'google-auth-library';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -90,17 +91,7 @@ if(!email || !password) {
       const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.role);
        const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.role);
 
-
-       
-
-     const cookieOptions = {
-  httpOnly: true,
-  // MUST be true for sameSite: "none" to work
-secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to be sent across different Render subdomains
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-   
-};
-      // ✅ Set cookie
+      // ✅ Set cookie using centralized cookieOptions
    res.cookie("token" ,accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
    res.cookie("refreshToken", refre_shToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
@@ -108,8 +99,9 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
             res.status(200).json({
                 success: true,
                 message: 'Login successful.',
-                user: userMetadata
-
+                user: userMetadata,
+                accessToken,
+                refreshToken: refre_shToken
             });
             auditController.auditingSave(req, 'User login', 'user', userMetadata.id, { email: userMetadata.email }, userMetadata.id)
                 .catch((err) => console.error('Audit save failed:', err));
@@ -153,13 +145,7 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
             const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.role);
             const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.role);
 
-            const cookieOptions = {
-                httpOnly: true,
-                secure: true,
-                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            };
-
-            // 5. Set cookies
+            // 5. Set cookies using centralized cookieOptions
             res.cookie("token", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
             res.cookie("refreshToken", refre_shToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
@@ -184,15 +170,16 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
      */
     logout: async (req, res, next) => {
         try {
-            const refreshToken = req.cookies?.refresh_token || req.body.refresh_token;
+            const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
             await authService.logout(refreshToken);
 
             // Clear active cookie maps from user agents
-            res.clearCookie('refresh_token', {
+            res.clearCookie('token');
+            res.clearCookie('refreshToken', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict'
+                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
             });
 
             res.status(200).json({
@@ -228,13 +215,7 @@ secure: process.env.NODE_ENV === "production",  // "none" allows the cookie to b
             // Generate new access token
             const newAccessToken = await generateToken(decoded.id, decoded.email, decoded.role);
 
-            const cookieOptions = {
-                httpOnly: true,
-                secure: true,
-                sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            };
-
-            // Set new access token cookie
+            // Set new access token cookie using centralized cookieOptions
             res.cookie("token", newAccessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
 
             res.status(200).json({

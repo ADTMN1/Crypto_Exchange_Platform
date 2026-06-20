@@ -6,12 +6,12 @@ export default function OrderForm({ symbol }: { symbol: string }) {
   const [amount, setAmount] = useState<string>('0.00');
 
   const tradeDurations = [
-    { duration: '30s', minAmount: '$100', profit: '+15%' },
-    { duration: '1m', minAmount: '$1,000', profit: '+20%' },
-    { duration: '90s', minAmount: '$5,000', profit: '+25%' },
-    { duration: '2m', minAmount: '$20,000', profit: '+30%' },
-    { duration: '3m', minAmount: '$50,000', profit: '+35%' },
-    { duration: '6m', minAmount: '$90,000', profit: '+40%' }
+    { duration: '30s', minAmount: '$100', profit: '+10%' },
+    { duration: '60s', minAmount: '$1,000', profit: '+15%' },
+    { duration: '90s', minAmount: '$5,000', profit: '+20%' },
+    { duration: '120s', minAmount: '$20,000', profit: '+20%' },
+    { duration: '180s', minAmount: '$50,000', profit: '+25%' },
+    { duration: '300s', minAmount: '$90,000', profit: '+30%' }
   ];
 
   return (

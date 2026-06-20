@@ -1,54 +1,38 @@
-import api from './api.service';
+import api, { API_ENDPOINTS } from './api.service';
+
+export interface PendingDeposit {
+  id: string;
+  user_id: string;
+  username: string;
+  email: string;
+  wallet_id: string;
+  currency: string;
+  amount: string;
+  status: 'pending' | 'completed' | 'failed';
+  screenshot_url: string | null;
+  created_at: string;
+}
+
+export interface PendingDepositsResponse {
+  deposits: PendingDeposit[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 const walletService = {
-  // ─── USER ENDPOINTS ─────────────────────────────────────────────────────────
-
-  /**
-   * Get user's wallet balances for all currencies
-   */
-  getBalance: async () => {
-    const response = await api.get('/wallet/balance');
-    return response.data;
+  getPendingDeposits: async (page = 1, limit = 50) => {
+    return api.get<PendingDepositsResponse>(
+      `${API_ENDPOINTS.WALLET.ADMIN_PENDING_DEPOSITS}?page=${page}&limit=${limit}`
+    );
   },
 
-  /**
-   * Get user's transaction history
-   * @param page - Page number
-   */
-  getTransactions: async (page: number = 1) => {
-    const response = await api.get('/wallet/transactions', {
-      params: { page },
-    });
-    return response.data;
+  approveDeposit: async (transactionId: string) => {
+    return api.post(API_ENDPOINTS.WALLET.ADMIN_APPROVE_DEPOSIT(transactionId));
   },
 
-  // ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────
-
-  /**
-   * Admin: Get all wallets
-   * @param page - Page number
-   * @param limit - Items per page
-   */
-  getAllWallets: async (page: number = 1, limit: number = 50) => {
-    const response = await api.get('/wallet/admin/wallets', {
-      params: { page, limit },
-    });
-    return response.data;
-  },
-
-  /**
-   * Admin: Top up user wallet (dev only)
-   * @param userId - User UUID
-   * @param currency - Currency code (BTC, ETH, USDT, etc.)
-   * @param amount - Amount to credit
-   */
-  adminTopup: async (userId: string, currency: string, amount: number) => {
-    const response = await api.post('/wallet/admin/topup', {
-      userId,
-      currency,
-      amount,
-    });
-    return response.data;
+  rejectDeposit: async (transactionId: string) => {
+    return api.post(API_ENDPOINTS.WALLET.ADMIN_REJECT_DEPOSIT(transactionId));
   },
 };
 

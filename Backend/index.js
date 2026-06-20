@@ -8,6 +8,7 @@ import app from './app.js';
 import { query } from './src/config/db.config.js';
 import redisClient from './src/config/redis.config.js';
 import { initializeWebSocket } from './src/websocket/socket.js';
+import './src/jobs/tradeResolver.js';
 
 const PORT = process.env.PORT || 3000;
 

@@ -46,22 +46,18 @@ export const useAuthStore = create<AuthState>()(
       },
       initialize: () => {
         try {
-          const storedUser = localStorage.getItem('user');
-          const storedAccessToken = localStorage.getItem('token');
-          const storedRefreshToken = localStorage.getItem('refreshToken');
-          
-          if (storedUser && storedAccessToken && storedRefreshToken) {
-            const user = JSON.parse(storedUser);
-            if (user && typeof user === 'object') {
+          // Check if we have a user stored (but don't rely on tokens from localStorage)
+          const authStorage = localStorage.getItem('auth-storage');
+          if (authStorage) {
+            const parsedStorage = JSON.parse(authStorage);
+            const { state } = parsedStorage;
+            if (state?.user) {
               set({
-                user,
-                isAuthenticated: true,
-                accessToken: storedAccessToken,
-                refreshToken: storedRefreshToken,
+                user: state.user,
+                isAuthenticated: state.isAuthenticated,
                 isLoading: false,
               });
             } else {
-              console.warn('Invalid user data in localStorage');
               set({ isLoading: false });
             }
           } else {
@@ -82,12 +78,10 @@ export const useAuthStore = create<AuthState>()(
           state.isLoading = false;
         }
       },
-      // Add partialize to prevent circular reference issues
+      // Add partialize to prevent circular reference issues AND NOT persist tokens in localStorage
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
       }),
     }
   )

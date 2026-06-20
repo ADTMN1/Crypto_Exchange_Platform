@@ -1,26 +1,56 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 // API Configuration
+const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 const API_CONFIG = {
-  baseURL: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api`,
+  baseURL: `${VITE_API_BASE}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Enable sending cookies with requests
 }
+console.log('API config:', { VITE_API_BASE, baseURL: API_CONFIG.baseURL })
 
 // Create axios instance
 const api: AxiosInstance = axios.create(API_CONFIG)
 
-// Request interceptor - Add auth token to requests if available in localStorage
+let csrfToken: string | null = null;
+
+// Function to fetch CSRF token
+const fetchCsrfToken = async () => {
+  try {
+    const response = await api.get('/csrf-token');
+    csrfToken = response.data.csrfToken;
+    return csrfToken;
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+    return null;
+  }
+};
+
+// Request interceptor - Add auth token and CSRF token to requests
 // Note: backend also reads httpOnly cookie automatically via withCredentials
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    console.log('Making API request to:', config.baseURL + config.url, 'with config:', config)
+    
+    // Add auth token from localStorage (fallback for cookie)
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // Add CSRF token for state-changing requests
+    if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
+      if (!csrfToken) {
+        await fetchCsrfToken();
+      }
+      if (csrfToken) {
+        config.headers['x-csrf-token'] = csrfToken;
+      }
+    }
+
     return config
   },
   (error) => Promise.reject(error)
@@ -91,8 +121,10 @@ export const API_ENDPOINTS = {
     DEPOSIT: '/wallet/deposit',
     WITHDRAW: '/wallet/withdraw',
     TRANSACTIONS: '/wallet/transactions',
-    ADMIN_TOPUP: '/wallet/admin/topup',
-    ADMIN_DEBIT: '/wallet/admin/debit',
+    CREATE_DEPOSIT_REQUEST: '/wallet/deposit-request',
+    ADMIN_PENDING_DEPOSITS: '/wallet/admin/pending-deposits',
+    ADMIN_APPROVE_DEPOSIT: (transactionId: string) => `/wallet/admin/deposit/${transactionId}/approve`,
+    ADMIN_REJECT_DEPOSIT: (transactionId: string) => `/wallet/admin/deposit/${transactionId}/reject`,
   },
   // Trade endpoints
   TRADE: {
@@ -101,6 +133,12 @@ export const API_ENDPOINTS = {
     CANCEL_ORDER: (orderId: string) => `/trade/order/${orderId}`,
     ORDER_HISTORY: '/trade/orders',
     MARKET_DATA: '/trade/market-data',
+  },
+  // Binary trading endpoints
+  BINARY: {
+    PLACE_TRADE: '/binary/trade',
+    MY_TRADES: '/binary/my-trades',
+    ADMIN_TRADES: (status: string) => `/binary/admin/trades/${status}`,
   },
   // Admin endpoints
   ADMIN: {

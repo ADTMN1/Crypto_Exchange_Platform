@@ -11,14 +11,26 @@ const PAIR_TO_COINGECKO_ID = {
   'SOL/USDT': 'solana',
 };
 
+// Helper to normalize pair (e.g., "BTCUSDT" → "BTC/USDT")
+const normalizePair = (pair) => {
+  if (pair.includes('/')) return pair;
+  // Try to insert slash before USDT
+  if (pair.endsWith('USDT')) {
+    const base = pair.slice(0, -4);
+    return `${base}/USDT`;
+  }
+  return pair;
+};
+
 const priceService = {
   /**
    * Get current price for a trading pair
-   * @param {string} pair - Trading pair (e.g., 'BTC/USDT')
+   * @param {string} pair - Trading pair (e.g., 'BTC/USDT' or 'BTCUSDT')
    * @returns {number} Current price
    */
   getPrice: async (pair) => {
-    const coinId = PAIR_TO_COINGECKO_ID[pair];
+    const normalizedPair = normalizePair(pair);
+    const coinId = PAIR_TO_COINGECKO_ID[normalizedPair];
     
     if (!coinId) {
       throw new AppError(`Unsupported trading pair: ${pair}`, 400);
