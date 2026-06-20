@@ -53,6 +53,7 @@ import RunningP2PTradesPage from "../pages/admin/RunningP2PTradesPage";
 import RunningBinaryTradesPage from "../pages/admin/RunningBinaryTradesPage";
 import MarketListPage from "../pages/admin/MarketListPage";
 import CoinPairsPage from "../pages/admin/CoinPairsPage";
+import EditCoinPairPage from "../pages/admin/EditCoinPairPage";
 import CompletedP2PTradesPage from "../pages/admin/CompletedP2PTradesPage";
 import SystemSettingsPage from "../pages/admin/SystemSettingsPage";
 import GeneralSettingsPage from "../pages/admin/GeneralSettingsPage";
@@ -495,11 +496,18 @@ export default function Router() {
             // Coin Pairs page
             if (section.path === "/admin/manage-coin-pair") {
               return (
-                <Route
-                  key={section.path}
-                  path={sectionPath}
-                  element={<CoinPairsPage />}
-                />
+                <>
+                  <Route
+                    key={section.path}
+                    path={sectionPath}
+                    element={<CoinPairsPage />}
+                  />
+                  <Route
+                    key={`${section.path}/edit/:id`}
+                    path={`${sectionPath}/edit/:id`}
+                    element={<EditCoinPairPage />}
+                  />
+                </>
               );
             }
 
@@ -720,6 +728,7 @@ export default function Router() {
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="transactions" element={<AdminTransactionsPage />} />
           <Route path="pairs" element={<AdminPairsPage />} />
+          <Route path="pairs/edit/:id" element={<EditCoinPairPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="settings/general" element={<GeneralSettingsPage />} />
           <Route path="support-ticket/:id" element={<TicketDetailPage />} />

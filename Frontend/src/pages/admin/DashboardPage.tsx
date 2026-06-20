@@ -145,17 +145,22 @@ const menuItems = [
     icon: FaBell,
   },
   { label: "System Setting", path: "/admin/system-settings", icon: FaCog },
-  {
-    label: "Extra",
-    path: "/admin/extra",
-    icon: FaEllipsisH,
-    children: [
-      { label: "Application", path: "/admin/extra/application" },
-      { label: "Server", path: "/admin/extra/server" },
-      { label: "Cache", path: "/admin/extra/cache" },
-      { label: "Update", path: "/admin/extra/update" },
-    ],
-  },
+  // ============================================================================
+  // TEMPORARILY HIDDEN - Extra
+  // Per business requirements - may be restored later
+  // All routes, components, services, and backend functionality remain intact
+  // ============================================================================
+  // {
+  //   label: "Extra",
+  //   path: "/admin/extra",
+  //   icon: FaEllipsisH,
+  //   children: [
+  //     { label: "Application", path: "/admin/extra/application" },
+  //     { label: "Server", path: "/admin/extra/server" },
+  //     { label: "Cache", path: "/admin/extra/cache" },
+  //     { label: "Update", path: "/admin/extra/update" },
+  //   ],
+  // },
   {
     label: "Report & Request",
     path: "/admin/report-request",
