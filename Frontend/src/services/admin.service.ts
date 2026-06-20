@@ -15,6 +15,11 @@ export interface AdminUser {
   is_active: boolean;
   created_at: string;
   last_login_at?: string;
+  kyc_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  kyc_submitted_at?: string;
+  kyc_verified_at?: string;
+  kyc_rejected_at?: string;
+  kyc_rejection_reason?: string;
 }
 
 export interface AdminUserTransaction {

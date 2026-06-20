@@ -61,19 +61,6 @@ const menuItems = [
     ],
   },
   {
-    label: "Manage P2P",
-    path: "/admin/manage-p2p",
-    icon: FaHandshake,
-    children: [
-      { label: "Running Trade", path: "/admin/manage-p2p/running-trade" },
-      { label: "Report Trade", path: "/admin/manage-p2p/report-trade" },
-      { label: "Completed Trade", path: "/admin/manage-p2p/completed-trade" },
-      { label: "Manage Ad", path: "/admin/manage-p2p/manage-ad" },
-      { label: "Payment Window", path: "/admin/manage-p2p/payment-window" },
-      { label: "Payment Method", path: "/admin/manage-p2p/payment-method" },
-    ],
-  },
-  {
     label: "Manage Binary",
     path: "/admin/manage-binary",
     icon: FaSitemap,
@@ -82,18 +69,6 @@ const menuItems = [
       { label: "Win Trades", path: "/admin/manage-binary/win-trades" },
       { label: "Lose Trades", path: "/admin/manage-binary/lose-trades" },
       { label: "All Trades", path: "/admin/manage-binary/all-trades" },
-    ],
-  },
-  {
-    label: "Manage Currency",
-    path: "/admin/manage-currency",
-    icon: FaDollarSign,
-    children: [
-      {
-        label: "Crypto Currency",
-        path: "/admin/manage-currency/crypto-currency",
-      },
-      { label: "Fiat Currency", path: "/admin/manage-currency/fiat-currency" },
     ],
   },
   { label: "Manage Market", path: "/admin/manage-market", icon: FaChartBar },
@@ -106,17 +81,11 @@ const menuItems = [
       { label: "Active Users", path: "/admin/users/active-users" },
       { label: "Banned Users", path: "/admin/users/banned-users" },
       { label: "Email Unverified", path: "/admin/users/email-unverified" },
-      { label: "Mobile Unverified", path: "/admin/users/mobile-unverified" },
       { label: "KYC Unverified", path: "/admin/users/kyc-unverified" },
       { label: "KYC Pending", path: "/admin/users/kyc-pending" },
       { label: "All Users", path: "/admin/users" },
       { label: "Send Notification", path: "/admin/users/send-notification" },
     ],
-  },
-  {
-    label: "Manage Referral",
-    path: "/admin/manage-referral",
-    icon: FaUserFriends,
   },
   {
     label: "Deposits",
@@ -125,15 +94,7 @@ const menuItems = [
     children: [
       { label: "Pending Deposits", path: "/admin/deposits/pending-deposits" },
       { label: "Approved Deposits", path: "/admin/deposits/approved-deposits" },
-      {
-        label: "Successful Deposits",
-        path: "/admin/deposits/successful-deposits",
-      },
       { label: "Rejected Deposits", path: "/admin/deposits/rejected-deposits" },
-      {
-        label: "Initiated Deposits",
-        path: "/admin/deposits/initiated-deposits",
-      },
       { label: "All Deposits", path: "/admin/deposits" },
     ],
   },
@@ -171,8 +132,6 @@ const menuItems = [
       { label: "All Ticket", path: "/admin/support-ticket" },
     ],
   },
-
-  { label: "Report", path: "/admin/report", icon: FaFileAlt },
   {
     label: "Transaction History",
     path: "/admin/transaction-history",
@@ -185,7 +144,6 @@ const menuItems = [
     path: "/admin/notification-history",
     icon: FaBell,
   },
-  { label: "Subscribers", path: "/admin/subscribers", icon: FaBell },
   { label: "System Setting", path: "/admin/system-settings", icon: FaCog },
   {
     label: "Extra",

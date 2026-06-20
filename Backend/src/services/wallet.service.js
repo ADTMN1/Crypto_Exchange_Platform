@@ -441,6 +441,43 @@ const walletService = {
     };
   },
 
+  getDepositsByStatus: async (status, page = 1, limit = 50) => {
+    const offset = (page - 1) * limit;
+    let statusCondition = '';
+    const params = [limit, offset];
+    
+    if (status && status !== 'all') {
+      statusCondition = `AND t.status = $3`;
+      params.splice(2, 0, status);
+    }
+
+    const result = await query(
+      `SELECT t.id, t.user_id, u.username, u.email,
+              t.wallet_id, t.currency, t.amount, t.status,
+              t.screenshot_url, t.created_at
+       FROM transactions t
+       JOIN users u ON t.user_id = u.id
+       WHERE t.type = 'deposit' ${statusCondition}
+       ORDER BY t.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      params
+    );
+
+    const countParams = status && status !== 'all' ? [status] : [];
+    const countResult = await query(
+      `SELECT COUNT(*) FROM transactions t
+       WHERE t.type = 'deposit' ${statusCondition ? 'AND t.status = $1' : ''}`,
+      countParams
+    );
+
+    return {
+      deposits: result.rows,
+      total: parseInt(countResult.rows[0].count),
+      page,
+      limit,
+    };
+  },
+
   approveDeposit: async (transactionId, adminUserId) => {
     const client = await pool.connect();
     try {

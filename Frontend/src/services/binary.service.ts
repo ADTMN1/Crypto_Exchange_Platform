@@ -16,6 +16,18 @@ export interface BinaryTrade {
   resolved_at?: string;
 }
 
+export interface BinarySettings {
+  id: string;
+  is_enabled: boolean;
+  payout_percentage: number;
+  min_trade_amount: number;
+  max_trade_amount: number;
+  allowed_expirations: number[];
+  allowed_pairs: string[];
+  updated_at: string;
+  updated_by?: string;
+}
+
 export interface PlaceTradeRequest {
   pair: string;
   direction: 'BUY' | 'SELL';
@@ -40,6 +52,12 @@ export interface GetTradesResponse {
   };
 }
 
+export interface BinarySettingsResponse {
+  success: boolean;
+  message: string;
+  data: BinarySettings;
+}
+
 const transformBinaryTrade = (trade: any): BinaryTrade => {
   return {
     ...trade,
@@ -48,6 +66,16 @@ const transformBinaryTrade = (trade: any): BinaryTrade => {
     entry_price: Number(trade.entry_price),
     close_price: trade.close_price ? Number(trade.close_price) : undefined,
     payout: trade.payout ? Number(trade.payout) : undefined,
+  };
+};
+
+const transformBinarySettings = (settings: any): BinarySettings => {
+  return {
+    ...settings,
+    payout_percentage: Number(settings.payout_percentage),
+    min_trade_amount: Number(settings.min_trade_amount),
+    max_trade_amount: Number(settings.max_trade_amount),
+    allowed_expirations: settings.allowed_expirations.map((e: any) => Number(e)),
   };
 };
 
@@ -74,6 +102,36 @@ export const binaryService = {
         ...response.data.data,
         trades: response.data.data.trades.map(transformBinaryTrade)
       }
+    };
+  },
+
+  getAdminTrades: async (status: string, page: number = 1): Promise<GetTradesResponse> => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    
+    const response = await api.get(`${API_ENDPOINTS.BINARY.ADMIN_TRADES(status)}?${params.toString()}`);
+    return {
+      ...response.data,
+      data: {
+        ...response.data.data,
+        trades: response.data.data.trades.map(transformBinaryTrade)
+      }
+    };
+  },
+
+  getSettings: async (): Promise<BinarySettingsResponse> => {
+    const response = await api.get(API_ENDPOINTS.BINARY.SETTINGS);
+    return {
+      ...response.data,
+      data: transformBinarySettings(response.data.data)
+    };
+  },
+
+  updateSettings: async (settings: Partial<BinarySettings>): Promise<BinarySettingsResponse> => {
+    const response = await api.put(API_ENDPOINTS.BINARY.UPDATE_SETTINGS, settings);
+    return {
+      ...response.data,
+      data: transformBinarySettings(response.data.data)
     };
   }
 };

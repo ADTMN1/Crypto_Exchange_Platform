@@ -59,6 +59,8 @@ import GeneralSettingsPage from "../pages/admin/GeneralSettingsPage";
 import ImpersonatePage from "../pages/admin/ImpersonatePage";
 import SupportTicketsPage from "../pages/admin/SupportTicketsPage";
 import TicketDetailPage from "../pages/admin/TicketDetailPage";
+import BinarySettingsPage from "../pages/admin/BinarySettingsPage";
+import TradingPairsPage from "../pages/admin/TradingPairsPage";
 
 const adminSectionRoutes = [
   {
@@ -242,19 +244,9 @@ const adminSectionRoutes = [
     description: "Review approved deposit records.",
   },
   {
-    path: "/admin/deposits/successful-deposits",
-    title: "Successful Deposits",
-    description: "Review successfully completed deposit records.",
-  },
-  {
     path: "/admin/deposits/rejected-deposits",
     title: "Rejected Deposits",
     description: "Review rejected deposit requests.",
-  },
-  {
-    path: "/admin/deposits/initiated-deposits",
-    title: "Initiated Deposits",
-    description: "Review initiated deposit requests.",
   },
   {
     path: "/admin/withdrawals",
@@ -429,7 +421,19 @@ export default function Router() {
       <Route element={<AdminRoute />}>
         <Route path="/admin" element={<AdminDashboardPage />}>
           <Route path="profile" element={<AdminProfilePage />} />
-          {adminSectionRoutes && adminSectionRoutes.length > 0 && adminSectionRoutes.map((section) => {
+          {adminSectionRoutes && adminSectionRoutes.length > 0 && adminSectionRoutes
+            .filter((section) => {
+              // Filter out unwanted routes
+              const unwantedPaths = [
+                "/admin/manage-p2p",
+                "/admin/manage-currency",
+                "/admin/manage-referral",
+                "/admin/subscribers",
+                "/admin/report",
+              ];
+              return !unwantedPaths.some((prefix) => section.path.startsWith(prefix));
+            })
+            .map((section) => {
             const sectionPath = section.path.replace("/admin/", "");
             const isManageUsersSection = section.path.startsWith("/admin/users/");
             
@@ -462,6 +466,28 @@ export default function Router() {
                   key={section.path}
                   path={sectionPath}
                   element={<MarketListPage />}
+                />
+              );
+            }
+
+            // Binary Control (Settings) page
+            if (section.path === "/admin/trade-management/binary-control") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<BinarySettingsPage />}
+                />
+              );
+            }
+
+            // Spot Control (Trading Pairs) page
+            if (section.path === "/admin/trade-management/spot-control") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<TradingPairsPage />}
                 />
               );
             }
@@ -507,15 +533,15 @@ export default function Router() {
             }
 
             // Binary trading pages
-            if (section.path === "/admin/manage-binary/running-trades") {
-              return (
-                <Route
-                  key={section.path}
-                  path={sectionPath}
-                  element={<RunningBinaryTradesPage />}
-                />
-              );
-            }
+          if (section.path === "/admin/manage-binary/running-trades") {
+            return (
+              <Route
+                key={section.path}
+                path={sectionPath}
+                element={<BinaryTradesPage status="running" title="Running Trades" description="Monitor active binary options trades" />}
+              />
+            );
+          }
             if (section.path === "/admin/manage-binary/win-trades") {
               return (
                 <Route
@@ -596,13 +622,14 @@ export default function Router() {
               );
             }
 
-            // Pending Deposits page
-            if (section.path === "/admin/deposits/pending-deposits") {
+            // Deposits pages
+            if (section.path.startsWith("/admin/deposits")) {
+              const type = section.path.replace("/admin/deposits", "") || "all";
               return (
                 <Route
                   key={section.path}
                   path={sectionPath}
-                  element={<AdminTransactionsPage type="pending-deposits" title={section.title} description={section.description} />}
+                  element={<AdminTransactionsPage type={type.replace("/", "") || "all"} title={section.title} description={section.description} />}
                 />
               );
             }

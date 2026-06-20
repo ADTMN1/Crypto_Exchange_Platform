@@ -49,11 +49,12 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
   };
 
   // Determine which API call to make based on page title
-  const getUserFilterType = (): 'all' | 'active' | 'banned' | 'email-unverified' | 'phone-unverified' => {
+  const getUserFilterType = (): 'all' | 'active' | 'banned' | 'email-unverified' | 'kyc-unverified' | 'kyc-pending' => {
     if (title === 'Active Users') return 'active';
     if (title === 'Banned Users') return 'banned';
     if (title === 'Email Unverified') return 'email-unverified';
-    if (title === 'Mobile Unverified') return 'phone-unverified';
+    if (title === 'KYC Unverified') return 'kyc-unverified';
+    if (title === 'KYC Pending') return 'kyc-pending';
     return 'all';
   };
 
@@ -86,26 +87,32 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
           break;
         
         case 'email-unverified':
-          // For email unverified, filter from all users where email_verified = false
           response = await adminService.getAllUsers({
             page: 1,
             limit: 50,
             search: searchQuery || undefined,
           });
-          // Client-side filter
           response.data.users = response.data.users.filter(u => !u.email_verified);
           response.data.total = response.data.users.length;
           break;
         
-        case 'phone-unverified':
-          // For phone unverified, filter from all users where phone_verified = false
+        case 'kyc-unverified':
           response = await adminService.getAllUsers({
             page: 1,
             limit: 50,
             search: searchQuery || undefined,
           });
-          // Client-side filter
-          response.data.users = response.data.users.filter(u => !u.phone_verified);
+          response.data.users = response.data.users.filter(u => u.kyc_status === 'unverified');
+          response.data.total = response.data.users.length;
+          break;
+        
+        case 'kyc-pending':
+          response = await adminService.getAllUsers({
+            page: 1,
+            limit: 50,
+            search: searchQuery || undefined,
+          });
+          response.data.users = response.data.users.filter(u => u.kyc_status === 'pending');
           response.data.total = response.data.users.length;
           break;
         

@@ -5,14 +5,18 @@ import { checkTradingGateWithAdminBypass } from '../middleware/gate.middleware.j
 
 const binaryRouter = express.Router();
 
-// All routes require authentication
+// ─── PUBLIC ROUTE ───────────────────────────────────────────────────────────
+binaryRouter.get('/settings', binaryController.getSettings);
+
+// All routes below require authentication
 binaryRouter.use(authenticateToken);
 
 // ─── USER ROUTES ────────────────────────────────────────────────────────────
-binaryRouter.post('/trade',         checkTradingGateWithAdminBypass, binaryController.placeTrade);
-binaryRouter.get('/my-trades',      binaryController.getMyTrades);
+binaryRouter.post('/trade', checkTradingGateWithAdminBypass, binaryController.placeTrade);
+binaryRouter.get('/my-trades', binaryController.getMyTrades);
 
 // ─── ADMIN ROUTES ───────────────────────────────────────────────────────────
 binaryRouter.get('/admin/trades/:status', requireAdmin, binaryController.getAdminTrades);
+binaryRouter.put('/admin/settings', requireAdmin, binaryController.updateSettings);
 
 export default binaryRouter;

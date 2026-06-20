@@ -19,7 +19,14 @@ async function runMigrations() {
     const client = await pool.connect();
 
     try {
-        console.log('📝 Running support ticket migrations...\n');
+        console.log('📝 Running all migrations...\n');
+        
+        // Migration 0: Add screenshot_url to transactions
+        console.log('0️⃣ Adding screenshot_url to transactions...');
+        const migration0Path = path.join(__dirname, 'src/models/migrations/007_add_screenshot_url_to_transactions.sql');
+        const sql0 = fs.readFileSync(migration0Path, 'utf8');
+        await client.query(sql0);
+        console.log('✅ Screenshot URL column added\n');
         
         // Migration 1: Update support_tickets table structure
         console.log('1️⃣ Updating support_tickets table...');
@@ -41,6 +48,27 @@ async function runMigrations() {
         const sql3 = fs.readFileSync(migration3Path, 'utf8');
         await client.query(sql3);
         console.log('✅ FAQs and spam protection tables created\n');
+        
+        // Migration 4: Create binary settings table
+        console.log('4️⃣ Creating binary settings table...');
+        const migration4Path = path.join(__dirname, 'src/models/migrations/010_create_binary_settings_table.sql');
+        const sql4 = fs.readFileSync(migration4Path, 'utf8');
+        await client.query(sql4);
+        console.log('✅ Binary settings table created\n');
+        
+        // Migration 5: Create permissions and admin menu tables
+        console.log('5️⃣ Creating permissions and admin menu tables...');
+        const migration5Path = path.join(__dirname, 'src/models/migrations/011_create_permissions_and_menu_tables.sql');
+        const sql5 = fs.readFileSync(migration5Path, 'utf8');
+        await client.query(sql5);
+        console.log('✅ Permissions and admin menu tables created\n');
+        
+        // Migration 6: Add KYC fields to user_status
+        console.log('6️⃣ Adding KYC fields to user_status...');
+        const migration6Path = path.join(__dirname, 'src/models/migrations/012_add_kyc_fields.sql');
+        const sql6 = fs.readFileSync(migration6Path, 'utf8');
+        await client.query(sql6);
+        console.log('✅ KYC fields added\n');
         
         console.log('🎉 All migrations completed successfully!');
     } catch (error) {
