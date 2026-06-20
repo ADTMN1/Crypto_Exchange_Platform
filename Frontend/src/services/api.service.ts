@@ -123,6 +123,7 @@ export const API_ENDPOINTS = {
     TRANSACTIONS: '/wallet/transactions',
     CREATE_DEPOSIT_REQUEST: '/wallet/deposit-request',
     ADMIN_PENDING_DEPOSITS: '/wallet/admin/pending-deposits',
+    ADMIN_DEPOSITS: (status: string) => `/wallet/admin/deposits/${status}`,
     ADMIN_APPROVE_DEPOSIT: (transactionId: string) => `/wallet/admin/deposit/${transactionId}/approve`,
     ADMIN_REJECT_DEPOSIT: (transactionId: string) => `/wallet/admin/deposit/${transactionId}/reject`,
   },
@@ -139,6 +140,16 @@ export const API_ENDPOINTS = {
     PLACE_TRADE: '/binary/trade',
     MY_TRADES: '/binary/my-trades',
     ADMIN_TRADES: (status: string) => `/binary/admin/trades/${status}`,
+    SETTINGS: '/binary/settings',
+    UPDATE_SETTINGS: '/binary/admin/settings',
+  },
+  // Trading pairs endpoints
+  TRADING_PAIRS: {
+    GET_ALL: '/trading-pairs',
+    GET_BY_ID: (id: string) => `/trading-pairs/${id}`,
+    CREATE: '/trading-pairs',
+    UPDATE: (id: string) => `/trading-pairs/${id}`,
+    DELETE: (id: string) => `/trading-pairs/${id}`,
   },
   // Admin endpoints
   ADMIN: {
@@ -158,6 +169,13 @@ export const API_ENDPOINTS = {
     Notifications: '/notifications/admin',
     TRANSACTIONS: '/admin/transactions',
     TRANSACTION_DETAIL: (id: string) => `/admin/transactions/${id}`,
+    // Admin order endpoints
+    ORDERS: '/admin/orders',
+    TRADES: '/admin/orders/trades',
+    OPEN_ORDERS: '/admin/orders/open',
+    ORDER_HISTORY: '/admin/orders/history',
+    ORDER_DETAIL: (orderId: string) => `/admin/orders/${orderId}`,
+    CANCEL_ORDER: (orderId: string) => `/admin/orders/${orderId}/cancel`,
   },
 }
 

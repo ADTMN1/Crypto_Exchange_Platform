@@ -60,24 +60,6 @@ const menuItems = [
       { label: "Trade History", path: "/admin/manage-order/trade-history" },
     ],
   },
-  // ============================================================================
-  // TEMPORARILY HIDDEN - Manage P2P
-  // Per business requirements - may be restored later
-  // All routes, components, services, and backend functionality remain intact
-  // ============================================================================
-  // {
-  //   label: "Manage P2P",
-  //   path: "/admin/manage-p2p",
-  //   icon: FaHandshake,
-  //   children: [
-  //     { label: "Running Trade", path: "/admin/manage-p2p/running-trade" },
-  //     { label: "Report Trade", path: "/admin/manage-p2p/report-trade" },
-  //     { label: "Completed Trade", path: "/admin/manage-p2p/completed-trade" },
-  //     { label: "Manage Ad", path: "/admin/manage-p2p/manage-ad" },
-  //     { label: "Payment Window", path: "/admin/manage-p2p/payment-window" },
-  //     { label: "Payment Method", path: "/admin/manage-p2p/payment-method" },
-  //   ],
-  // },
   {
     label: "Manage Binary",
     path: "/admin/manage-binary",
@@ -89,23 +71,6 @@ const menuItems = [
       { label: "All Trades", path: "/admin/manage-binary/all-trades" },
     ],
   },
-  // ============================================================================
-  // TEMPORARILY HIDDEN - Manage Currency
-  // Per business requirements - may be restored later
-  // All routes, components, services, and backend functionality remain intact
-  // ============================================================================
-  // {
-  //   label: "Manage Currency",
-  //   path: "/admin/manage-currency",
-  //   icon: FaDollarSign,
-  //   children: [
-  //     {
-  //       label: "Crypto Currency",
-  //       path: "/admin/manage-currency/crypto-currency",
-  //     },
-  //     { label: "Fiat Currency", path: "/admin/manage-currency/fiat-currency" },
-  //   ],
-  // },
   { label: "Manage Market", path: "/admin/manage-market", icon: FaChartBar },
   { label: "Manage Coin Pair", path: "/admin/manage-coin-pair", icon: FaCoins },
   {
@@ -116,23 +81,12 @@ const menuItems = [
       { label: "Active Users", path: "/admin/users/active-users" },
       { label: "Banned Users", path: "/admin/users/banned-users" },
       { label: "Email Unverified", path: "/admin/users/email-unverified" },
-      { label: "Mobile Unverified", path: "/admin/users/mobile-unverified" },
       { label: "KYC Unverified", path: "/admin/users/kyc-unverified" },
       { label: "KYC Pending", path: "/admin/users/kyc-pending" },
       { label: "All Users", path: "/admin/users" },
       { label: "Send Notification", path: "/admin/users/send-notification" },
     ],
   },
-  // ============================================================================
-  // TEMPORARILY HIDDEN - Manage Referral
-  // Per business requirements - may be restored later
-  // All routes, components, services, and backend functionality remain intact
-  // ============================================================================
-  // {
-  //   label: "Manage Referral",
-  //   path: "/admin/manage-referral",
-  //   icon: FaUserFriends,
-  // },
   {
     label: "Deposits",
     path: "/admin/deposits",
@@ -140,15 +94,7 @@ const menuItems = [
     children: [
       { label: "Pending Deposits", path: "/admin/deposits/pending-deposits" },
       { label: "Approved Deposits", path: "/admin/deposits/approved-deposits" },
-      {
-        label: "Successful Deposits",
-        path: "/admin/deposits/successful-deposits",
-      },
       { label: "Rejected Deposits", path: "/admin/deposits/rejected-deposits" },
-      {
-        label: "Initiated Deposits",
-        path: "/admin/deposits/initiated-deposits",
-      },
       { label: "All Deposits", path: "/admin/deposits" },
     ],
   },
@@ -186,13 +132,6 @@ const menuItems = [
       { label: "All Ticket", path: "/admin/support-ticket" },
     ],
   },
-
-  // ============================================================================
-  // TEMPORARILY HIDDEN - Report
-  // Per business requirements - may be restored later
-  // All routes, components, services, and backend functionality remain intact
-  // ============================================================================
-  // { label: "Report", path: "/admin/report", icon: FaFileAlt },
   {
     label: "Transaction History",
     path: "/admin/transaction-history",
@@ -205,12 +144,6 @@ const menuItems = [
     path: "/admin/notification-history",
     icon: FaBell,
   },
-  // ============================================================================
-  // TEMPORARILY HIDDEN - Subscribers
-  // Per business requirements - may be restored later
-  // All routes, components, services, and backend functionality remain intact
-  // ============================================================================
-  // { label: "Subscribers", path: "/admin/subscribers", icon: FaBell },
   { label: "System Setting", path: "/admin/system-settings", icon: FaCog },
   // ============================================================================
   // TEMPORARILY HIDDEN - Extra

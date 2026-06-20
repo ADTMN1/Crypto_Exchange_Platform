@@ -1,192 +1,226 @@
-import pool, { query } from '../config/db.config.js';
+import SupportService from '../services/support.service.js';
 import auditController from './audit.controller.js';
 
 const SupportController = {
-    /**
-     * Create a new support ticket
-     */
     createTicket: async (req, res, next) => {
-        const { name, email, subject, category, message } = req.body;
-        const userId = req.user?.id || null; // Optional if user is logged in
-
         try {
-            // Validate required fields
-            if (!name || !email || !subject || !category || !message) {
-                const error = new Error('All fields are required');
-                error.statusCode = 400;
-                throw error;
+            const { subject, category, message } = req.body;
+            
+            // Get user info from authenticated request
+            const userId = req.user.id;
+            const name = req.user.username || req.user.email?.split('@')[0] || 'User';
+            const email = req.user.email;
+            
+            const ipAddress = req.ip || req.connection.remoteAddress;
+
+            const { ticket, finalIsSpam, finalSpamScore } = await SupportService.createTicket({
+                name, 
+                email, 
+                subject, 
+                category, 
+                message, 
+                userId, 
+                ipAddress
+            });
+
+            if (finalIsSpam) {
+                res.status(202).json({
+                    success: true,
+                    message: 'Your ticket has been received and is under review.',
+                    data: { ticketId: ticket.id, status: 'under_review', createdAt: ticket.created_at }
+                });
+            } else {
+                res.status(201).json({
+                    success: true,
+                    message: 'Support ticket created successfully',
+                    data: { ticketId: ticket.id, status: ticket.status, createdAt: ticket.created_at }
+                });
             }
 
-            // Insert support ticket
-            const ticketQuery = `
-                INSERT INTO support_tickets (user_id, name, email, subject, category, message, status)
-                VALUES ($1, $2, $3, $4, $5, $6, 'open')
-                RETURNING id, name, email, subject, category, status, created_at;
-            `;
+            // Async Auditing
+            auditController.auditingSave(
+                req,
+                finalIsSpam ? 'Created support ticket (flagged as spam)' : 'Created support ticket',
+                'support_ticket',
+                ticket.id,
+                { category, subject, spam_score: finalSpamScore }
+            ).catch((err) => console.error('Audit save failed:', err));
 
-            const result = await query(ticketQuery, [
-                userId,
-                name,
-                email,
-                subject,
-                category,
-                message
-            ]);
-
-            const ticket = result.rows[0];
-
-            // TODO: Send email notification to support team
-            // TODO: Send confirmation email to user
-
-            res.status(201).json({
-                success: true,
-                message: 'Support ticket created successfully',
-                data: {
-                    ticketId: ticket.id,
-                    status: ticket.status,
-                    createdAt: ticket.created_at
-                }
-            });
-            auditController.auditingSave(req, 'Created support ticket', 'support_ticket', ticket.id, { category, subject })
-                .catch((err) => console.error('Audit save failed:', err));
-            return;
         } catch (error) {
-            console.error('Create ticket error:', error);
             next(error);
         }
     },
 
-    /**
-     * Get user's support tickets (authenticated users only)
-     */
     getUserTickets: async (req, res, next) => {
-        const userId = req.user.id;
-        const { status, limit = 20, offset = 0 } = req.query;
-
         try {
-            let queryString = `
-                SELECT 
-                    id, subject, category, status, 
-                    created_at, updated_at, resolved_at
-                FROM support_tickets
-                WHERE user_id = $1
-            `;
+            const userId = req.user.id;
+            const { status, limit = 20, offset = 0 } = req.query;
 
-            const params = [userId];
-            let paramIndex = 2;
-
-            // Filter by status
-            if (status && ['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
-                queryString += ` AND status = $${paramIndex}`;
-                params.push(status);
-                paramIndex++;
-            }
-
-            queryString += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-            params.push(limit, offset);
-
-            const result = await query(queryString, params);
-
-            // Get total count
-            const countResult = await query(
-                'SELECT COUNT(*) FROM support_tickets WHERE user_id = $1',
-                [userId]
-            );
+            const { tickets, total } = await SupportService.getUserTickets({
+                userId, status, limit, offset
+            });
 
             res.status(200).json({
                 success: true,
-                data: result.rows,
-                pagination: {
-                    total: parseInt(countResult.rows[0].count),
-                    limit: parseInt(limit),
-                    offset: parseInt(offset)
-                }
+                data: tickets,
+                pagination: { total, limit: parseInt(limit), offset: parseInt(offset) }
             });
+
             auditController.auditingSave(req, 'Viewed support tickets', 'support_ticket', null, { limit, offset, status })
                 .catch((err) => console.error('Audit save failed:', err));
-            return;
+
         } catch (error) {
-            console.error('Get user tickets error:', error);
             next(error);
         }
     },
 
-    /**
-     * Get ticket details
-     */
     getTicketById: async (req, res, next) => {
-        const { id } = req.params;
-        const userId = req.user?.id;
-
         try {
-            const ticketQuery = `
-                SELECT 
-                    id, user_id, name, email, subject, category, 
-                    message, status, created_at, updated_at, resolved_at
-                FROM support_tickets
-                WHERE id = $1
-            `;
+            const { id } = req.params;
+            const userId = req.user?.id;
 
-            const result = await query(ticketQuery, [id]);
-
-            if (result.rows.length === 0) {
-                const error = new Error('Ticket not found');
-                error.statusCode = 404;
-                throw error;
-            }
-
-            const ticket = result.rows[0];
-
-            // Check if user owns this ticket (if authenticated)
-            if (userId && ticket.user_id !== userId) {
-                const error = new Error('Unauthorized access to ticket');
-                error.statusCode = 403;
-                throw error;
-            }
+            const ticket = await SupportService.getTicketById(id, userId);
 
             res.status(200).json({
                 success: true,
                 data: ticket
             });
+
             auditController.auditingSave(req, 'Viewed support ticket', 'support_ticket', ticket.id)
                 .catch((err) => console.error('Audit save failed:', err));
-            return;
+
         } catch (error) {
-            console.error('Get ticket error:', error);
             next(error);
         }
     },
 
-    /**
-     * Get FAQ categories and items
-     */
     getFAQs: async (req, res, next) => {
-        const { category } = req.query;
-
         try {
-            let queryString = `
-                SELECT id, category, question, answer, sort_order
-                FROM faqs
-                WHERE is_active = true
-            `;
-
-            const params = [];
-
-            if (category) {
-                queryString += ` AND category = $1`;
-                params.push(category);
-            }
-
-            queryString += ` ORDER BY sort_order ASC, created_at DESC`;
-
-            const result = await query(queryString, params);
+            const { category } = req.query;
+            const faqs = await SupportService.getFAQs(category);
 
             return res.status(200).json({
                 success: true,
-                data: result.rows
+                data: faqs
             });
         } catch (error) {
-            console.error('Get FAQs error:', error);
+            next(error);
+        }
+    },
+
+    // ============================================================================
+    // ADMIN ENDPOINTS
+    // ============================================================================
+
+    getAllTickets: async (req, res, next) => {
+        try {
+            const { status, limit = 20, offset = 0, search } = req.query;
+
+            const { tickets, total } = await SupportService.getAllTickets({
+                status, limit, offset, search
+            });
+
+            res.status(200).json({
+                success: true,
+                data: tickets,
+                pagination: { total, limit: parseInt(limit), offset: parseInt(offset) }
+            });
+
+            auditController.auditingSave(req, 'Viewed all support tickets', 'support_ticket', null, { status, limit, offset })
+                .catch((err) => console.error('Audit save failed:', err));
+
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    getTicketCounts: async (req, res, next) => {
+        try {
+            const counts = await SupportService.getTicketCounts();
+
+            res.status(200).json({
+                success: true,
+                data: counts
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    getTicketWithReplies: async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const ticket = await SupportService.getTicketWithReplies(id);
+
+            res.status(200).json({
+                success: true,
+                data: ticket
+            });
+
+            auditController.auditingSave(req, 'Viewed support ticket with replies', 'support_ticket', id)
+                .catch((err) => console.error('Audit save failed:', err));
+
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    replyToTicket: async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const { message } = req.body;
+            const userId = req.user.id;
+
+            const reply = await SupportService.replyToTicket(id, userId, message);
+
+            res.status(201).json({
+                success: true,
+                message: 'Reply added successfully',
+                data: reply
+            });
+
+            auditController.auditingSave(req, 'Replied to support ticket', 'support_ticket', id)
+                .catch((err) => console.error('Audit save failed:', err));
+
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    closeTicket: async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const ticket = await SupportService.closeTicket(id);
+
+            res.status(200).json({
+                success: true,
+                message: 'Ticket closed successfully',
+                data: ticket
+            });
+
+            auditController.auditingSave(req, 'Closed support ticket', 'support_ticket', id)
+                .catch((err) => console.error('Audit save failed:', err));
+
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    reopenTicket: async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const ticket = await SupportService.reopenTicket(id);
+
+            res.status(200).json({
+                success: true,
+                message: 'Ticket reopened successfully',
+                data: ticket
+            });
+
+            auditController.auditingSave(req, 'Reopened support ticket', 'support_ticket', id)
+                .catch((err) => console.error('Audit save failed:', err));
+
+        } catch (error) {
             next(error);
         }
     }

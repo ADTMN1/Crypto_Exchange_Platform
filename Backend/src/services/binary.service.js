@@ -13,37 +13,75 @@ const normalizePair = (pair) => {
   return pair;
 };
 
+// Helper to get binary settings
+const getBinarySettings = async () => {
+  const result = await query('SELECT * FROM binary_settings LIMIT 1');
+  if (result.rows.length === 0) {
+    throw new AppError('Binary settings not found', 500);
+  }
+  return result.rows[0];
+};
+
 const binaryService = {
+  // ─── GET BINARY SETTINGS ────────────────────────────────────────────────────
+  getSettings: async () => {
+    return await getBinarySettings();
+  },
+
+  // ─── UPDATE BINARY SETTINGS (ADMIN) ─────────────────────────────────────────
+  updateSettings: async (settings, adminId) => {
+    const { is_enabled, payout_percentage, min_trade_amount, max_trade_amount, allowed_expirations, allowed_pairs } = settings;
+    const result = await query(
+      `UPDATE binary_settings 
+       SET is_enabled = COALESCE($1, is_enabled),
+           payout_percentage = COALESCE($2, payout_percentage),
+           min_trade_amount = COALESCE($3, min_trade_amount),
+           max_trade_amount = COALESCE($4, max_trade_amount),
+           allowed_expirations = COALESCE($5, allowed_expirations),
+           allowed_pairs = COALESCE($6, allowed_pairs),
+           updated_at = NOW(),
+           updated_by = $7
+       RETURNING *`,
+      [is_enabled, payout_percentage, min_trade_amount, max_trade_amount, allowed_expirations, allowed_pairs, adminId]
+    );
+    return result.rows[0];
+  },
 
   // ─── PLACE TRADE ────────────────────────────────────────────────────────────
-
   placeTrade: async (userId, pair, direction, amount, duration) => {
     console.log('[binary.service] Starting placeTrade with:', { userId, pair, direction, amount, duration });
     try {
+      // Get binary settings first
+      const settings = await getBinarySettings();
+      
+      // Check if binary trading is enabled
+      if (!settings.is_enabled) {
+        throw new AppError('Binary trading is currently disabled', 403);
+      }
+
       // Validate direction
       if (direction !== 'BUY' && direction !== 'SELL') {
         throw new AppError('Direction must be BUY or SELL', 400);
       }
       console.log('[binary.service] Direction validated');
 
-      // Validate amount
-      if (amount <= 0) {
-        throw new AppError('Amount must be positive', 400);
+      // Validate amount against settings
+      if (amount < settings.min_trade_amount || amount > settings.max_trade_amount) {
+        throw new AppError(`Trade amount must be between ${settings.min_trade_amount} and ${settings.max_trade_amount}`, 400);
       }
       console.log('[binary.service] Amount validated');
 
-      // Validate duration
-      if (duration < 30 || duration > 3600) {
-        throw new AppError('Duration must be between 30 and 3600 seconds', 400);
+      // Validate duration against allowed expirations
+      if (!settings.allowed_expirations.includes(duration)) {
+        throw new AppError(`Invalid duration. Allowed durations: ${settings.allowed_expirations.join(', ')} seconds`, 400);
       }
       console.log('[binary.service] Duration validated');
 
-      // Validate pair
+      // Validate pair against allowed pairs
       const normalizedPair = normalizePair(pair);
       console.log('[binary.service] Normalized pair:', normalizedPair);
-      const supportedPairs = priceService.getSupportedPairs();
-      if (!supportedPairs.includes(normalizedPair)) {
-        throw new AppError(`Unsupported pair. Supported: ${supportedPairs.join(', ')}`, 400);
+      if (!settings.allowed_pairs.includes(normalizedPair)) {
+        throw new AppError(`Unsupported pair. Allowed pairs: ${settings.allowed_pairs.join(', ')}`, 400);
       }
       console.log('[binary.service] Pair validated');
 

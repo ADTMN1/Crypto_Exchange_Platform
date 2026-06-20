@@ -15,6 +15,11 @@ export interface AdminUser {
   is_active: boolean;
   created_at: string;
   last_login_at?: string;
+  kyc_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  kyc_submitted_at?: string;
+  kyc_verified_at?: string;
+  kyc_rejected_at?: string;
+  kyc_rejection_reason?: string;
 }
 
 export interface AdminUserTransaction {
@@ -144,6 +149,92 @@ export interface GetAdminNotificationsParams {
   page?: number;
   limit?: number;
 }
+
+// Admin Order Types
+export interface AdminOrder {
+  id: string;
+  user_id: string;
+  username: string;
+  email: string;
+  base_currency: string;
+  quote_currency: string;
+  pair: string;
+  type: 'market' | 'limit';
+  side: 'buy' | 'sell';
+  status: 'open' | 'partially_filled' | 'filled' | 'cancelled';
+  price: string;
+  quantity: string;
+  filled_qty: string;
+  avg_fill_price: string;
+  fee: string;
+  fee_currency: string;
+  created_at: string;
+  updated_at: string;
+  cancelled_at?: string;
+}
+
+export interface AdminOrdersResponse {
+  success: boolean;
+  data: AdminOrder[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+}
+
+export interface AdminOrderDetailResponse {
+  success: boolean;
+  data: AdminOrder;
+}
+
+export interface GetAdminOrdersParams {
+  status?: 'open' | 'partially_filled' | 'filled' | 'cancelled';
+  pair?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CancelOrderResponse {
+  success: boolean;
+  message: string;
+  data: AdminOrder;
+}
+
+export interface AdminTrade {
+  id: string;
+  pair: string;
+  base_currency: string;
+  quote_currency: string;
+  price: string;
+  quantity: string;
+  total: string;
+  buyer_fee: string;
+  seller_fee: string;
+  executed_at: string;
+  buyer_username: string;
+  buyer_email: string;
+  seller_username: string;
+  seller_email: string;
+  buy_order_id: string;
+  sell_order_id: string;
+}
+
+export interface AdminTradesResponse {
+  success: boolean;
+  data: AdminTrade[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+}
+
+export interface GetAdminTradesParams {
+  pair?: string;
+  limit?: number;
+  offset?: number;
+}
 const adminService = {
   /**
    * Get all users (paginated with filters)
@@ -254,6 +345,37 @@ async getAdminNotifications(
     const response = await api.post<ImpersonateResponse>(
       API_ENDPOINTS.ADMIN.IMPERSONATE_USER(userId)
     );
+    return response.data;
+  },
+
+  // Admin order functions
+  async getAllOrders(params: GetAdminOrdersParams = {}): Promise<AdminOrdersResponse> {
+    const response = await api.get<AdminOrdersResponse>(API_ENDPOINTS.ADMIN.ORDERS, { params });
+    return response.data;
+  },
+
+  async getOpenOrders(params: Omit<GetAdminOrdersParams, 'status'> = {}): Promise<AdminOrdersResponse> {
+    const response = await api.get<AdminOrdersResponse>(API_ENDPOINTS.ADMIN.OPEN_ORDERS, { params });
+    return response.data;
+  },
+
+  async getOrderHistory(params: Omit<GetAdminOrdersParams, 'status'> = {}): Promise<AdminOrdersResponse> {
+    const response = await api.get<AdminOrdersResponse>(API_ENDPOINTS.ADMIN.ORDER_HISTORY, { params });
+    return response.data;
+  },
+
+  async getOrderById(orderId: string): Promise<AdminOrderDetailResponse> {
+    const response = await api.get<AdminOrderDetailResponse>(API_ENDPOINTS.ADMIN.ORDER_DETAIL(orderId));
+    return response.data;
+  },
+
+  async cancelOrder(orderId: string): Promise<CancelOrderResponse> {
+    const response = await api.patch<CancelOrderResponse>(API_ENDPOINTS.ADMIN.CANCEL_ORDER(orderId));
+    return response.data;
+  },
+
+  async getAllTrades(params: GetAdminTradesParams = {}): Promise<AdminTradesResponse> {
+    const response = await api.get<AdminTradesResponse>(API_ENDPOINTS.ADMIN.TRADES, { params });
     return response.data;
   },
 };
