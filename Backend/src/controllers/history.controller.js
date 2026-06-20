@@ -18,10 +18,6 @@ const HistoryController = {
                     t.amount,
                     t.fee,
                     t.status,
-                    t.tx_hash,
-                    t.from_address,
-                    t.to_address,
-                    t.confirmations,
                     t.confirmed_at,
                     t.created_at
                 FROM transactions t

@@ -10,16 +10,8 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wallets, setWallets] = useState<any[]>([]);
+  const [totalUSD, setTotalUSD] = useState<number>(0);
   const [transactions, setTransactions] = useState<any[]>([]);
-
-  // Calculate total USD value of all assets (simplified version)
-  const calculateTotalUSD = () => {
-    const walletArray = Array.isArray(wallets) ? wallets : [];
-    const total = walletArray.reduce((sum, wallet) => {
-      return sum + parseFloat(wallet.balance || 0) + parseFloat(wallet.locked_balance || 0);
-    }, 0);
-    return total.toFixed(2);
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,8 +21,9 @@ export default function WalletPage() {
           walletService.getBalance(),
           walletService.getTransactions()
         ]);
-        // The API returns { success: true, data: wallets }
-        setWallets(balanceData?.data || []);
+        // The API returns { success: true, data: { wallets, totalUSD } }
+        setWallets(balanceData?.data?.wallets || []);
+        setTotalUSD(balanceData?.data?.totalUSD || 0);
         setTransactions(transactionsData?.data?.transactions || transactionsData?.data || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load wallet data');
@@ -90,7 +83,7 @@ export default function WalletPage() {
             <h3 className="assets-label">Total Assets</h3>
             <div className="assets-amount-container">
               <h1 className="assets-amount">
-                {showBalance ? `$${calculateTotalUSD()} USD` : '***********'}
+                {showBalance ? `$${totalUSD.toFixed(2)} USD` : '***********'}
               </h1>
               <button 
                 className="toggle-balance-btn" 
@@ -130,6 +123,9 @@ export default function WalletPage() {
                   </span>
                   <span className="crypto-change positive">
                     Available
+                  </span>
+                  <span style={{ color: '#10b981', fontSize: '0.875rem' }}>
+                    ${wallet.usdValue?.toFixed(2) || '0.00'}
                   </span>
                 </div>
               </div>

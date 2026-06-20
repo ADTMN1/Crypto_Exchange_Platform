@@ -3,62 +3,96 @@ import AppError from '../utils/errorHandling.js';
 import walletService from './wallet.service.js';
 import priceService from './price.service.js';
 
+// Helper to normalize pair (e.g., "BTCUSDT" → "BTC/USDT")
+const normalizePair = (pair) => {
+  if (pair.includes('/')) return pair;
+  if (pair.endsWith('USDT')) {
+    const base = pair.slice(0, -4);
+    return `${base}/USDT`;
+  }
+  return pair;
+};
+
 const binaryService = {
 
   // ─── PLACE TRADE ────────────────────────────────────────────────────────────
 
   placeTrade: async (userId, pair, direction, amount, duration) => {
-    // Validate direction
-    if (direction !== 'UP' && direction !== 'DOWN') {
-      throw new AppError('Direction must be UP or DOWN', 400);
-    }
-
-    // Validate amount
-    if (amount <= 0) {
-      throw new AppError('Amount must be positive', 400);
-    }
-
-    // Validate duration
-    if (duration < 30 || duration > 3600) {
-      throw new AppError('Duration must be between 30 and 3600 seconds', 400);
-    }
-
-    // Validate pair
-    const supportedPairs = priceService.getSupportedPairs();
-    if (!supportedPairs.includes(pair)) {
-      throw new AppError(`Unsupported pair. Supported: ${supportedPairs.join(', ')}`, 400);
-    }
-
-    // Get entry price
-    const entryPrice = await priceService.getPrice(pair);
-
-    // Calculate expiry
-    const expiresAt = new Date(Date.now() + duration * 1000);
-
-    const client = await pool.connect();
+    console.log('[binary.service] Starting placeTrade with:', { userId, pair, direction, amount, duration });
     try {
-      await client.query('BEGIN');
+      // Validate direction
+      if (direction !== 'BUY' && direction !== 'SELL') {
+        throw new AppError('Direction must be BUY or SELL', 400);
+      }
+      console.log('[binary.service] Direction validated');
 
-      // Lock USDT from user's wallet
-      await walletService.lock(userId, 'USDT', amount, client);
+      // Validate amount
+      if (amount <= 0) {
+        throw new AppError('Amount must be positive', 400);
+      }
+      console.log('[binary.service] Amount validated');
 
-      // Create trade record
-      const result = await client.query(
-        `INSERT INTO binary_trades 
-         (user_id, pair, direction, amount, duration, entry_price, status, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, 'running', $7)
-         RETURNING *`,
-        [userId, pair, direction, amount, duration, entryPrice, expiresAt]
-      );
+      // Validate duration
+      if (duration < 30 || duration > 3600) {
+        throw new AppError('Duration must be between 30 and 3600 seconds', 400);
+      }
+      console.log('[binary.service] Duration validated');
 
-      await client.query('COMMIT');
+      // Validate pair
+      const normalizedPair = normalizePair(pair);
+      console.log('[binary.service] Normalized pair:', normalizedPair);
+      const supportedPairs = priceService.getSupportedPairs();
+      if (!supportedPairs.includes(normalizedPair)) {
+        throw new AppError(`Unsupported pair. Supported: ${supportedPairs.join(', ')}`, 400);
+      }
+      console.log('[binary.service] Pair validated');
 
-      return result.rows[0];
+      // Get entry price
+      console.log('[binary.service] Getting entry price');
+      const entryPrice = await priceService.getPrice(normalizedPair);
+      console.log('[binary.service] Got entry price:', entryPrice);
+
+      // Calculate expiry
+      const expiresAt = new Date(Date.now() + duration * 1000);
+      console.log('[binary.service] Expires at:', expiresAt);
+
+      console.log('[binary.service] Getting database client');
+      const client = await pool.connect();
+      try {
+        console.log('[binary.service] Starting transaction');
+        await client.query('BEGIN');
+
+        // Lock USDT from user's wallet
+        console.log('[binary.service] Locking USDT from wallet');
+        await walletService.lock(userId, 'USDT', amount, client);
+        console.log('[binary.service] Locked USDT successfully');
+
+        // Create trade record (store normalized pair)
+        console.log('[binary.service] Inserting trade record');
+        const result = await client.query(
+          `INSERT INTO binary_trades 
+           (user_id, pair, direction, amount, duration, entry_price, status, expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, 'running', $7)
+           RETURNING *`,
+          [userId, normalizedPair, direction, amount, duration, entryPrice, expiresAt]
+        );
+        console.log('[binary.service] Inserted trade:', result.rows[0]);
+
+        await client.query('COMMIT');
+        console.log('[binary.service] Committed transaction');
+
+        return result.rows[0];
+      } catch (error) {
+        console.error('[binary.service] Error in transaction, rolling back:', error);
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        console.log('[binary.service] Releasing database client');
+        client.release();
+      }
     } catch (error) {
-      await client.query('ROLLBACK');
+      console.error('[binary.service] placeTrade failed:', error);
       throw error;
-    } finally {
-      client.release();
     }
   },
 

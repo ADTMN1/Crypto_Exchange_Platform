@@ -11,6 +11,8 @@ import {
 } from 'lightweight-charts';
 import { useMarketData } from '../../hooks/useMarketData';
 import { calculateSMA } from '../../utils/technicalIndicators';
+import TradePopup from './TradePopup';
+import binaryService, { BinaryTrade } from '../../services/binary.service';
 
 const INTERVALS = [
   { label: '30s', value: '30s' },
@@ -49,6 +51,36 @@ export default function TradeChart() {
   const [duration, setDuration] = useState<string>('30s');
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
   const amountInputRef = useRef<HTMLInputElement | null>(null);
+  // Popup and active trade state
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [activeTrade, setActiveTrade] = useState<BinaryTrade | null>(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Update current time every second for the button display
+  useEffect(() => {
+    if (!activeTrade) return;
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeTrade]);
+
+  // Check for active running trade on component mount
+  useEffect(() => {
+    const fetchActiveTrade = async () => {
+      try {
+        const response = await binaryService.getMyTrades('running', 1);
+        if (response.data.trades.length > 0) {
+          setActiveTrade(response.data.trades[0]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch active trades:', err);
+      }
+    };
+    fetchActiveTrade();
+  }, []);
 
   // focus amount input when symbol changes (user selects a new chart pair)
   useEffect(() => {
@@ -56,6 +88,37 @@ export default function TradeChart() {
     const t = window.setTimeout(() => amountInputRef.current?.focus(), 80);
     return () => window.clearTimeout(t);
   }, [symbol]);
+
+  // Poll for trade status updates
+  useEffect(() => {
+    if (!activeTrade) return;
+    if (activeTrade.status !== 'running') return;
+
+    const pollTradeStatus = async () => {
+      try {
+        const response = await binaryService.getMyTrades('running', 1);
+        const currentTrade = response.data.trades.find(t => t.id === activeTrade.id);
+        
+        if (currentTrade) {
+          if (currentTrade.status !== activeTrade.status) {
+            setActiveTrade(currentTrade);
+          }
+        } else {
+          // Trade is no longer in running status, fetch all to see what happened
+          const allResponse = await binaryService.getMyTrades('all', 1);
+          const updatedTrade = allResponse.data.trades.find(t => t.id === activeTrade.id);
+          if (updatedTrade) {
+            setActiveTrade(updatedTrade);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to poll trade status:', err);
+      }
+    };
+
+    const pollInterval = setInterval(pollTradeStatus, 3000);
+    return () => clearInterval(pollInterval);
+  }, [activeTrade]);
 
   // Init chart
   useEffect(() => {
@@ -302,7 +365,7 @@ export default function TradeChart() {
         <div className="order-row">
           <div className="order-left">
             <div className="trade-amount">
-              <label className="trade-label">Enter amount</label>
+              <label className="trade-label">Enter amount (USDT)</label>
               <div className="trade-amount-input-row">
                 <input
                   ref={amountInputRef}
@@ -311,7 +374,7 @@ export default function TradeChart() {
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
                 />
-                <span className="pair-badge">{base}</span>
+                <span className="pair-badge">USDT</span>
               </div>
             </div>
           </div>
@@ -319,10 +382,12 @@ export default function TradeChart() {
           <div className="order-right">
             <div className="trade-durations">
               {[
-                { key: '30s', label: '30s (12%)' },
+                { key: '30s', label: '30s (10%)' },
                 { key: '60s', label: '60s (15%)' },
+                { key: '90s', label: '90s (20%)' },
                 { key: '120s', label: '120s (20%)' },
-                { key: '300s', label: '300s (25%)' },
+                { key: '180s', label: '180s (25%)' },
+                { key: '300s', label: '300s (30%)' },
               ].map((d) => (
                 <button
                   key={d.key}
@@ -351,16 +416,70 @@ export default function TradeChart() {
           <div className="trade-confirm">
             <button
               className="trade-confirm-btn"
-              onClick={() => {
-                const parsed = parseFloat(amount.replace(/,/g, '')) || 0;
-                const order = { symbol, side, amount: parsed, duration };
-                // TODO: wire to order placement handler / backend
-                console.log('Confirm Trade', order);
+              onClick={async () => {
+                if (activeTrade) {
+                  // If there's an active trade, open the popup
+                  setPopupOpen(true);
+                } else {
+                  // Validate amount first
+                  const parsed = parseFloat(amount.replace(/,/g, ''));
+                  
+                  if (!parsed || parsed <= 0) {
+                    setError('Please enter a valid amount greater than 0');
+                    amountInputRef.current?.focus();
+                    return;
+                  }
+                  
+                  console.log('Placing trade request:', {
+                    pair: symbol,
+                    direction: side === 'buy' ? 'BUY' : 'SELL',
+                    amount: parsed,
+                    duration: parseInt(duration.replace('s', ''), 10)
+                  });
+                  
+                  // Start a new trade
+                  try {
+                    setIsLoading(true);
+                    setError(null);
+                    
+                    const numericDuration = parseInt(duration.replace('s', ''), 10);
+                    
+                    const response = await binaryService.placeTrade({
+                      pair: symbol,
+                      direction: side === 'buy' ? 'BUY' : 'SELL',
+                      amount: parsed,
+                      duration: numericDuration
+                    });
+                    
+                    setActiveTrade(response.data);
+                    setPopupOpen(true);
+                  } catch (err: any) {
+                    setError(err.response?.data?.message || 'Failed to place trade');
+                    console.error('Trade placement failed:', err);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }
               }}
-            >Confirm Trade</button>
+              disabled={isLoading}
+            >
+              {isLoading ? 'Placing Trade...' : (
+                activeTrade ? (
+                  activeTrade.status === 'running' 
+                    ? `Trade Active (${Math.max(0, Math.ceil((new Date(activeTrade.expires_at).getTime() - currentTime) / 1000))}s)`
+                    : `Trade ${(activeTrade.status === 'win' ? 'Win' : activeTrade.status === 'lose' ? 'Lose' : activeTrade.status.charAt(0).toUpperCase() + activeTrade.status.slice(1))} (${(Number(activeTrade.payout || 0) - Number(activeTrade.amount)) >= 0 ? '+' : ''}$${(Number(activeTrade.payout || 0) - Number(activeTrade.amount)).toLocaleString()})`
+                ) : 'Confirm Trade'
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="trade-error-message">
+          {error}
+        </div>
+      )}
 
       <div className="trade-volume-label">
         Vol({symbol.replace('USDT', '')}): {volInfo.vol.toFixed(4)} &nbsp;
@@ -368,6 +487,19 @@ export default function TradeChart() {
         MA(5): {volInfo.ma5.toFixed(4)} &nbsp;
         MA(10): {volInfo.ma10.toFixed(4)}
       </div>
+
+      {/* Trade Popup */}
+      {activeTrade && (
+        <TradePopup
+          open={popupOpen}
+          onClose={() => setPopupOpen(false)}
+          trade={activeTrade}
+          onNewTrade={() => {
+            setActiveTrade(null);
+            setPopupOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

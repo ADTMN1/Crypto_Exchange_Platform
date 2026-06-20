@@ -588,6 +588,17 @@ export default function Router() {
               );
             }
 
+            // Pending Deposits page
+            if (section.path === "/admin/deposits/pending-deposits") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<AdminTransactionsPage type="pending-deposits" title={section.title} description={section.description} />}
+                />
+              );
+            }
+
             // System Settings page
             if (section.path === "/admin/system-settings") {
               return (

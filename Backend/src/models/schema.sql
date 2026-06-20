@@ -6,6 +6,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Clean drop tables if they exist (Reverse dependency order)
+DROP TABLE IF EXISTS notification_recipients CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS candles CASCADE;
@@ -98,8 +99,6 @@ CREATE TABLE wallets (
     currency VARCHAR(10) NOT NULL, -- BTC, ETH, USDT
     balance NUMERIC(28,8) NOT NULL DEFAULT 0.00000000,
     locked_balance NUMERIC(28,8) NOT NULL DEFAULT 0.00000000,
-    deposit_address TEXT,
-    address_key_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_user_currency UNIQUE (user_id, currency)
 );
@@ -114,10 +113,6 @@ CREATE TABLE transactions (
     amount NUMERIC(28,8) NOT NULL,
     fee NUMERIC(28,8) NOT NULL DEFAULT 0.00000000,
     status transaction_status_enum NOT NULL DEFAULT 'pending',
-    tx_hash TEXT,
-    from_address TEXT,
-    to_address TEXT,
-    confirmations INT NOT NULL DEFAULT 0,
     confirmed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
