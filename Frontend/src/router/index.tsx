@@ -26,6 +26,9 @@ import SecurityPage from "../pages/user/SecurityPage";
 import KYCPage from "../pages/user/KYCPage";
 import NotificationsPage from "../pages/user/NotificationsPage";
 import NewsPage from "../pages/user/NewsPage";
+import SupportTicketsListPage from "../pages/user/SupportTicketsListPage";
+import NewTicketPage from "../pages/user/NewTicketPage";
+import TicketConversationPage from "../pages/user/TicketConversationPage";
 import AdminDashboardPage from "../pages/admin/DashboardPage";
 import AdminUsersPage from "../pages/admin/UsersPage";
 import AdminUserDetailPage from "../pages/admin/UserDetailPage";
@@ -54,6 +57,8 @@ import CompletedP2PTradesPage from "../pages/admin/CompletedP2PTradesPage";
 import SystemSettingsPage from "../pages/admin/SystemSettingsPage";
 import GeneralSettingsPage from "../pages/admin/GeneralSettingsPage";
 import ImpersonatePage from "../pages/admin/ImpersonatePage";
+import SupportTicketsPage from "../pages/admin/SupportTicketsPage";
+import TicketDetailPage from "../pages/admin/TicketDetailPage";
 
 const adminSectionRoutes = [
   {
@@ -412,6 +417,9 @@ export default function Router() {
         <Route path="/wallet/withdraw" element={<WithdrawPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/support/tickets" element={<SupportTicketsListPage />} />
+        <Route path="/support/new" element={<NewTicketPage />} />
+        <Route path="/support/tickets/:id" element={<TicketConversationPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/security" element={<SecurityPage />} />
         <Route path="/profile/kyc" element={<KYCPage />} />
@@ -610,6 +618,44 @@ export default function Router() {
               );
             }
 
+            // Support Ticket pages
+            if (section.path === "/admin/support-ticket") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<SupportTicketsPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/support-ticket/pending-ticket") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<SupportTicketsPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/support-ticket/answered-ticket") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<SupportTicketsPage />}
+                />
+              );
+            }
+            if (section.path === "/admin/support-ticket/closed-ticket") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<SupportTicketsPage />}
+                />
+              );
+            }
+
             return (
               <Route
                 key={section.path}
@@ -638,6 +684,7 @@ export default function Router() {
           <Route path="pairs" element={<AdminPairsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="settings/general" element={<GeneralSettingsPage />} />
+          <Route path="support-ticket/:id" element={<TicketDetailPage />} />
         </Route>
       </Route>
 
