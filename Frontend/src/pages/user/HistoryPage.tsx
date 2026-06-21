@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { FaHistory, FaFilter, FaDownload, FaArrowUp, FaArrowDown, FaExchangeAlt, FaSearch } from 'react-icons/fa';
+import { FaHistory, FaFilter, FaDownload, FaArrowUp, FaArrowDown, FaExchangeAlt, FaSearch, FaSpinner } from 'react-icons/fa';
 import historyService, { Transaction, Trade, Order } from '../../services/history.service';
-
 type HistoryType = 'all' | 'deposits' | 'withdrawals' | 'trades' | 'orders';
 type TransactionStatus = 'pending' | 'completed' | 'failed' | 'cancelled';
 
@@ -276,9 +275,16 @@ export default function HistoryPage() {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Loading history...</p>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '60px 20px',
+          color: '#F7931A'
+        }}>
+          <FaSpinner style={{ fontSize: '48px', animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: '20px', fontSize: '18px' }}>Loading history...</p>
         </div>
       );
     }

@@ -3,11 +3,20 @@ import pool, { query } from '../config/db.config.js';
 import priceService from '../services/price.service.js';
 import walletService from '../services/wallet.service.js';
 
+let resolverTask = null;
+let isResolving = false;
+
 /**
  * Binary Trade Resolver - Runs every 5 seconds
  * Resolves expired binary trades
  */
 const resolveExpiredTrades = async () => {
+  if (isResolving) {
+    console.log('⏭️ Binary trade resolver still running, skipping this tick');
+    return;
+  }
+
+  isResolving = true;
   console.log('🔄 Running binary trade resolver...');
 
   try {
@@ -112,12 +121,29 @@ const resolveExpiredTrades = async () => {
 
   } catch (error) {
     console.error('❌ Trade resolver job error:', error.message);
+  } finally {
+    isResolving = false;
   }
 };
 
-// Schedule job to run every 5 seconds
-cron.schedule('*/5 * * * * *', resolveExpiredTrades);
+export const startBinaryTradeResolver = () => {
+  if (resolverTask) {
+    return resolverTask;
+  }
 
-console.log('🚀 Binary trade resolver cron job started (runs every 5 seconds)');
+  resolverTask = cron.schedule('*/5 * * * * *', resolveExpiredTrades);
+  console.log('🚀 Binary trade resolver cron job started (runs every 5 seconds)');
+  return resolverTask;
+};
+
+export const stopBinaryTradeResolver = () => {
+  if (!resolverTask) {
+    return;
+  }
+
+  resolverTask.stop();
+  resolverTask = null;
+  console.log('🛑 Binary trade resolver cron job stopped');
+};
 
 export default resolveExpiredTrades;

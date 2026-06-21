@@ -100,9 +100,9 @@ export default function LandingPage() {
           </div>
           <div className="nav-links">
             <a href="#markets">Markets</a>
-            <a href="#trade">Trade</a>
+            <Link to="/login">Trade</Link>
             <a href="#features">Features</a>
-            <a href="#support">Support</a>
+            <Link to="/login">Support</Link>
           </div>
           <div className="nav-actions">
             <Link to="/login" className="nav-link-btn">Sign In</Link>

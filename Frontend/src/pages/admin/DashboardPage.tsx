@@ -261,12 +261,16 @@ export default function AdminOverviewPage() {
 
   const handleLogout = () => {
     navigate("/", { replace: true });
+    // Clear auth state and storage first
     logout();
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
     document.cookie.split(";").forEach((c) => {
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
+    // Navigate client-side to root. Use a microtask delay so route-guards
+    // that run synchronously after state changes don't immediately redirect.
+    setTimeout(() => navigate('/', { replace: true }), 0)
   };
 
   return (

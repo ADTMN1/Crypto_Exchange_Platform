@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BinaryTrade } from '../../services/binary.service';
+import { useMarketData } from '../../hooks/useMarketData';
 
 interface TradePopupProps {
   open: boolean;
@@ -10,6 +11,16 @@ interface TradePopupProps {
 
 export default function TradePopup({ open, onClose, trade, onNewTrade }: TradePopupProps) {
   const [timeLeft, setTimeLeft] = useState(0);
+  const { livePrice, kline } = useMarketData();
+  const [currentPrice, setCurrentPrice] = useState(0);
+
+  useEffect(() => {
+    if (livePrice && livePrice > 0) {
+      setCurrentPrice(livePrice);
+    } else if (kline && kline.close > 0) {
+      setCurrentPrice(kline.close);
+    }
+  }, [livePrice, kline]);
 
   // Calculate time left whenever something changes
   useEffect(() => {
@@ -40,8 +51,37 @@ export default function TradePopup({ open, onClose, trade, onNewTrade }: TradePo
   const isCompleted = trade.status !== 'running';
   const amount = Number(trade.amount);
   const entryPrice = Number(trade.entry_price);
-  const payout = Number(trade.payout || 0);
-  const profit = payout - amount;
+  
+  // Calculate profit/loss
+  let profit = 0;
+  let profitPercentage = 0;
+  
+  if (isCompleted) {
+    const payout = Number(trade.payout || 0);
+    profit = payout - amount;
+    profitPercentage = amount > 0 ? (profit / amount) * 100 : 0;
+  } else {
+    // Calculate live profit based on current price and trade direction
+    const isWinning = (trade.direction === 'BUY' && currentPrice > entryPrice) || 
+                      (trade.direction === 'SELL' && currentPrice < entryPrice);
+    
+    // Get payout multiplier based on duration (same as backend)
+    let multiplier = 1.10; // Default 10%
+    if (trade.duration === 30) multiplier = 1.10;
+    else if (trade.duration === 60) multiplier = 1.15;
+    else if (trade.duration === 90) multiplier = 1.20;
+    else if (trade.duration === 120) multiplier = 1.20;
+    else if (trade.duration === 180) multiplier = 1.25;
+    else if (trade.duration === 300) multiplier = 1.30;
+
+    if (isWinning) {
+      profit = (amount * (multiplier - 1));
+      profitPercentage = (multiplier - 1) * 100;
+    } else {
+      profit = -amount;
+      profitPercentage = -100;
+    }
+  }
 
   return (
     <div className="trade-popup-overlay" onClick={onClose}>
@@ -68,14 +108,19 @@ export default function TradePopup({ open, onClose, trade, onNewTrade }: TradePo
           <div className="trade-popup-price">
             Opening Price: {entryPrice.toLocaleString('en-US', { maximumFractionDigits: 3 })} USDT
           </div>
+          {!isCompleted && currentPrice > 0 && (
+            <div className="trade-popup-price">
+              Current Price: {currentPrice.toLocaleString('en-US', { maximumFractionDigits: 3 })} USDT
+            </div>
+          )}
         </div>
         <div className="trade-popup-side">
           <div className={`trade-popup-side-badge ${side}`}>{trade.direction}</div>
         </div>
         <div className="trade-popup-profit-row">
-          <div className="trade-popup-profit-label">PROFIT:</div>
+          <div className="trade-popup-profit-label">{isCompleted ? 'PROFIT:' : 'UNREALIZED P/L:'}</div>
           <div className={`trade-popup-profit-value ${profit >= 0 ? 'profit' : 'loss'}`}>
-            {`${profit >= 0 ? '+' : ''}$${profit.toLocaleString()}`}
+            {`${profit >= 0 ? '+' : ''}$${profit.toLocaleString('en-US', { maximumFractionDigits: 2 })} (${profitPercentage >= 0 ? '+' : ''}${profitPercentage.toFixed(1)}%)`}
           </div>
         </div>
         {isCompleted && (

@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import WebSocket from 'ws';
+import jwt from 'jsonwebtoken';
 
 let io;
 const connectedClients = new Map();
@@ -20,6 +21,19 @@ const initializeWebSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`Client connected: ${socket.id}`);
     connectedClients.set(socket.id, { socket, subscriptions: new Set(), klineInterval: '15m' });
+
+    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
+    if (token) {
+      try {
+        const user = jwt.verify(token, process.env.JWT_SECRET);
+        if (user?.id) {
+          socket.join(`user:${user.id}`);
+          socket.data.user = user;
+        }
+      } catch (error) {
+        console.warn(`Socket auth failed for ${socket.id}:`, error.message);
+      }
+    }
 
     socket.on('subscribe', ({ symbol, interval = '15m' }) => {
       const sym = symbol.toLowerCase();
@@ -350,6 +364,12 @@ const broadcastToSymbol = (symbol, event, data) => {
   });
 };
 
+const emitToUser = (userId, event, data) => {
+  if (io && userId) {
+    io.to(`user:${userId}`).emit(event, data);
+  }
+};
+
 // Cleanup function
 const cleanup = () => {
   console.log('Cleaning up WebSocket connections...');
@@ -380,5 +400,6 @@ export {
   getMarketData,
   broadcast,
   broadcastToSymbol,
+  emitToUser,
   cleanup
 };

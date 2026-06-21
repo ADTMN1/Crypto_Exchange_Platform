@@ -1,4 +1,5 @@
 import api, { API_ENDPOINTS } from './api.service';
+import type { WalletBalanceResponse } from '../types/wallet.types';
 
 export interface PendingDeposit {
   id: string;
@@ -22,7 +23,7 @@ export interface PendingDepositsResponse {
 
 const walletService = {
   getBalance: async () => {
-    return api.get(API_ENDPOINTS.WALLET.BALANCE);
+    return api.get<{ success: boolean; message: string; data: WalletBalanceResponse }>(API_ENDPOINTS.WALLET.BALANCE);
   },
 
   getTransactions: async (page = 1, limit = 20) => {

@@ -123,7 +123,7 @@ export const PriceAlert: React.FC<PriceAlertProps> = ({
                   value={alertPrice}
                   onChange={(e) => setAlertPrice(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-[#4CF4A5]"
                   step="0.01"
                 />
               </div>
@@ -136,14 +136,14 @@ export const PriceAlert: React.FC<PriceAlertProps> = ({
                   value={alertMessage}
                   onChange={(e) => setAlertMessage(e.target.value)}
                   placeholder="Enter custom message..."
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-[#4CF4A5]"
                 />
               </div>
 
               {/* Create Button */}
               <button
                 onClick={handleCreateAlert}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-medium transition-colors"
+                className="w-full bg-[#4CF4A5] hover:bg-[#3bcca0] text-[#0d0d0d] py-2 px-4 rounded font-medium transition-colors"
               >
                 Create Alert
               </button>

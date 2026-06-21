@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
-import { FaSearch, FaStar, FaArrowUp, FaArrowDown, FaChartLine, FaBitcoin, FaEthereum } from 'react-icons/fa';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FaSearch, FaStar, FaArrowUp, FaArrowDown, FaChartLine, FaBitcoin, FaEthereum, FaSpinner } from 'react-icons/fa';
 import { SiBinance, SiSolana, SiRipple, SiCardano, SiDogecoin, SiPolygon } from 'react-icons/si';
 import marketApi from '../../services/market.api';
 import marketSocket from '../../socket/market.socket';
@@ -19,9 +19,10 @@ interface Market {
 }
 
 export default function MarketsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [filteredMarkets, setFilteredMarkets] = useState<Market[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [activeFilter, setActiveFilter] = useState<'all' | 'favorites' | 'gainers' | 'losers'>('all');
   const [activeTab, setActiveTab] = useState<'cryptos' | 'metals' | 'hot' | 'gainers' | 'droppers'>('cryptos');
   const [sortBy, setSortBy] = useState<'volume' | 'change' | 'price'>('volume');
@@ -179,6 +180,23 @@ export default function MarketsPage() {
 
     return () => { marketSocket.off('market:price_update', handler); };
   }, [markets.length > 0]);
+
+  // Update search query when URL params change
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams]);
+
+  // Update URL params when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      setSearchParams({ search: searchQuery });
+    } else {
+      setSearchParams({});
+    }
+  }, [searchQuery, setSearchParams]);
 
   // Filter and search
   useEffect(() => {
@@ -429,9 +447,16 @@ export default function MarketsPage() {
       {/* Markets Table */}
       <div className="markets-table-container">
         {isLoading ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading markets...</p>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '60px 20px',
+            color: '#F7931A'
+          }}>
+            <FaSpinner style={{ fontSize: '48px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '20px', fontSize: '18px' }}>Loading markets...</p>
           </div>
         ) : filteredMarkets.length === 0 ? (
           <div className="empty-state">

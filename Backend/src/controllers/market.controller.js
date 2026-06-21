@@ -335,6 +335,71 @@ export const getFavoriteSymbols = async (req, res) => {
   }
 };
 
+// Get all prices (format for frontend getAllPrices)
+export const getAllPrices = async (req, res) => {
+  try {
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/ticker/price`);
+    const prices = response.data.map(p => ({
+      symbol: p.symbol,
+      price: parseFloat(p.price)
+    }));
+    
+    res.status(200).json({
+      success: true,
+      count: prices.length,
+      data: prices
+    });
+  } catch (error) {
+    console.error('Error fetching all prices:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching prices',
+      error: error.message
+    });
+  }
+};
+
+// Get single price by symbol
+export const getMarketPrice = async (req, res) => {
+  try {
+    const symbol = (req.params.symbol || req.query.symbol || 'BTCUSDT').toUpperCase();
+    const response = await axios.get(`${BINANCE_FUTURES_BASE}/fapi/v1/ticker/price?symbol=${symbol}`);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        symbol: response.data.symbol,
+        price: parseFloat(response.data.price)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching market price:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching price',
+      error: error.message
+    });
+  }
+};
+
+// Get supported coins
+export const getCoins = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      count: SUPPORTED_SYMBOLS.length,
+      data: SUPPORTED_SYMBOLS
+    });
+  } catch (error) {
+    console.error('Error fetching coins:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching coins',
+      error: error.message
+    });
+  }
+};
+
 const aggregateCandles = (candles, factor = 30) => {
   if (!Array.isArray(candles) || candles.length === 0) return [];
 

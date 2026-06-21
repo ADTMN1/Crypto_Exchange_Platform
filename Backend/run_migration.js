@@ -77,6 +77,13 @@ async function runMigrations() {
         await client.query(sql7);
         console.log('✅ Withdrawals table created\n');
         
+        // Migration 8: Add usd_value to wallets
+        console.log('8️⃣ Adding usd_value to wallets...');
+        const migration8Path = path.join(__dirname, 'src/models/migrations/014_add_usd_value_to_wallets.sql');
+        const sql8 = fs.readFileSync(migration8Path, 'utf8');
+        await client.query(sql8);
+        console.log('✅ usd_value column added to wallets\n');
+        
         console.log('🎉 All migrations completed successfully!');
     } catch (error) {
         console.error('❌ Migration failed:', error.message);

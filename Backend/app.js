@@ -10,7 +10,6 @@ import router from './src/routes/route.index.js';
 import dotenv from 'dotenv';
 import globalErrorHandler from './src/middleware/errorMiddleware.js';
 import AppError from './src/utils/errorHandling.js';
-import './src/jobs/tradeResolver.js';
 dotenv.config();
 const app = express();
 

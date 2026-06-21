@@ -1,5 +1,6 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useAuthStore } from '../store';
+import userService from '../services/user.service';
 
 interface StoreProviderProps {
   children: ReactNode;
@@ -8,6 +9,8 @@ interface StoreProviderProps {
 export default function StoreProvider({ children }: StoreProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const initialize = useAuthStore((state) => state?.initialize);
+  const isAuthenticated = useAuthStore((state) => state?.isAuthenticated);
+  const updateUser = useAuthStore((state) => state?.updateUser);
 
   useEffect(() => {
     const initializeStores = async () => {
@@ -25,6 +28,29 @@ export default function StoreProvider({ children }: StoreProviderProps) {
 
     initializeStores();
   }, [initialize]);
+
+  // Fetch user profile on app load if authenticated
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (isAuthenticated && updateUser) {
+        try {
+          const profile = await userService.getProfile();
+          // Ensure both profile_image and profile_picture_url are set
+          updateUser({
+            ...profile,
+            profile_image: profile.profile_image || profile.profile_picture_url,
+            profile_picture_url: profile.profile_picture_url || profile.profile_image,
+          });
+        } catch (error) {
+          console.error('Failed to fetch user profile on load:', error);
+        }
+      }
+    };
+
+    if (isInitialized) {
+      fetchProfile();
+    }
+  }, [isAuthenticated, isInitialized, updateUser]);
 
   if (!isInitialized) {
     return (

@@ -7,7 +7,10 @@ import {
   getAllTickers,
   getExchangeInfo,
   saveFavoriteSymbols,
-  getFavoriteSymbols
+  getFavoriteSymbols,
+  getAllPrices,
+  getMarketPrice,
+  getCoins
 } from '../controllers/market.controller.js';
 import { authMiddleware } from '../middleware/auth.midlware.js';
 
@@ -21,6 +24,10 @@ marketRouter.get('/trades/:symbol', getRecentTrades);
 marketRouter.get('/tickers', getAllTickers);
 marketRouter.get('/overview', getAllTickers);
 marketRouter.get('/exchangeinfo', getExchangeInfo);
+marketRouter.get('/prices', getAllPrices);
+marketRouter.get('/price', getMarketPrice);
+marketRouter.get('/price/:symbol', getMarketPrice);
+marketRouter.get('/coins', getCoins);
 
 // Protected routes (require authentication)
 marketRouter.post('/favorites', authMiddleware, saveFavoriteSymbols);

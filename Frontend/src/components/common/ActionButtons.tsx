@@ -29,7 +29,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {showView && onView && (
         <button
           onClick={onView}
-          className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10 transition-colors"
+          className="p-1.5 rounded-lg text-[#4CF4A5] hover:bg-[#4CF4A5]/10 transition-colors"
           title="View"
         >
           <Eye className="h-4 w-4" />

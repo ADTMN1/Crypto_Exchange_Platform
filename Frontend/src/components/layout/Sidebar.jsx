@@ -1,5 +1,5 @@
 
-import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaBolt, FaChevronLeft, FaChevronRight, FaArrowCircleDown } from 'react-icons/fa'
+import { FaArrowUp, FaArrowDown, FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store'
 
@@ -8,18 +8,19 @@ function Sidebar({ collapsed, onToggle }) {
   const logout = useAuthStore((state) => state.logout)
   const iconStyle = { color: '#F7931A' }
 
-  const handleLogout = () => {
-    // Navigate first to avoid route guard redirect
-    navigate('/')
-    // Then update auth state and clear storage
-    logout()
-    localStorage.removeItem('token')
-    localStorage.removeItem('refreshToken')
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
-    })
+    const handleLogout = () => {
+      // Clear auth state and storage first
+      logout()
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
+      })
+      // Navigate client-side to root. Use a microtask delay so any route-guards
+      // that run synchronously during state change don't immediately redirect to /login.
+      setTimeout(() => navigate('/', { replace: true }), 0)
   }
 
   return (
@@ -40,10 +41,6 @@ function Sidebar({ collapsed, onToggle }) {
             <FaChartBar style={iconStyle} className="nav-icon" />
             {!collapsed && 'Markets'}
           </Link>
-          <Link to="/market-dashboard" className="nav-item">
-            <FaBolt style={iconStyle} className="nav-icon" />
-            {!collapsed && 'Live Chart'}
-          </Link>
           <Link to="/trade" className="nav-item">
             <FaChartLine style={iconStyle} className="nav-icon" />
             {!collapsed && 'Trade'}
@@ -59,13 +56,13 @@ function Sidebar({ collapsed, onToggle }) {
             <FaWallet style={iconStyle} className="nav-icon" />
             {!collapsed && 'Assets'}
           </Link>
+          <Link to="/wallet/withdraw" className="nav-item">
+            <FaArrowUp style={iconStyle} className="nav-icon" />
+            {!collapsed && 'Withdraw'}
+          </Link>
           <Link to="/history" className="nav-item">
             <FaHistory style={iconStyle} className="nav-icon" />
             {!collapsed && 'History'}
-          </Link>
-          <Link to="/wallet/withdraw" className="nav-item">
-            <FaArrowCircleDown style={iconStyle} className="nav-icon" />
-            {!collapsed && 'Withdraw'}
           </Link>
         </div>
         <div className="nav-section">

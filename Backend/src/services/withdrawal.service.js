@@ -1,5 +1,6 @@
 import pool, { query } from '../config/db.config.js';
 import AppError from '../utils/errorHandling.js';
+import walletService from './wallet.service.js';
 
 const withdrawalService = {
 
@@ -27,10 +28,13 @@ const withdrawalService = {
         throw new AppError('Insufficient balance', 400);
       }
 
+      // Lock the withdrawal amount (moves from balance to locked_balance)
+      await walletService.lock(userId, currency, parsedAmount, client);
+
       const result = await client.query(
         `INSERT INTO withdrawals
-          (user_id, wallet_id, amount, fee, currency, payment_method, withdrawal_address, network)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          (user_id, wallet_id, amount, fee, currency, payment_method, withdrawal_address, network, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING')
          RETURNING *`,
         [userId, wallet.id, parsedAmount, parsedFee, currency, paymentMethod || null, withdrawalAddress, network || null]
       );
@@ -152,30 +156,11 @@ const withdrawalService = {
         throw new AppError(`Cannot approve a ${withdrawal.status} withdrawal`, 400);
       }
 
-      // Deduct from wallet
-      const walletRes = await client.query(
-        `SELECT id, balance FROM wallets WHERE id = $1 FOR UPDATE`,
-        [withdrawal.wallet_id]
-      );
+      // Burn the locked withdrawal amount (permanently deduct from locked_balance)
+      await walletService.burn(withdrawal.user_id, withdrawal.currency, parseFloat(withdrawal.amount), client);
 
-      if (walletRes.rows.length === 0) throw new AppError('Wallet not found', 404);
-      const wallet = walletRes.rows[0];
-
-      if (parseFloat(wallet.balance) < parseFloat(withdrawal.amount)) {
-        throw new AppError('Insufficient wallet balance for approval', 400);
-      }
-
-      await client.query(
-        `UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
-        [withdrawal.amount, wallet.id]
-      );
-
-      // Record the debit transaction
-      await client.query(
-        `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
-         VALUES ($1, $2, 'withdrawal', $3, $4, $5, 'completed', NOW())`,
-        [withdrawal.user_id, wallet.id, withdrawal.currency, withdrawal.amount, withdrawal.fee]
-      );
+      // Record the debit transaction (already done in burn, but let's make sure? Wait no, wallet.service.js burn does that!)
+      // Wait let's check wallet.service.js burn() to confirm... Yes, it inserts a transaction!
 
       // Update withdrawal status
       const now = new Date();
@@ -219,6 +204,9 @@ const withdrawalService = {
       if (!rejectionReason) {
         throw new AppError('Rejection reason is required', 400);
       }
+
+      // Release the locked withdrawal amount (move back to available balance)
+      await walletService.release(withdrawal.user_id, withdrawal.currency, parseFloat(withdrawal.amount), client);
 
       const now = new Date();
       const updated = await client.query(
