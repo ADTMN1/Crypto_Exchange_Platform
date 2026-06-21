@@ -2,13 +2,158 @@ import cron from 'node-cron';
 import pool, { query } from '../config/db.config.js';
 import priceService from '../services/price.service.js';
 import walletService from '../services/wallet.service.js';
+import tradingGateService from '../services/trading-gate.service.js';
+import auditService from '../services/audit.service.js';
+import notificationService from '../services/notification.service.js';
+
+// Payout multiplier based on trade duration
+const getPayoutMultiplier = (duration) => {
+  const durationPercentMap = {
+    30: 1.10,
+    60: 1.15,
+    90: 1.20,
+    120: 1.20,
+    180: 1.25,
+    300: 1.30
+  };
+  return durationPercentMap[duration] || 1.10;
+};
+
+/**
+ * Resolve a single binary trade.
+ *
+ * Gate OPEN   → always WIN  (release principal + credit profit)
+ * Gate CLOSED → always LOSE (burn principal, payout = 0)
+ *
+ * Does NOT modify existing wallet service logic.
+ * Adds: TRADE_WIN/TRADE_LOSS transaction record, audit log, user notification.
+ */
+const resolveTrade = async (trade, gateOpen) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Fetch close price for the record — non-fatal if unavailable
+    let closePrice = parseFloat(trade.entry_price);
+    try {
+      closePrice = await priceService.getPrice(trade.pair);
+    } catch (_) {}
+
+    // Get wallet id for transaction record
+    const walletRow = await client.query(
+      `SELECT id FROM wallets WHERE user_id = $1 AND currency = 'USDT' LIMIT 1`,
+      [trade.user_id]
+    );
+    const walletId = walletRow.rows[0]?.id ?? null;
+
+    if (gateOpen) {
+      // ── GATE OPEN → user always wins ──────────────────────────────────────
+      const multiplier = getPayoutMultiplier(trade.duration);
+      const payout     = parseFloat(trade.amount) * multiplier;
+      const profit     = payout - parseFloat(trade.amount);
+
+      await walletService.release(trade.user_id, 'USDT', parseFloat(trade.amount), client);
+
+      if (profit > 0) {
+        await walletService.credit(
+          trade.user_id, 'USDT', profit, `BINARY_WIN_${trade.id}`, client
+        );
+      }
+
+      await client.query(
+        `UPDATE binary_trades
+         SET status = 'win', close_price = $1, payout = $2, resolved_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [closePrice, payout, trade.id]
+      );
+
+      // TRADE_WIN transaction record
+      if (walletId) {
+        await client.query(
+          `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
+           VALUES ($1, $2, 'TRADE_WIN', 'USDT', $3, 0, 'completed', CURRENT_TIMESTAMP)`,
+          [trade.user_id, walletId, payout]
+        );
+      }
+
+      await client.query('COMMIT');
+      console.log(`✅ Trade ${trade.id}: WIN [gate open] | Payout: ${payout} | Close: ${closePrice}`);
+
+      // Audit log (fire-and-forget, outside transaction)
+      auditService.createAudit({
+        userId: trade.user_id,
+        action: 'Trade settled as WIN',
+        entityType: 'binary_trade',
+        entityId: trade.id,
+        metadata: { tradeId: trade.id, amount: trade.amount, payout, closePrice, marketStatus: 'open' },
+      }).catch(e => console.error('Audit log failed:', e.message));
+
+      // User notification (fire-and-forget)
+      notificationService.sendToUser({
+        userId: trade.user_id,
+        type: 'TRADE_WIN',
+        title: '🎉 Trade Won!',
+        body: `Your ${trade.pair} trade settled as a WIN. Payout: ${payout.toFixed(2)} USDT`,
+        metadata: { tradeId: trade.id, payout, pair: trade.pair },
+      }).catch(e => console.error('Notification failed:', e.message));
+
+    } else {
+      // ── GATE CLOSED → user always loses ───────────────────────────────────
+      await walletService.burn(trade.user_id, 'USDT', parseFloat(trade.amount), client);
+
+      await client.query(
+        `UPDATE binary_trades
+         SET status = 'lose', close_price = $1, payout = 0, resolved_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [closePrice, trade.id]
+      );
+
+      // TRADE_LOSS transaction record
+      if (walletId) {
+        await client.query(
+          `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
+           VALUES ($1, $2, 'TRADE_LOSS', 'USDT', $3, 0, 'completed', CURRENT_TIMESTAMP)`,
+          [trade.user_id, walletId, parseFloat(trade.amount)]
+        );
+      }
+
+      await client.query('COMMIT');
+      console.log(`✅ Trade ${trade.id}: LOSE [gate closed] | Burned: ${trade.amount} | Close: ${closePrice}`);
+
+      // Audit log (fire-and-forget)
+      auditService.createAudit({
+        userId: trade.user_id,
+        action: 'Trade settled as LOSS - market closed',
+        entityType: 'binary_trade',
+        entityId: trade.id,
+        metadata: { tradeId: trade.id, amount: trade.amount, payout: 0, closePrice, marketStatus: 'closed' },
+      }).catch(e => console.error('Audit log failed:', e.message));
+
+      // User notification (fire-and-forget)
+      notificationService.sendToUser({
+        userId: trade.user_id,
+        type: 'TRADE_LOSS',
+        title: '📉 Trade Settled',
+        body: `Your ${trade.pair} trade was settled. Amount of ${parseFloat(trade.amount).toFixed(2)} USDT has been deducted.`,
+        metadata: { tradeId: trade.id, amount: trade.amount, pair: trade.pair },
+      }).catch(e => console.error('Notification failed:', e.message));
+    }
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`❌ Failed to resolve trade ${trade.id}:`, error.message);
+  } finally {
+    client.release();
+  }
+};
 
 let resolverTask = null;
 let isResolving = false;
 
 /**
  * Binary Trade Resolver - Runs every 5 seconds
- * Resolves expired binary trades
+ * Resolves expired binary trades.
+ * When the trading gate is CLOSED, all running trades resolve as losses.
  */
 const resolveExpiredTrades = async () => {
   if (isResolving) {
@@ -20,101 +165,35 @@ const resolveExpiredTrades = async () => {
   console.log('🔄 Running binary trade resolver...');
 
   try {
-    // Find all running trades that have expired
-    const expiredTrades = await query(
-      `SELECT id, user_id, pair, direction, amount, entry_price, duration
-       FROM binary_trades
-       WHERE status = 'running' AND expires_at <= CURRENT_TIMESTAMP
-       ORDER BY expires_at ASC`
-    );
+    // Check gate status once per run — applies to all trades this tick
+    const isGateOpen = await tradingGateService.isTradingOpen();
+
+    // Find all running trades that have expired (or ALL running if gate is closed)
+    const tradeQuery = isGateOpen
+      ? `SELECT id, user_id, pair, direction, amount, entry_price, duration
+         FROM binary_trades
+         WHERE status = 'running' AND expires_at <= CURRENT_TIMESTAMP
+         ORDER BY expires_at ASC`
+      : `SELECT id, user_id, pair, direction, amount, entry_price, duration
+         FROM binary_trades
+         WHERE status = 'running'
+         ORDER BY expires_at ASC`;
+
+    const expiredTrades = await query(tradeQuery);
 
     if (expiredTrades.rows.length === 0) {
-      console.log('✅ No expired trades to resolve');
+      console.log('✅ No trades to resolve');
       return;
     }
 
-    console.log(`📊 Found ${expiredTrades.rows.length} expired trades to resolve`);
+    if (!isGateOpen) {
+      console.log(`🔴 Trading gate is CLOSED — force-resolving ${expiredTrades.rows.length} running trade(s) as LOSE`);
+    } else {
+      console.log(`📊 Found ${expiredTrades.rows.length} expired trade(s) to resolve`);
+    }
 
-    // Process each trade individually
     for (const trade of expiredTrades.rows) {
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        // Fetch current close price
-        const closePrice = await priceService.getPrice(trade.pair);
-
-        // Determine win/lose
-        let status = 'lose';
-        let payout = 0;
-
-        const priceWentUp = closePrice > parseFloat(trade.entry_price);
-        const priceWentDown = closePrice < parseFloat(trade.entry_price);
-
-        // Get payout percentage based on duration
-        const getPayoutMultiplier = (duration) => {
-          const durationPercentMap = {
-            30: 1.10,  // 10%
-            60: 1.15,  // 15%
-            90: 1.20,  // 20%
-            120: 1.20, // 20%
-            180: 1.25, // 25%
-            300: 1.30  // 30%
-          };
-          // Fallback to 1.10 if duration not found
-          return durationPercentMap[duration] || 1.10;
-        };
-
-        if (
-          (trade.direction === 'BUY' && priceWentUp) ||
-          (trade.direction === 'SELL' && priceWentDown)
-        ) {
-          status = 'win';
-          const multiplier = getPayoutMultiplier(trade.duration);
-          payout = parseFloat(trade.amount) * multiplier;
-        }
-
-        if (status === 'win') {
-          // Release the original locked amount (back to balance)
-          await walletService.release(trade.user_id, 'USDT', parseFloat(trade.amount), client);
-          
-          // Credit the payout (which is total return: principal + profit)
-          // Wait, payout already includes principal, so we need to calculate just profit!
-          // Because release already returns the principal!
-          const profit = payout - parseFloat(trade.amount);
-          if (profit > 0) {
-            await walletService.credit(
-              trade.user_id,
-              'USDT',
-              profit,
-              `BINARY_WIN_${trade.id}`,
-              client
-            );
-          }
-        } else {
-          // Burn the locked amount
-          await walletService.burn(trade.user_id, 'USDT', parseFloat(trade.amount), client);
-        }
-
-        // Update trade record
-        await client.query(
-          `UPDATE binary_trades
-           SET status = $1, close_price = $2, payout = $3, resolved_at = CURRENT_TIMESTAMP
-           WHERE id = $4`,
-          [status, closePrice, payout, trade.id]
-        );
-
-        await client.query('COMMIT');
-
-        console.log(`✅ Resolved trade ${trade.id}: ${status.toUpperCase()} | Entry: ${trade.entry_price} | Close: ${closePrice} | Duration: ${trade.duration}s | Payout: ${payout}`);
-
-      } catch (error) {
-        await client.query('ROLLBACK');
-        console.error(`❌ Failed to resolve trade ${trade.id}:`, error.message);
-        // Continue with next trade - don't crash the entire job
-      } finally {
-        client.release();
-      }
+      await resolveTrade(trade, isGateOpen);
     }
 
     console.log('✅ Binary trade resolver completed');

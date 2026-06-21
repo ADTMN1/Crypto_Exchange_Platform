@@ -1,7 +1,7 @@
 import AppError from '../utils/errorHandling.js';
 
-const BINANCE_REST_BASE  = process.env.BINANCE_REST_BASEURL || 'https://fapi.binance.com'
-const BINANCE_WS_BASE    = process.env.BINANCE_WS_BASEURL || 'wss://fstream.binance.com/ws'
+const BINANCE_REST_BASE  = process.env.BINANCE_REST_BASEURL || 'https://api.binance.com'
+const BINANCE_WS_BASE    = process.env.BINANCE_WS_BASEURL || 'wss://stream.binance.com:9443/ws'
 const REQUEST_TIMEOUT_MS = 8000;
 
 export const SUPPORTED_SYMBOLS = [
@@ -84,7 +84,7 @@ const binanceService = {
      */
     getPrice: async (symbol = 'BTCUSDT') => {
         const upper = binanceService.validateSymbol(symbol);
-        const url   = `${BINANCE_REST_BASE}/fapi/v1/ticker/price?symbol=${upper}`;
+        const url   = `${BINANCE_REST_BASE}/api/v3/ticker/price?symbol=${upper}`;
         const data  = await binanceFetch(url);
 
         if (!data?.symbol || data?.price === undefined) {
@@ -102,7 +102,7 @@ const binanceService = {
      * Fetches prices for all supported symbols in one request.
      */
     getAllPrices: async () => {
-        const url  = `${BINANCE_REST_BASE}/fapi/v1/ticker/price`;
+        const url  = `${BINANCE_REST_BASE}/api/v3/ticker/price`;
         const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {
@@ -122,7 +122,7 @@ const binanceService = {
      * Fetches 24h stats (price change %, volume) for all supported symbols.
      */
     getOverview: async () => {
-        const url  = `${BINANCE_REST_BASE}/fapi/v1/ticker/24hr`;
+        const url  = `${BINANCE_REST_BASE}/api/v3/ticker/24hr`;
         const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {
@@ -152,7 +152,7 @@ const binanceService = {
         // Handle 30s interval by fetching 1m klines and splitting into two 30s pseudo-candles
         if (interval === '30s') {
             const oneMinuteLimit = limit;
-            const url = `${BINANCE_REST_BASE}/fapi/v1/klines?symbol=${upper}&interval=1m&limit=${oneMinuteLimit}`;
+            const url = `${BINANCE_REST_BASE}/api/v3/klines?symbol=${upper}&interval=1m&limit=${oneMinuteLimit}`;
             const data = await binanceFetch(url);
 
             if (!Array.isArray(data)) {
@@ -190,7 +190,7 @@ const binanceService = {
         }
 
         // Normal case for Binance-supported intervals
-        const url = `${BINANCE_REST_BASE}/fapi/v1/klines?symbol=${upper}&interval=${interval}&limit=${limit}`;
+        const url = `${BINANCE_REST_BASE}/api/v3/klines?symbol=${upper}&interval=${interval}&limit=${limit}`;
         const data = await binanceFetch(url);
 
         if (!Array.isArray(data)) {
