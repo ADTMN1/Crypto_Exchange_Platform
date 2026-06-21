@@ -1,6 +1,7 @@
 import walletService from '../services/wallet.service.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
+import notificationService from '../services/notification.service.js';
 
 const walletController = {
 
@@ -87,6 +88,13 @@ const walletController = {
 
       auditController.auditingSave(req, 'Created deposit request', 'wallet', req.user.id, { currency, amount })
         .catch((err) => console.error('Audit save failed:', err));
+
+      notificationService.sendAdminAlert({
+        type: 'DEPOSIT_REQUESTED',
+        title: 'New Deposit Request',
+        body: `User ${req.user.email} submitted a deposit request for ${amount} ${currency}.`,
+        metadata: { userId: req.user.id, currency, amount, transactionId: transaction.id },
+      }).catch((err) => console.error('Admin alert (deposit request) failed:', err));
       return;
     } catch (error) {
       next(error);
@@ -209,6 +217,13 @@ const walletController = {
 
       auditController.auditingSave(req, 'Approved deposit', 'admin_wallet', null, { transactionId })
         .catch((err) => console.error('Audit save failed:', err));
+
+      notificationService.sendAdminAlert({
+        type: 'DEPOSIT_APPROVED',
+        title: 'Deposit Approved',
+        body: `Deposit ${transactionId} was approved by admin ${req.user.email}.`,
+        metadata: { transactionId, adminId: req.user.id },
+      }).catch((err) => console.error('Admin alert (deposit approved) failed:', err));
       return;
     } catch (error) {
       next(error);
@@ -231,6 +246,13 @@ const walletController = {
 
       auditController.auditingSave(req, 'Rejected deposit', 'admin_wallet', null, { transactionId })
         .catch((err) => console.error('Audit save failed:', err));
+
+      notificationService.sendAdminAlert({
+        type: 'DEPOSIT_REJECTED',
+        title: 'Deposit Rejected',
+        body: `Deposit ${transactionId} was rejected by admin ${req.user.email}.`,
+        metadata: { transactionId, adminId: req.user.id },
+      }).catch((err) => console.error('Admin alert (deposit rejected) failed:', err));
       return;
     } catch (error) {
       next(error);

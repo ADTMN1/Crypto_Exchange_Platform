@@ -40,7 +40,6 @@ import AdminProfilePage from "../pages/admin/ProfilePage";
 import AdminSectionPage from "../pages/admin/AdminSectionPage";
 import AdminManageUsersPage from "../pages/admin/ManageUsersPage";
 import HistoryPage from "../pages/user/HistoryPage";
-import NotificationHistoryPage from "../pages/user/NotificationHistoryPage";
 import BinaryTradesPage from "../pages/admin/BinaryTradesPage";
 import P2POrdersPage from "../pages/admin/P2POrdersPage";
 import P2PDisputesPage from "../pages/admin/P2PDisputesPage";
@@ -65,6 +64,7 @@ import TradingPairsPage from "../pages/admin/TradingPairsPage";
 import AdminWithdrawalsPage from "../pages/admin/WithdrawalsPage";
 import WithdrawalDetailPage from "../pages/admin/WithdrawalDetailPage";
 import LoginHistoryPage from "../pages/admin/LoginHistoryPage";
+import AdminNotificationHistoryPage from "../pages/admin/NotificationHistoryPage";
 
 const adminSectionRoutes = [
   {
@@ -688,6 +688,17 @@ export default function Router() {
                   key={section.path}
                   path={sectionPath}
                   element={<LoginHistoryPage />}
+                />
+              );
+            }
+
+            // Notification History page
+            if (section.path === "/admin/notification-history") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<AdminNotificationHistoryPage />}
                 />
               );
             }

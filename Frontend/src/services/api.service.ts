@@ -177,6 +177,12 @@ export const API_ENDPOINTS = {
     LOGIN_HISTORY: '/admin/login-history',
     SYSTEM_STATS: '/admin/stats',
     Notifications: '/notifications/admin',
+    NOTIFICATIONS: '/notifications/admin',
+    NOTIFICATIONS_UNREAD_COUNT: '/notifications/admin/unread-count',
+    NOTIFICATIONS_READ_ALL: '/notifications/admin/read-all',
+    NOTIFICATION_READ: (id: string) => `/notifications/admin/${id}/read`,
+    NOTIFICATION_HISTORY: '/notifications/admin/history',
+    NOTIFICATION_DETAIL: (id: string) => `/notifications/admin/history/${id}`,
     TRANSACTIONS: '/admin/transactions',
     TRANSACTION_DETAIL: (id: string) => `/admin/transactions/${id}`,
     // Admin order endpoints

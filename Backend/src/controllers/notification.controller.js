@@ -89,6 +89,45 @@ const notificationController = {
     }
   },
 
+  // ─── GET /notifications/admin/history ───────────────────────────────────────
+
+  getNotificationHistory: async (req, res, next) => {
+    try {
+      const page   = Math.max(1, parseInt(req.query.page)  || 1);
+      const limit  = Math.min(100, parseInt(req.query.limit) || 20);
+      const search = req.query.search?.trim() || null;
+      const type   = req.query.type?.trim()   || null;
+      const userId = req.query.userId?.trim() || null;
+
+      const { records, totalCount } = await notificationService.getNotificationHistory({
+        page, limit, search, type, userId,
+      });
+
+      return res.status(200).json({
+        success: true,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+        totalCount,
+        data: records,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── GET /notifications/admin/history/:id ───────────────────────────────────
+
+  getNotificationDetail: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const data = await notificationService.getNotificationDetail(id);
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // ─── GET /notifications/admin ────────────────────────────────────────────────
 
   getAdminNotifications: async (req, res, next) => {
@@ -103,6 +142,40 @@ const notificationController = {
         message: 'Admin notifications fetched successfully.',
         data,
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── GET /notifications/admin/unread-count ───────────────────────────────────
+
+  getAdminUnreadCount: async (req, res, next) => {
+    try {
+      const count = await notificationService.getAdminUnreadCount(req.user.id);
+      return res.status(200).json({ success: true, data: { unread_count: count } });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── PATCH /notifications/admin/:id/read ─────────────────────────────────────
+
+  markAdminNotificationRead: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const data = await notificationService.markAdminNotificationRead(id, req.user.id);
+      return res.status(200).json({ success: true, message: 'Marked as read.', data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ─── PATCH /notifications/admin/read-all ─────────────────────────────────────
+
+  markAllAdminNotificationsRead: async (req, res, next) => {
+    try {
+      await notificationService.markAllAdminNotificationsRead(req.user.id);
+      return res.status(200).json({ success: true, message: 'All marked as read.' });
     } catch (error) {
       next(error);
     }

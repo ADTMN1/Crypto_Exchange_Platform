@@ -33,7 +33,7 @@ export const query = async (text, params) => {
 		const duration = Date.now() - start;
 		
 		if (!isProduction) {
-			console.log(`⚡ Executed Query: [${text.substring(0, 50)}...] in ${duration}ms | Rows: ${res.rowCount}`);
+			// console.log(`⚡ Executed Query: [${text.substring(0, 50)}...] in ${duration}ms | Rows: ${res.rowCount}`);
 		}
 		
 		return res;
