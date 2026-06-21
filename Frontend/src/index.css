@@ -7626,3 +7626,18 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Responsive two-column layout for page sections */
+.nex-page-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .nex-page-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+}

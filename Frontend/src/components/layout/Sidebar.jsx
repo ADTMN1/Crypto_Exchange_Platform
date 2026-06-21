@@ -1,5 +1,5 @@
 
-import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaBolt, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
+import { FaFire, FaChartBar, FaChartLine, FaUser, FaWallet, FaHistory, FaHeadset, FaSignOutAlt, FaBolt, FaChevronLeft, FaChevronRight, FaArrowCircleDown } from 'react-icons/fa'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store'
 
@@ -62,6 +62,10 @@ function Sidebar({ collapsed, onToggle }) {
           <Link to="/history" className="nav-item">
             <FaHistory style={iconStyle} className="nav-icon" />
             {!collapsed && 'History'}
+          </Link>
+          <Link to="/wallet/withdraw" className="nav-item">
+            <FaArrowCircleDown style={iconStyle} className="nav-icon" />
+            {!collapsed && 'Withdraw'}
           </Link>
         </div>
         <div className="nav-section">

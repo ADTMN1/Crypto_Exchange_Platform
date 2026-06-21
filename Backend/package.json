@@ -11,7 +11,9 @@
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:roles": "node src/jobs/role.seed.js",
-    "seed:admin": "node src/jobs/admin.seed.js"
+    "seed:admin": "node src/jobs/admin.seed.js",
+    "seed:withdrawals": "node src/jobs/withdrawal.seed.js",
+    "migrate": "node run_migration.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
