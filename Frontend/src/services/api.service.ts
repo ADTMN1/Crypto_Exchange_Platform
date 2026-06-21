@@ -174,6 +174,7 @@ export const API_ENDPOINTS = {
     UNBAN_USER: (userId: string) => `/admin/users/${userId}/unban`,
     DELETE_USER: (userId: string) => `/admin/users/${userId}`,
     AUDIT_LOGS: '/admin/audit-logs',
+    LOGIN_HISTORY: '/admin/login-history',
     SYSTEM_STATS: '/admin/stats',
     Notifications: '/notifications/admin',
     TRANSACTIONS: '/admin/transactions',

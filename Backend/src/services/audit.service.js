@@ -54,6 +54,51 @@ const auditService = {
         totalCount,
     };
 },
+
+    // Login-history: only auth-related audit events
+    getLoginHistory: async ({ page = 1, pageSize = 20, userId = null, search = null }) => {
+        const offset = (page - 1) * pageSize;
+        const searchValue = search ? `%${search}%` : null;
+
+        const LOGIN_ACTIONS = [
+            'User login',
+            'Google OAuth login',
+            'User logout',
+            'Access token refreshed',
+            'User registered',
+        ];
+
+        const { rows } = await query(
+            `SELECT al.*, u.username AS user_name, u.email AS user_email,
+                    COUNT(*) OVER()::int AS total_count
+             FROM audit_logs al
+             LEFT JOIN users u ON al.user_id = u.id
+             WHERE al.action = ANY($1::text[])
+               AND ($2::uuid IS NULL OR al.user_id = $2)
+               AND ($5::text IS NULL OR (
+                     al.action ILIKE $5 OR
+                     u.username ILIKE $5 OR
+                     u.email ILIKE $5 OR
+                     al.ip_address::text ILIKE $5
+                   ))
+             ORDER BY al.created_at DESC
+             LIMIT $3 OFFSET $4`,
+            [LOGIN_ACTIONS, userId, pageSize, offset, searchValue]
+        );
+
+        const totalCount = rows[0]?.total_count ?? 0;
+        const records = rows.map(({ total_count, ...r }) => ({
+            ...r,
+            // map to the login-history shape the frontend expects
+            userId:     r.user_id,
+            loginTime:  r.created_at,
+            ipAddress:  r.ip_address,
+            deviceInfo: r.metadata?.userAgent || null,
+            action:     r.action,
+        }));
+
+        return { records, totalCount };
+    },
 };
 
 export default auditService;

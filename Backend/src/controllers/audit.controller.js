@@ -51,6 +51,33 @@ const auditController = {
         });
     },
 
+    loginHistoryFetch: async (req, res, next) => {
+        try {
+            const page  = Math.max(1, parseInt(req.query.page, 10) || 1);
+            const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+            const userId = req.query.userId?.trim() || null;
+            const search = req.query.search?.toString().trim() || null;
+
+            const { records, totalCount } = await auditService.getLoginHistory({
+                page,
+                pageSize: limit,
+                userId,
+                search,
+            });
+
+            return res.status(200).json({
+                success: true,
+                page,
+                limit,
+                totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+                totalCount,
+                data: records,
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
     auditingFetch: async (req, res, next) => {
         try {
             const page = Math.max(1, parseInt(req.query.page, 10) || 1);

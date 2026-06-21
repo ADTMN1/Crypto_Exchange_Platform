@@ -64,6 +64,7 @@ import BinarySettingsPage from "../pages/admin/BinarySettingsPage";
 import TradingPairsPage from "../pages/admin/TradingPairsPage";
 import AdminWithdrawalsPage from "../pages/admin/WithdrawalsPage";
 import WithdrawalDetailPage from "../pages/admin/WithdrawalDetailPage";
+import LoginHistoryPage from "../pages/admin/LoginHistoryPage";
 
 const adminSectionRoutes = [
   {
@@ -676,6 +677,17 @@ export default function Router() {
                   key={section.path}
                   path={sectionPath}
                   element={<AdminTransactionsPage />}
+                />
+              );
+            }
+
+            // Login History page
+            if (section.path === "/admin/login-history") {
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<LoginHistoryPage />}
                 />
               );
             }

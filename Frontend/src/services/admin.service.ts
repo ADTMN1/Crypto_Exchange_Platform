@@ -123,6 +123,38 @@ export interface GetAuditLogsParams {
   search?: string;
 }
 
+export interface LoginHistoryRecord {
+  id: string;
+  user_id: string | null;
+  userId: string | null;
+  action: string;
+  entity_type: string;
+  ip_address: string | null;
+  ipAddress: string | null;
+  loginTime: string;
+  deviceInfo: string | null;
+  metadata: any;
+  created_at: string;
+  user_name?: string;
+  user_email?: string;
+}
+
+export interface LoginHistoryResponse {
+  success: boolean;
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalCount: number;
+  data: LoginHistoryRecord[];
+}
+
+export interface GetLoginHistoryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  userId?: string;
+}
+
 
 export interface AdminNotification {
   notification_id: string;
@@ -308,6 +340,13 @@ const adminService = {
 
   async getAuditLogs(params: GetAuditLogsParams = {}): Promise<AdminAuditLogsResponse> {
     const response = await api.get<AdminAuditLogsResponse>(API_ENDPOINTS.ADMIN.AUDIT_LOGS, {
+      params,
+    });
+    return response.data;
+  },
+
+  async getLoginHistory(params: GetLoginHistoryParams = {}): Promise<LoginHistoryResponse> {
+    const response = await api.get<LoginHistoryResponse>(API_ENDPOINTS.ADMIN.LOGIN_HISTORY, {
       params,
     });
     return response.data;
