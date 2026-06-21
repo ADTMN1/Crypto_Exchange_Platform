@@ -70,6 +70,13 @@ async function runMigrations() {
         await client.query(sql6);
         console.log('✅ KYC fields added\n');
         
+        // Migration 7: Create withdrawals table
+        console.log('7️⃣ Creating withdrawals table...');
+        const migration7Path = path.join(__dirname, 'src/models/migrations/013_create_withdrawals_table.sql');
+        const sql7 = fs.readFileSync(migration7Path, 'utf8');
+        await client.query(sql7);
+        console.log('✅ Withdrawals table created\n');
+        
         console.log('🎉 All migrations completed successfully!');
     } catch (error) {
         console.error('❌ Migration failed:', error.message);

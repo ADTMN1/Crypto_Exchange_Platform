@@ -16,6 +16,7 @@ import transactionRouter from './transaction.route.js';
 import pairRouter from './pair.routes.js';
 import adminOrderRouter from './admin-order.routes.js';
 import tradingPairRouter from './trading-pair.routes.js';
+import withdrawalRouter from './withdrawal.routes.js';
 
 const router = express.Router();
 router.use('/auth',          authRouter);
@@ -36,5 +37,6 @@ router.use('/p2p',           p2pRouter);
 router.use('/trading-gate',  tradingGateRouter);
 router.use('/admin',         transactionRouter);
 router.use('/trading-pairs', tradingPairRouter);
+router.use('/withdrawals',   withdrawalRouter);
 
 export default router;

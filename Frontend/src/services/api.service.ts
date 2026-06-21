@@ -151,6 +151,15 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/trading-pairs/${id}`,
     DELETE: (id: string) => `/trading-pairs/${id}`,
   },
+  // Withdrawal endpoints
+  WITHDRAWALS: {
+    CREATE: '/withdrawals',
+    MY_WITHDRAWALS: '/withdrawals/me',
+    ADMIN_ALL: '/withdrawals/admin/all',
+    ADMIN_DETAIL: (id: string) => `/withdrawals/admin/${id}`,
+    ADMIN_CHANGE_STATUS: (id: string) => `/withdrawals/admin/change-status/${id}`,
+    ADMIN_UPDATE_WALLET: (walletId: string) => `/withdrawals/admin/update-wallet/${walletId}`,
+  },
   // Admin endpoints
   ADMIN: {
     USERS: '/admin/users',

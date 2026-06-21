@@ -1,5 +1,6 @@
 import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DepositModal from '../../components/common/DepositModal';
 import LoadingOverlay from '../../components/common/LoadingOverlay';
 import walletService from '../../services/wallet.service';
@@ -12,6 +13,7 @@ export default function WalletPage() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [totalUSD, setTotalUSD] = useState<number>(0);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,6 +100,7 @@ export default function WalletPage() {
             </p>
           </div>
           <button className="btn-deposit" onClick={() => setOpen(true)}>Deposit</button>
+          <button className="btn-deposit" onClick={() => navigate('/wallet/withdraw')} style={{ marginLeft: '8px', background: '#333', color: '#F7931A', border: '1px solid #F7931A' }}>Withdraw</button>
           <DepositModal open={open} onClose={() => setOpen(false)} />
         </div>
       </div>

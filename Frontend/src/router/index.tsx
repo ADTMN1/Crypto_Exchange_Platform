@@ -62,6 +62,8 @@ import SupportTicketsPage from "../pages/admin/SupportTicketsPage";
 import TicketDetailPage from "../pages/admin/TicketDetailPage";
 import BinarySettingsPage from "../pages/admin/BinarySettingsPage";
 import TradingPairsPage from "../pages/admin/TradingPairsPage";
+import AdminWithdrawalsPage from "../pages/admin/WithdrawalsPage";
+import WithdrawalDetailPage from "../pages/admin/WithdrawalDetailPage";
 
 const adminSectionRoutes = [
   {
@@ -642,6 +644,20 @@ export default function Router() {
               );
             }
 
+            // Withdrawals pages
+            if (section.path.startsWith("/admin/withdrawals")) {
+              const rawStatus = section.path.replace("/admin/withdrawals", "").replace("/", "").replace("-withdrawals", "").toUpperCase() || "ALL";
+              const statusMap: Record<string, string> = { 'PENDING': 'PENDING', 'APPROVED': 'APPROVED', 'REJECTED': 'REJECTED', '': 'ALL' };
+              const wStatus = statusMap[rawStatus] || 'ALL';
+              return (
+                <Route
+                  key={section.path}
+                  path={sectionPath}
+                  element={<AdminWithdrawalsPage statusFilter={wStatus} title={section.title} description={section.description} />}
+                />
+              );
+            }
+
             // System Settings page
             if (section.path === "/admin/system-settings") {
               return (
@@ -732,6 +748,7 @@ export default function Router() {
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="settings/general" element={<GeneralSettingsPage />} />
           <Route path="support-ticket/:id" element={<TicketDetailPage />} />
+          <Route path="withdrawals/:withdrawalId" element={<WithdrawalDetailPage />} />
         </Route>
       </Route>
 
