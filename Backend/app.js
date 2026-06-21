@@ -120,6 +120,10 @@ app.get('/api', (req, res) => {
 	res.json({ message: 'Crypto Exchange Tier-1 Backend Running Securely.' });
 });
 
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'success', message: 'Backend is up and running!' });
+});
+
 // 2. Fallback Route for non-existent URLs (404 Not Found)
 app.use((req, res, next) => {
   const err = new AppError(`Can't find ${req.originalUrl} on this server!`, 404);
@@ -129,8 +133,6 @@ app.use((req, res, next) => {
 // 3. THE GLOBAL ERROR HANDLER (Must be last!)
 app.use(globalErrorHandler);
 
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'success', message: 'Backend is up and running!' });
-});
+
 
 export default app;
