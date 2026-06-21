@@ -129,6 +129,8 @@ app.use((req, res, next) => {
 // 3. THE GLOBAL ERROR HANDLER (Must be last!)
 app.use(globalErrorHandler);
 
-
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'success', message: 'Backend is up and running!' });
+});
 
 export default app;
