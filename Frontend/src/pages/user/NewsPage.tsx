@@ -1,121 +1,35 @@
-import { useState } from 'react';
-import { FaNewspaper, FaFire, FaClock, FaArrowUp, FaArrowDown, FaBookmark, FaRegBookmark } from 'react-icons/fa';
-
-interface NewsArticle {
-  id: string;
-  title: string;
-  excerpt: string;
-  category: 'Breaking' | 'Analysis' | 'Technology' | 'Regulation' | 'Market' | 'DeFi';
-  source: string;
-  timeAgo: string;
-  imageUrl?: string;
-  isTrending: boolean;
-  isBookmarked: boolean;
-  relatedCrypto?: string[];
-  sentiment?: 'bullish' | 'bearish' | 'neutral';
-}
+import { useState, useEffect } from 'react';
+import { FaNewspaper, FaFire, FaClock, FaArrowUp, FaArrowDown, FaBookmark, FaRegBookmark, FaSpinner } from 'react-icons/fa';
+import newsService, { NewsArticle } from '../../services/news.service';
 
 export default function NewsPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Set<string>>(new Set());
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const categories = ['all', 'Breaking', 'Analysis', 'Market', 'Technology', 'DeFi', 'Regulation'];
 
-  const newsArticles: NewsArticle[] = [
-    {
-      id: '1',
-      title: 'Bitcoin Reaches New All-Time High as Institutional Adoption Soars',
-      excerpt: 'Bitcoin has surged past $75,000 for the first time, driven by increased institutional investment and growing mainstream acceptance.',
-      category: 'Breaking',
-      source: 'CryptoNews',
-      timeAgo: '15 minutes ago',
-      isTrending: true,
-      isBookmarked: false,
-      relatedCrypto: ['BTC'],
-      sentiment: 'bullish',
-    },
-    {
-      id: '2',
-      title: 'Ethereum 2.0 Upgrade Reduces Transaction Fees by 90%',
-      excerpt: 'The latest Ethereum network upgrade has dramatically reduced gas fees, making DeFi applications more accessible to retail users.',
-      category: 'Technology',
-      source: 'Blockchain Today',
-      timeAgo: '1 hour ago',
-      isTrending: true,
-      isBookmarked: false,
-      relatedCrypto: ['ETH'],
-      sentiment: 'bullish',
-    },
-    {
-      id: '3',
-      title: 'SEC Announces New Guidelines for Cryptocurrency Exchanges',
-      excerpt: 'The Securities and Exchange Commission has released comprehensive guidelines that could reshape how crypto exchanges operate in the US.',
-      category: 'Regulation',
-      source: 'Financial Times',
-      timeAgo: '2 hours ago',
-      isTrending: false,
-      isBookmarked: false,
-      relatedCrypto: ['BTC', 'ETH'],
-      sentiment: 'neutral',
-    },
-    {
-      id: '4',
-      title: 'Solana Network Experiences Brief Outage, Recovery Underway',
-      excerpt: 'The Solana blockchain experienced a temporary network disruption lasting approximately 4 hours before validators restored normal operations.',
-      category: 'Technology',
-      source: 'CoinDesk',
-      timeAgo: '3 hours ago',
-      isTrending: false,
-      isBookmarked: false,
-      relatedCrypto: ['SOL'],
-      sentiment: 'bearish',
-    },
-    {
-      id: '5',
-      title: 'DeFi Total Value Locked Surpasses $200 Billion Milestone',
-      excerpt: 'Decentralized finance protocols have collectively reached a new record with over $200 billion in total value locked across all platforms.',
-      category: 'DeFi',
-      source: 'DeFi Pulse',
-      timeAgo: '5 hours ago',
-      isTrending: true,
-      isBookmarked: false,
-      sentiment: 'bullish',
-    },
-    {
-      id: '6',
-      title: 'Major Banks Partner to Launch Blockchain Payment Network',
-      excerpt: 'Five major international banks have announced a collaborative effort to create a cross-border payment system using blockchain technology.',
-      category: 'Analysis',
-      source: 'Bloomberg Crypto',
-      timeAgo: '6 hours ago',
-      isTrending: false,
-      isBookmarked: false,
-      sentiment: 'bullish',
-    },
-    {
-      id: '7',
-      title: 'Crypto Market Analysis: Technical Indicators Point to Continued Bull Run',
-      excerpt: 'Leading technical analysts suggest multiple indicators are aligning for a sustained upward trend in major cryptocurrencies.',
-      category: 'Market',
-      source: 'Trading View',
-      timeAgo: '8 hours ago',
-      isTrending: false,
-      isBookmarked: false,
-      relatedCrypto: ['BTC', 'ETH'],
-      sentiment: 'bullish',
-    },
-    {
-      id: '8',
-      title: 'NFT Marketplace Volume Drops 60% Amid Market Correction',
-      excerpt: 'Trading volumes on major NFT marketplaces have declined significantly as the broader crypto market experiences a correction period.',
-      category: 'Market',
-      source: 'NFT Stats',
-      timeAgo: '10 hours ago',
-      isTrending: false,
-      isBookmarked: false,
-      sentiment: 'bearish',
-    },
-  ];
+  const fetchNews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await newsService.getNews();
+      if (response.data?.success && response.data?.data?.articles) {
+        setNewsArticles(response.data.data.articles);
+      }
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      setError('Failed to load news');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
 
   const toggleBookmark = (articleId: string) => {
     setBookmarkedArticles((prev) => {
@@ -179,99 +93,165 @@ export default function NewsPage() {
         ))}
       </div>
 
-      {/* Trending Section */}
-      {activeCategory === 'all' && (
-        <div className="trending-section">
-          <h2 className="section-heading">
-            <FaFire style={{ color: '#F7931A' }} /> Trending Now
-          </h2>
-          <div className="trending-grid">
-            {newsArticles.filter((article) => article.isTrending).slice(0, 3).map((article) => (
-              <div key={article.id} className="trending-card">
-                <div className="trending-card-header">
-                  <span 
-                    className="category-badge" 
-                    style={{ backgroundColor: getCategoryColor(article.category) }}
+      {loading ? (
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '60px 20px',
+          color: '#F7931A'
+        }}>
+          <FaSpinner style={{ fontSize: '48px', animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: '20px', fontSize: '18px' }}>Loading news...</p>
+        </div>
+      ) : error ? (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '60px 20px',
+          color: '#ef4444'
+        }}>
+          <p style={{ fontSize: '18px' }}>{error}</p>
+          <button
+            onClick={fetchNews}
+            style={{
+              marginTop: '20px',
+              padding: '12px 24px',
+              backgroundColor: '#F7931A',
+              color: '#0a0a0a',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Trending Section */}
+          {activeCategory === 'all' && (
+            <div className="trending-section">
+              <h2 className="section-heading">
+                <FaFire style={{ color: '#F7931A' }} /> Trending Now
+              </h2>
+              <div className="trending-grid">
+                {newsArticles.slice(0, 3).map((article) => (
+                  <div
+                    key={article.id}
+                    className="trending-card"
+                    onClick={() => article.url && window.open(article.url, '_blank')}
+                    style={{ cursor: 'pointer' }}
                   >
-                    {article.category}
-                  </span>
-                  <button
-                    className="bookmark-btn"
-                    onClick={() => toggleBookmark(article.id)}
-                  >
-                    {bookmarkedArticles.has(article.id) ? (
-                      <FaBookmark style={{ color: '#F7931A' }} />
-                    ) : (
-                      <FaRegBookmark />
+                    {article.imageUrl && (
+                      <div className="trending-card-image">
+                        <img src={article.imageUrl} alt={article.title} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px 8px 0 0' }} />
+                      </div>
                     )}
-                  </button>
-                </div>
-                <h3 className="trending-card-title">{article.title}</h3>
-                <p className="trending-card-excerpt">{article.excerpt}</p>
-                <div className="trending-card-footer">
-                  <span className="news-source">{article.source}</span>
-                  <span className="news-time">
-                    <FaClock /> {article.timeAgo}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* News List */}
-      <div className="news-list-section">
-        <h2 className="section-heading">Latest Articles</h2>
-        <div className="news-list">
-          {filteredNews.map((article) => (
-            <article key={article.id} className="news-article">
-              <div className="article-header">
-                <span 
-                  className="category-badge" 
-                  style={{ backgroundColor: getCategoryColor(article.category) }}
-                >
-                  {article.category}
-                </span>
-                {article.sentiment && (
-                  <span className="sentiment-indicator">
-                    {getSentimentIcon(article.sentiment)}
-                  </span>
-                )}
-                <button
-                  className="bookmark-btn"
-                  onClick={() => toggleBookmark(article.id)}
-                >
-                  {bookmarkedArticles.has(article.id) ? (
-                    <FaBookmark style={{ color: '#F7931A' }} />
-                  ) : (
-                    <FaRegBookmark />
-                  )}
-                </button>
-              </div>
-              <h3 className="article-title">{article.title}</h3>
-              <p className="article-excerpt">{article.excerpt}</p>
-              <div className="article-footer">
-                <div className="article-meta">
-                  <span className="news-source">{article.source}</span>
-                  <span className="news-time">
-                    <FaClock /> {article.timeAgo}
-                  </span>
-                </div>
-                {article.relatedCrypto && article.relatedCrypto.length > 0 && (
-                  <div className="related-crypto">
-                    {article.relatedCrypto.map((crypto) => (
-                      <span key={crypto} className="crypto-tag">
-                        {crypto}
+                    <div className="trending-card-header">
+                      <span 
+                        className="category-badge" 
+                        style={{ backgroundColor: getCategoryColor(article.category) }}
+                      >
+                        {article.category}
                       </span>
-                    ))}
+                      <button
+                        className="bookmark-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleBookmark(article.id);
+                        }}
+                      >
+                        {bookmarkedArticles.has(article.id) ? (
+                          <FaBookmark style={{ color: '#F7931A' }} />
+                        ) : (
+                          <FaRegBookmark />
+                        )}
+                      </button>
+                    </div>
+                    <h3 className="trending-card-title">{article.title}</h3>
+                    <p className="trending-card-excerpt">{article.excerpt}</p>
+                    <div className="trending-card-footer">
+                      <span className="news-source">{article.source}</span>
+                      <span className="news-time">
+                        <FaClock /> {article.timeAgo}
+                      </span>
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
-      </div>
+            </div>
+          )}
+
+          {/* News List */}
+          <div className="news-list-section">
+            <h2 className="section-heading">Latest Articles</h2>
+            <div className="news-list">
+              {filteredNews.map((article) => (
+                <article
+                  key={article.id}
+                  className="news-article"
+                  onClick={() => article.url && window.open(article.url, '_blank')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="article-header">
+                    <span 
+                      className="category-badge" 
+                      style={{ backgroundColor: getCategoryColor(article.category) }}
+                    >
+                      {article.category}
+                    </span>
+                    {article.sentiment && (
+                      <span className="sentiment-indicator">
+                        {getSentimentIcon(article.sentiment)}
+                      </span>
+                    )}
+                    <button
+                      className="bookmark-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleBookmark(article.id);
+                      }}
+                    >
+                      {bookmarkedArticles.has(article.id) ? (
+                        <FaBookmark style={{ color: '#F7931A' }} />
+                      ) : (
+                        <FaRegBookmark />
+                      )}
+                    </button>
+                  </div>
+                  {article.imageUrl && (
+                    <div className="article-image">
+                      <img src={article.imageUrl} alt={article.title} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', marginBottom: '16px' }} />
+                    </div>
+                  )}
+                  <h3 className="article-title">{article.title}</h3>
+                  <p className="article-excerpt">{article.excerpt}</p>
+                  <div className="article-footer">
+                    <div className="article-meta">
+                      <span className="news-source">{article.source}</span>
+                      <span className="news-time">
+                        <FaClock /> {article.timeAgo}
+                      </span>
+                    </div>
+                    {article.relatedCrypto && article.relatedCrypto.length > 0 && (
+                      <div className="related-crypto">
+                        {article.relatedCrypto.map((crypto) => (
+                          <span key={crypto} className="crypto-tag">
+                            {crypto}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </main>
   );
 }

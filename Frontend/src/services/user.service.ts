@@ -15,13 +15,23 @@ interface ChangePasswordPayload {
 
 const userService = {
   async getProfile(): Promise<User> {
-    const response = await api.get<User>(API_ENDPOINTS.USER.PROFILE)
-    return response.data
+    const response = await api.get<any>(API_ENDPOINTS.USER.PROFILE)
+    const userData = response.data.data as User
+    return {
+      ...userData,
+      profile_image: userData.profile_image || userData.profile_picture_url,
+      profile_picture_url: userData.profile_picture_url || userData.profile_image,
+    }
   },
   
   async updateProfile(data: UpdateProfilePayload): Promise<User> {
-    const response = await api.put<User>(API_ENDPOINTS.USER.UPDATE_PROFILE, data)
-    return response.data
+    const response = await api.put<any>(API_ENDPOINTS.USER.UPDATE_PROFILE, data)
+    const userData = response.data.data as User
+    return {
+      ...userData,
+      profile_image: userData.profile_image || userData.profile_picture_url,
+      profile_picture_url: userData.profile_picture_url || userData.profile_image,
+    }
   },
   
   async changePassword(data: ChangePasswordPayload): Promise<void> {
@@ -37,7 +47,15 @@ const userService = {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response.data.data
+    const data = response.data.data
+    return {
+      imageUrl: data.imageUrl,
+      user: {
+        ...data.user,
+        profile_image: data.user.profile_image || data.user.profile_picture_url,
+        profile_picture_url: data.user.profile_picture_url || data.user.profile_image,
+      },
+    }
   },
 
   async deleteProfileImage(): Promise<void> {

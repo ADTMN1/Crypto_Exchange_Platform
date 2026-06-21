@@ -1,3 +1,4 @@
+import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import GuestRoute from "./GuestRoute";
 import ProtectedRoute from "./ProtectedRoute";
@@ -7,7 +8,6 @@ import DebugPage from "../pages/DebugPage";
 import HomePage from "../pages/public/HomePage";
 import LandingPage from "../pages/public/LandingPage";
 import MarketsPage from "../pages/public/MarketsPage";
-import MarketDashboardPage from "../pages/public/MarketDashboardPage";
 import SupportPage from "../pages/public/SupportPage";
 import NotFoundPage from "../pages/public/NotFoundPage";
 import LoginPage from "../pages/auth/LoginPage";
@@ -19,7 +19,6 @@ import TradePage from "../pages/user/TradePage";
 import TradingPage from "../pages/TradingPage";
 import OrdersPage from "../pages/user/OrdersPage";
 import WalletPage from "../pages/user/WalletPage";
-import DepositPage from "../pages/user/DepositPage";
 import WithdrawPage from "../pages/user/WithdrawPage";
 import ProfilePage from "../pages/user/ProfilePage";
 import SecurityPage from "../pages/user/SecurityPage";
@@ -401,7 +400,6 @@ export default function Router() {
       <Route element={<ProtectedRoute />}>
         <Route path="/debug" element={<DebugPage />} />
         <Route path="/markets" element={<MarketsPage />} />
-        <Route path="/market-dashboard" element={<MarketDashboardPage />} />
         <Route path="/trading" element={<TradingPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/trade/:pair" element={<TradePage />} />
@@ -409,7 +407,7 @@ export default function Router() {
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/assets" element={<WalletPage />} />
-        <Route path="/wallet/deposit" element={<DepositPage />} />
+        <Route path="/wallet/deposit" element={<WalletPage />} />
         <Route path="/wallet/withdraw" element={<WithdrawPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/support" element={<SupportPage />} />
@@ -499,7 +497,7 @@ export default function Router() {
             // Coin Pairs page
             if (section.path === "/admin/manage-coin-pair") {
               return (
-                <>
+                <React.Fragment key={section.path}>
                   <Route
                     key={section.path}
                     path={sectionPath}
@@ -510,7 +508,7 @@ export default function Router() {
                     path={`${sectionPath}/edit/:id`}
                     element={<EditCoinPairPage />}
                   />
-                </>
+                </React.Fragment>
               );
             }
 

@@ -7,7 +7,7 @@ export default function TradeForm() {
           className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3"
           placeholder="Amount"
         />
-        <button className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+        <button className="w-full rounded-xl bg-[#4CF4A5] py-3 text-sm font-semibold text-[#0d0d0d] hover:bg-[#3bcca0]">
           Place Order
         </button>
       </form>

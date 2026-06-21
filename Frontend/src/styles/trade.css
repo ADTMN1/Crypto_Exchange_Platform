@@ -586,8 +586,8 @@
   }
 }
 
-.trade-deposit-btn { padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:var(--bn-text); cursor:pointer; font-weight:700; }
-.trade-deposit-btn:hover { background: rgba(255,255,255,0.02); }
+.trade-deposit-btn { padding:8px 12px; border-radius:10px; border:1px solid rgba(240,185,11,0.25); background: linear-gradient(180deg, #f0b90b, #d6a30b); color: #0b0e11; cursor:pointer; font-weight:600; }
+.trade-deposit-btn:hover { background: linear-gradient(180deg, #ffd74a, #e6b800); border-color: rgba(240,185,11,0.35); }
 
 @media (max-width: 900px) {
   .deposit-modal { width: calc(100% - 32px); padding:12px; }

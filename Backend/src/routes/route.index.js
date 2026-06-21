@@ -17,6 +17,7 @@ import pairRouter from './pair.routes.js';
 import adminOrderRouter from './admin-order.routes.js';
 import tradingPairRouter from './trading-pair.routes.js';
 import withdrawalRouter from './withdrawal.routes.js';
+import newsRouter from './news.routes.js';
 
 const router = express.Router();
 router.use('/auth',          authRouter);
@@ -25,6 +26,7 @@ router.use('/history',       historyRouter);
 router.use('/support',       supportRouter);
 router.use('/audit',         auditRouter);
 router.use('/market',        marketRouter);
+router.use('/news',          newsRouter);
 router.use('/admin',         adminRouter);
 router.use('/admin',         auditRouter);
 router.use('/admin',         currencyRouter);

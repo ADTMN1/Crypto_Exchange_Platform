@@ -7,7 +7,7 @@ import AuthForm from "../../components/auth/AuthForm";
 import OAuthButtons from "../../components/auth/OAuthButtons";
 import LoadingOverlay from "../../components/common/LoadingOverlay";
 import { loginSchema, LoginFormData } from "../../types/auth.types";
-import { authService } from "../../services";
+import { authService, userService } from "../../services";
 import { toast } from "sonner";
 import { useAuthStore } from "../../store";
 
@@ -55,10 +55,19 @@ const loginUserInStore = useAuthStore((state) => state.login);
 
       if (response?.user) {
         // We don't store tokens in localStorage anymore - they're in httpOnly cookies!
-        loginUserInStore(response.user, response.accessToken ?? null, response.refreshToken ?? null)
+        
+        // First, set initial login to get latest profile data from backend!
+        const latestUser = await userService.getProfile();
+        const userToStore = {
+          ...latestUser,
+          profile_image: latestUser.profile_image || latestUser.profile_picture_url,
+          profile_picture_url: latestUser.profile_picture_url || latestUser.profile_image,
+        };
+        
+        loginUserInStore(userToStore, response.accessToken ?? null, response.refreshToken ?? null)
 
         // Redirect based on user role
-        if (response.user.role === "admin") {
+        if (userToStore.role === "admin") {
           navigate("/admin");
         } else {
           navigate("/");

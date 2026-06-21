@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaShieldAlt, FaLock, FaMobileAlt, FaKey, FaHistory, FaCheckCircle, FaExclamationTriangle, FaDesktop, FaMapMarkerAlt } from 'react-icons/fa';
+import userService from '../../services/user.service';
 
 export default function SecurityPage() {
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
 
   const [passwordData, setPasswordData] = useState({
@@ -11,17 +12,34 @@ export default function SecurityPage() {
     confirmPassword: '',
   });
 
-  const loginHistory = [
-    { id: 1, device: 'Chrome on Windows', location: 'New York, USA', ip: '192.168.1.1', time: '2 hours ago', status: 'success' },
-    { id: 2, device: 'Safari on iPhone', location: 'New York, USA', ip: '192.168.1.5', time: '1 day ago', status: 'success' },
-    { id: 3, device: 'Firefox on MacOS', location: 'Los Angeles, USA', ip: '192.168.2.10', time: '3 days ago', status: 'failed' },
-    { id: 4, device: 'Chrome on Android', location: 'New York, USA', ip: '192.168.1.8', time: '5 days ago', status: 'success' },
-  ];
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [lastPasswordChange, setLastPasswordChange] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const activeSessions = [
-    { id: 1, device: 'Chrome on Windows', location: 'New York, USA', lastActive: 'Active now', current: true },
-    { id: 2, device: 'Safari on iPhone', location: 'New York, USA', lastActive: '2 hours ago', current: false },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    const fetchProfile = async () => {
+      try {
+        const profile = await userService.getProfile();
+        if (!mounted) return;
+        setTwoFactorEnabled(Boolean(profile.two_fa_enabled));
+        setLastPasswordChange(profile.updated_at || null);
+
+        // If backend exposes sessions/login history endpoints, replace these with real calls.
+        // For now populate with available profile fields (last_login_at) and leave others empty.
+        if (profile.last_login_at) {
+          setLoginHistory(prev => [{ id: 1, device: 'Last known', location: profile.last_login_ip || 'Unknown', ip: profile.last_login_ip || 'Unknown', time: profile.last_login_at, status: 'success' }, ...prev]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile for security page', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchProfile();
+    return () => { mounted = false };
+  }, []);
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +140,7 @@ export default function SecurityPage() {
 
           <div className="section-info">
             <p className="info-text">
-              <FaKey /> Last changed: 30 days ago
+              <FaKey /> Last changed: {lastPasswordChange ? new Date(lastPasswordChange).toLocaleString() : 'Unknown'}
             </p>
             <p className="info-subtext">
               We recommend changing your password every 90 days for optimal security
@@ -148,10 +166,12 @@ export default function SecurityPage() {
 
           <div className="section-info">
             <p className="info-text">
-              {twoFactorEnabled ? (
-                <><FaCheckCircle style={{ color: '#24C576' }} /> 2FA is enabled on your account</>
-              ) : (
-                <><FaExclamationTriangle style={{ color: '#f59e0b' }} /> 2FA is not enabled. Enable it for better security</>
+              {loading ? 'Loading...' : (
+                twoFactorEnabled ? (
+                  <><FaCheckCircle style={{ color: '#24C576' }} /> 2FA is enabled on your account</>
+                ) : (
+                  <><FaExclamationTriangle style={{ color: '#f59e0b' }} /> 2FA is not enabled. Enable it for better security</>
+                )
               )}
             </p>
             <p className="info-subtext">
@@ -202,25 +222,53 @@ export default function SecurityPage() {
           </div>
 
           <div className="history-list">
-            {loginHistory.map((login) => (
-              <div key={login.id} className="history-item">
-                <div className={`history-status ${login.status}`}>
-                  {login.status === 'success' ? <FaCheckCircle /> : <FaExclamationTriangle />}
+            {loginHistory.length === 0 ? (
+              <div className="history-item placeholder">
+                <div className="history-status unknown">
+                  <FaExclamationTriangle />
                 </div>
                 <div className="history-info">
-                  <h4 className="history-device">{login.device}</h4>
+                  <h4 className="history-device">Last known</h4>
                   <p className="history-details">
-                    <FaMapMarkerAlt /> {login.location} • IP: {login.ip}
+                    <FaMapMarkerAlt /> Unknown • IP: Unknown
                   </p>
-                  <p className="history-time">{login.time}</p>
+                  <p className="history-time">Unknown</p>
                 </div>
                 <div className="history-badge">
-                  <span className={`status-badge ${login.status}`}>
-                    {login.status === 'success' ? 'Successful' : 'Failed'}
-                  </span>
+                  <span className={`status-badge unknown`}>No Data</span>
                 </div>
               </div>
-            ))}
+            ) : (
+              loginHistory.map((login) => {
+                const location = login.location || 'Unknown';
+                const ip = login.ip || 'Unknown';
+                let timeText = 'Unknown';
+                try {
+                  const t = Date.parse(login.time);
+                  timeText = isNaN(t) ? String(login.time) : new Date(t).toLocaleString();
+                } catch { timeText = String(login.time) }
+
+                return (
+                  <div key={login.id} className="history-item">
+                    <div className={`history-status ${login.status}`}>
+                      {login.status === 'success' ? <FaCheckCircle /> : <FaExclamationTriangle />}
+                    </div>
+                    <div className="history-info">
+                      <h4 className="history-device">{login.device || 'Last known'}</h4>
+                      <p className="history-details">
+                        <FaMapMarkerAlt /> {location} • IP: {ip}
+                      </p>
+                      <p className="history-time">{timeText}</p>
+                    </div>
+                    <div className="history-badge">
+                      <span className={`status-badge ${login.status}`}>
+                        {login.status === 'success' ? 'Successful' : 'Failed'}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
       </div>

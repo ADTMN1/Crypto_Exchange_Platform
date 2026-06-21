@@ -122,7 +122,7 @@ export default function BinarySettingsPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
-                <label htmlFor="payout_percentage" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="payout_percentage" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                   Payout Percentage (%)
                 </label>
                 <input
@@ -134,20 +134,12 @@ export default function BinarySettingsPage() {
                   max="100"
                   value={formData.payout_percentage}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(169,255,232,0.12)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '1rem',
-                  }}
+                  className="nex-input"
                 />
               </div>
 
               <div>
-                <label htmlFor="min_trade_amount" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="min_trade_amount" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                   Minimum Trade Amount (USDT)
                 </label>
                 <input
@@ -158,20 +150,12 @@ export default function BinarySettingsPage() {
                   min="0"
                   value={formData.min_trade_amount}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(169,255,232,0.12)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '1rem',
-                  }}
+                  className="nex-input"
                 />
               </div>
 
               <div>
-                <label htmlFor="max_trade_amount" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="max_trade_amount" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                   Maximum Trade Amount (USDT)
                 </label>
                 <input
@@ -182,21 +166,13 @@ export default function BinarySettingsPage() {
                   min="0"
                   value={formData.max_trade_amount}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(169,255,232,0.12)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '1rem',
-                  }}
+                  className="nex-input"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="allowed_expirations" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <label htmlFor="allowed_expirations" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                 Allowed Expirations (seconds, comma-separated)
               </label>
               <input
@@ -206,15 +182,7 @@ export default function BinarySettingsPage() {
                 value={formData.allowed_expirations}
                 onChange={handleChange}
                 placeholder="30,60,300,600"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(169,255,232,0.12)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                }}
+                className="nex-input"
               />
               <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
                 Example: 30,60,300,600 (30 sec, 1 min, 5 min, 10 min)
@@ -222,7 +190,7 @@ export default function BinarySettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="allowed_pairs" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <label htmlFor="allowed_pairs" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                 Allowed Trading Pairs (comma-separated)
               </label>
               <input
@@ -232,15 +200,7 @@ export default function BinarySettingsPage() {
                 value={formData.allowed_pairs}
                 onChange={handleChange}
                 placeholder="BTC/USDT,ETH/USDT,SOL/USDT"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(169,255,232,0.12)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                }}
+                className="nex-input"
               />
             </div>
 
@@ -248,8 +208,7 @@ export default function BinarySettingsPage() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="nex-btn-primary"
-                style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+                className="nex-button nex-button-primary"
               >
                 {isSaving ? 'Saving...' : 'Save Settings'}
               </button>

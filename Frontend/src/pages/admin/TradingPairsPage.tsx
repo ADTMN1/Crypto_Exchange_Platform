@@ -154,8 +154,7 @@ export default function TradingPairsPage() {
         </div>
         <button
           onClick={handleCreate}
-          className="nex-btn-primary"
-          style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+          className="nex-button nex-button-primary"
         >
           + Add Pair
         </button>
@@ -265,23 +264,33 @@ export default function TradingPairsPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.75)',
+          background: 'rgba(0,0,0,0.85)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
+          backdropFilter: 'blur(4px)'
         }} onClick={() => setIsModalOpen(false)}>
           <div style={{
-            background: '#1a1a2e',
+            background: 'var(--surface)',
+            borderRadius: '16px',
             padding: '2rem',
-            borderRadius: '12px',
             maxWidth: '600px',
             width: '100%',
             margin: '1rem',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
           }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '1.5rem', color: 'white' }}>
-              {editingPair ? 'Edit Trading Pair' : 'Create Trading Pair'}
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.5rem' }}>
+                {editingPair ? 'Edit Trading Pair' : 'Create Trading Pair'}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '2rem', cursor: 'pointer', padding: '0.25rem' }}
+              >
+                ×
+              </button>
+            </div>
             
             {error && (
               <div style={{ padding: '1rem', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444' }}>
@@ -289,10 +298,10 @@ export default function TradingPairsPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div>
-                  <label htmlFor="base_currency" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="base_currency" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Base Currency
                   </label>
                   <input
@@ -303,19 +312,11 @@ export default function TradingPairsPage() {
                     onChange={handleChange}
                     placeholder="BTC"
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
                 <div>
-                  <label htmlFor="quote_currency" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="quote_currency" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Quote Currency
                   </label>
                   <input
@@ -326,22 +327,14 @@ export default function TradingPairsPage() {
                     onChange={handleChange}
                     placeholder="USDT"
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div>
-                  <label htmlFor="min_order_size" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="min_order_size" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Min Order Size
                   </label>
                   <input
@@ -353,19 +346,11 @@ export default function TradingPairsPage() {
                     value={formData.min_order_size}
                     onChange={handleChange}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
                 <div>
-                  <label htmlFor="max_order_size" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="max_order_size" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Max Order Size
                   </label>
                   <input
@@ -377,22 +362,14 @@ export default function TradingPairsPage() {
                     value={formData.max_order_size}
                     onChange={handleChange}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div>
-                  <label htmlFor="price_precision" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="price_precision" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Price Precision
                   </label>
                   <input
@@ -404,19 +381,11 @@ export default function TradingPairsPage() {
                     value={formData.price_precision}
                     onChange={handleChange}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
                 <div>
-                  <label htmlFor="qty_precision" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="qty_precision" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Quantity Precision
                   </label>
                   <input
@@ -428,22 +397,14 @@ export default function TradingPairsPage() {
                     value={formData.qty_precision}
                     onChange={handleChange}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div>
-                  <label htmlFor="maker_fee" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="maker_fee" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Maker Fee (%)
                   </label>
                   <input
@@ -456,19 +417,11 @@ export default function TradingPairsPage() {
                     value={formData.maker_fee}
                     onChange={handleChange}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
                 <div>
-                  <label htmlFor="taker_fee" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'white' }}>
+                  <label htmlFor="taker_fee" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     Taker Fee (%)
                   </label>
                   <input
@@ -481,15 +434,7 @@ export default function TradingPairsPage() {
                     value={formData.taker_fee}
                     onChange={handleChange}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(169,255,232,0.12)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '1rem',
-                    }}
+                    className="nex-input"
                   />
                 </div>
               </div>
@@ -503,25 +448,23 @@ export default function TradingPairsPage() {
                   onChange={handleChange}
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
-                <label htmlFor="is_active" style={{ fontSize: '1rem', fontWeight: '500', color: 'white' }}>
+                <label htmlFor="is_active" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--text-main)' }}>
                   Active
                 </label>
               </div>
 
-              <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="nex-btn-secondary"
-                  style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+                  className="nex-button nex-button-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="nex-btn-primary"
-                  style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+                  className="nex-button nex-button-primary"
                 >
                   {isSaving ? 'Saving...' : (editingPair ? 'Update' : 'Create')}
                 </button>

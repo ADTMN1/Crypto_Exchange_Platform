@@ -1,41 +1,73 @@
-import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FaArrowUp, FaExchangeAlt, FaHeadset, FaChartLine, FaComments, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
+import { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DepositModal from '../../components/common/DepositModal';
 import LoadingOverlay from '../../components/common/LoadingOverlay';
 import walletService from '../../services/wallet.service';
+import newsService from '../../services/news.service';
+import { useWalletStore } from '../../store/useWalletStore';
 
 export default function WalletPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showBalance, setShowBalance] = useState(true);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [totalUSD, setTotalUSD] = useState<number>(0);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const navigate = useNavigate();
+  const [newsItems, setNewsItems] = useState<any[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { wallets, totalUSD, isLoading, fetchWallet } = useWalletStore();
+  const loading = isLoading && transactions.length === 0;
+
+  const formatAmount = (amount: number, currency: string) => {
+    if (currency === 'USDT') {
+      return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `${amount.toLocaleString('en-US', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}`;
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const transactionsData = await walletService.getTransactions();
+      const transactionsPayload = transactionsData?.data?.data || {};
+      setTransactions(transactionsPayload.transactions || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load transactions');
+    }
+  };
+
+  const fetchNews = async () => {
+    try {
+      setNewsLoading(true);
+      const response = await newsService.getNews(5);
+      if (response.data?.success && response.data?.data?.articles) {
+        setNewsItems(
+          response.data.data.articles.map((article: any) => ({
+            tag: article.category?.toUpperCase() || 'NEWS',
+            title: article.title,
+            source: article.source,
+            time: article.timeAgo,
+            tagColor: '#F7931A',
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to fetch news for wallet page:', err);
+    } finally {
+      setNewsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [balanceData, transactionsData] = await Promise.all([
-          walletService.getBalance(),
-          walletService.getTransactions()
-        ]);
-        // The API returns { success: true, data: { wallets, totalUSD } }
-        setWallets(balanceData?.data?.wallets || []);
-        setTotalUSD(balanceData?.data?.totalUSD || 0);
-        setTransactions(transactionsData?.data?.transactions || transactionsData?.data || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load wallet data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+    fetchWallet();
+    fetchTransactions();
+    fetchNews();
+    // Check if we're on /wallet/deposit and open the modal
+    if (location.pathname === '/wallet/deposit') {
+      setOpen(true);
+    }
+  }, [fetchWallet, location.pathname]);
 
   const cryptoData = [
     { symbol: 'BTCUSDT', volume: '1813011074362.9M', price: '$73405.92', change: '+4.34%', positive: true },
@@ -47,33 +79,21 @@ export default function WalletPage() {
     { symbol: 'XAG_USD', volume: '180000000000.0M', price: '$23.15', change: '-0.32%', positive: false },
   ];
 
-  const newsItems = [
-    { 
-      tag: 'BREAKING', 
-      title: 'Analysis: Market trends show positive momentum for BTC', 
-      source: 'investing.com', 
-      time: '27m ago',
-      tagColor: '#ef4444'
-    },
-    { 
-      tag: 'TRENDING', 
-      title: 'Bitcoin Reaches New All-Time High as Institutional Adoption Soars', 
-      source: 'TRADEZIB Trade', 
-      time: '1h ago',
-      tagColor: '#F7931A'
-    },
-    { 
-      tag: 'UPDATE', 
-      title: 'Ethereum 2.0 Upgrade Reduces Transaction Fees by 90%', 
-      source: 'Crypto Weekly', 
-      time: '2h ago',
-      tagColor: '#3b82f6'
-    },
-  ];
-
   return (
     <main className="wallet-page" style={{ position: 'relative', minHeight: '80vh' }}>
-      {loading && <LoadingOverlay message="Loading wallet data..." fullPage={false} />}
+      {loading && (
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '60px 20px',
+          color: '#F7931A'
+        }}>
+          <FaSpinner style={{ fontSize: '48px', animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: '20px', fontSize: '18px' }}>Loading wallet data...</p>
+        </div>
+      )}
       {error && <div style={{ padding: '20px', color: 'red' }}>Error: {error}</div>}
       
       {!loading && (
@@ -85,7 +105,7 @@ export default function WalletPage() {
             <h3 className="assets-label">Total Assets</h3>
             <div className="assets-amount-container">
               <h1 className="assets-amount">
-                {showBalance ? `$${totalUSD.toFixed(2)} USD` : '***********'}
+                {showBalance ? formatAmount(totalUSD, 'USDT') : '***********'}
               </h1>
               <button 
                 className="toggle-balance-btn" 
@@ -99,9 +119,19 @@ export default function WalletPage() {
               <FaArrowUp /> {wallets.length} currencies
             </p>
           </div>
-          <button className="btn-deposit" onClick={() => setOpen(true)}>Deposit</button>
-          <button className="btn-deposit" onClick={() => navigate('/wallet/withdraw')} style={{ marginLeft: '8px', background: '#333', color: '#F7931A', border: '1px solid #F7931A' }}>Withdraw</button>
-          <DepositModal open={open} onClose={() => setOpen(false)} />
+          <div className="action-buttons-container">
+            <button className="btn-deposit" onClick={() => {
+              navigate('/wallet/deposit');
+              setOpen(true);
+            }}>Deposit</button>
+            <button className="btn-deposit" onClick={() => navigate('/wallet/withdraw')} style={{ background: 'var(--surface-hover)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Withdraw</button>
+          </div>
+          <DepositModal open={open} onClose={() => {
+            setOpen(false);
+            if (location.pathname === '/wallet/deposit') {
+              navigate('/wallet');
+            }
+          }} />
         </div>
       </div>
 
@@ -128,7 +158,7 @@ export default function WalletPage() {
                     Available
                   </span>
                   <span style={{ color: '#10b981', fontSize: '0.875rem' }}>
-                    ${wallet.usdValue?.toFixed(2) || '0.00'}
+                    {formatAmount(wallet.usdValue, 'USDT')}
                   </span>
                 </div>
               </div>
@@ -172,15 +202,15 @@ export default function WalletPage() {
       <div className="quick-actions-section">
         <h2 className="section-title">Quick Actions</h2>
         <div className="quick-actions-grid">
-          <button className="action-card">
+          <button className="action-card" onClick={() => navigate('/history')}>
             <FaExchangeAlt className="action-icon" />
             <span>Transactions</span>
           </button>
-          <button className="action-card">
+          <button className="action-card" onClick={() => navigate('/trade')}>
             <FaChartLine className="action-icon" />
             <span>Trades</span>
           </button>
-          <button className="action-card">
+          <button className="action-card" onClick={() => navigate('/support')}>
             <FaHeadset className="action-icon" />
             <span>Support</span>
           </button>
@@ -197,21 +227,35 @@ export default function WalletPage() {
           <h2 className="section-title">Market Insights</h2>
           <a href="#" className="view-all-link">View All</a>
         </div>
-        <div className="news-list">
-          {newsItems.map((news, index) => (
-            <div key={index} className="news-item">
-              <span className="news-tag" style={{ backgroundColor: news.tagColor }}>
-                {news.tag}
-              </span>
-              <div className="news-content">
-                <h4 className="news-title">{news.title}</h4>
-                <p className="news-meta">
-                  {news.source} • {news.time}
-                </p>
+        {newsLoading ? (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '40px 20px',
+            color: '#F7931A'
+          }}>
+            <FaSpinner style={{ fontSize: '36px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '16px', fontSize: '14px' }}>Loading news...</p>
+          </div>
+        ) : (
+          <div className="news-list">
+            {newsItems.map((news, index) => (
+              <div key={index} className="news-item">
+                <span className="news-tag" style={{ backgroundColor: news.tagColor }}>
+                  {news.tag}
+                </span>
+                <div className="news-content">
+                  <h4 className="news-title">{news.title}</h4>
+                  <p className="news-meta">
+                    {news.source} • {news.time}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Top Cryptos */}

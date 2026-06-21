@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { FaCopy, FaCheck } from 'react-icons/fa';
 import withdrawalService, { Withdrawal } from '../../services/withdrawal.service';
 
 const fmtDate = (d?: string | null) => {
@@ -50,6 +51,7 @@ export default function WithdrawalDetailPage() {
   const [withdrawal, setWithdrawal] = useState<Withdrawal | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Approve modal
   const [showApprove, setShowApprove] = useState(false);
@@ -110,6 +112,16 @@ export default function WithdrawalDetailPage() {
       toast.error(err?.response?.data?.message || 'Failed to reject');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      toast.error('Failed to copy address');
     }
   };
 
@@ -278,7 +290,7 @@ export default function WithdrawalDetailPage() {
                 <DetailRow label="Request ID"  value={withdrawal.id} mono />
                 <DetailRow label="Amount"      value={<strong style={{ fontSize: '1.05rem' }}>{parseFloat(withdrawal.amount).toFixed(8)} {withdrawal.currency}</strong>} />
                 <DetailRow label="Fee"         value={`${parseFloat(withdrawal.fee || '0').toFixed(8)} ${withdrawal.currency}`} />
-                <DetailRow label="Net Amount"  value={<strong>{parseFloat(withdrawal.net_amount || withdrawal.amount).toFixed(8)} {withdrawal.currency}</strong>} />
+                <DetailRow label="Net Amount (after fee)"  value={<strong>{parseFloat(withdrawal.net_amount || withdrawal.amount).toFixed(8)} {withdrawal.currency}</strong>} />
                 <DetailRow label="Status"      value={<StatusBadge status={withdrawal.status} />} />
               </div>
             </div>
@@ -287,7 +299,43 @@ export default function WithdrawalDetailPage() {
             <div className="nex-card">
               <div className="nex-card-title"><h2>Destination</h2></div>
               <div className="nex-card-body" style={{ padding: '0 1.5rem 1rem' }}>
-                <DetailRow label="Address"        value={withdrawal.withdrawal_address} mono />
+                <DetailRow 
+                  label="Address"        
+                  value={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontFamily: 'monospace', wordBreak: 'break-all', flex: 1 }}>
+                        {withdrawal.withdrawal_address}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(withdrawal.withdrawal_address)}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          color: copied ? '#10b981' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          transition: 'all 0.15s',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.24)';
+                          e.currentTarget.style.color = copied ? '#10b981' : 'var(--text-main)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+                          e.currentTarget.style.color = copied ? '#10b981' : 'var(--text-muted)';
+                        }}
+                      >
+                        {copied ? <FaCheck /> : <FaCopy />}
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  } 
+                />
                 <DetailRow label="Network"        value={withdrawal.network || '—'} />
                 <DetailRow label="Payment Method" value={withdrawal.payment_method || '—'} />
               </div>
@@ -368,7 +416,7 @@ export default function WithdrawalDetailPage() {
                 <strong style={{ fontFamily: 'monospace' }}>
                   {withdrawal.withdrawal_address.slice(0,12)}…
                 </strong>.
-                This will deduct <strong>{parseFloat(withdrawal.amount).toFixed(8)} {withdrawal.currency}</strong> from the user's wallet.
+                This will deduct <strong>{parseFloat(withdrawal.amount).toFixed(8)} {withdrawal.currency}</strong> (gross) from the user's wallet, with <strong>{parseFloat(withdrawal.fee || 0).toFixed(8)} {withdrawal.currency}</strong> fee.
               </div>
               <div className="nex-form-group">
                 <label>Admin Note (optional)</label>

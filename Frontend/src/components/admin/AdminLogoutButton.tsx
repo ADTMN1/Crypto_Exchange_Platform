@@ -7,9 +7,7 @@ export default function AdminLogoutButton() {
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
-    // Navigate first to avoid route guard redirect
-    navigate("/", { replace: true });
-    // Then update auth state and clear storage
+    // Clear auth state and storage first
     logout();
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
@@ -18,6 +16,9 @@ export default function AdminLogoutButton() {
         .replace(/^ +/, "")
         .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
+    // Navigate client-side to root. Use a microtask delay so route-guards
+    // that run synchronously after state changes don't immediately redirect.
+    setTimeout(() => navigate('/', { replace: true }), 0)
   };
 
   return (

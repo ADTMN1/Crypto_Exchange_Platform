@@ -70,11 +70,7 @@ api.interceptors.response.use(
         const storedRefreshToken = localStorage.getItem('refreshToken')
 
         // Call refresh — backend reads cookie OR body refreshToken, returns new accessToken in body
-        const refreshResponse = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/refresh-token`,
-          storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
-          { withCredentials: true }
-        )
+        const refreshResponse = await api.post('/auth/refresh-token', storedRefreshToken ? { refreshToken: storedRefreshToken } : {})
 
         const newAccessToken = refreshResponse.data?.accessToken
         if (!newAccessToken) throw new Error('No access token returned from refresh')

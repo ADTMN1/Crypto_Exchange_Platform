@@ -1,4 +1,5 @@
 import { useMarketData } from '../../hooks/useMarketData';
+import { FaSpinner } from 'react-icons/fa';
 
 function formatTime(ts: number) {
   const d = new Date(ts);
@@ -37,7 +38,17 @@ export default function TradeMarketTrades() {
           );
         })}
         {trades.length === 0 && (
-          <div className="trade-loading">Loading trades...</div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '40px 20px',
+            color: '#F7931A'
+          }}>
+            <FaSpinner style={{ fontSize: '36px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '16px', fontSize: '14px' }}>Loading trades...</p>
+          </div>
         )}
       </div>
     </div>

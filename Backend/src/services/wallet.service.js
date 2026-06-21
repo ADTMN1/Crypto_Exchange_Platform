@@ -27,6 +27,29 @@ const uploadToCloudinary = async (file) => {
   });
 };
 
+// Helper function to calculate USD value for a given currency and amount
+const calculateUsdValue = async (currency, amount) => {
+  // If currency is USDT, amount is already USD value
+  if (currency === 'USDT') {
+    return amount;
+  }
+  
+  // For other currencies, fetch price from Binance ONCE when needed
+  try {
+    const prices = await binanceService.getAllPrices();
+    const priceMap = new Map(prices.map(p => [p.symbol, p.price]));
+    const symbol = `${currency}USDT`;
+    const price = priceMap.get(symbol);
+    if (price) {
+      return amount * price;
+    }
+  } catch (err) {
+    console.error('Error fetching price for', currency, err);
+  }
+  
+  return 0;
+};
+
 const walletService = {
   // --- Core Balance Operations ---
 
@@ -34,18 +57,21 @@ const walletService = {
     if (amount <= 0) throw new AppError('Credit amount must be positive', 400);
 
     await client.query(
-      `INSERT INTO wallets (user_id, currency, balance, locked_balance)
-       VALUES ($1, $2, 0, 0)
+      `INSERT INTO wallets (user_id, currency, balance, locked_balance, usd_value)
+       VALUES ($1, $2, 0, 0, 0)
        ON CONFLICT (user_id, currency) DO NOTHING`,
       [userId, currency]
     );
 
+    // Calculate the USD value for the amount being credited
+    const usdValueToAdd = await calculateUsdValue(currency, amount);
+
     const walletResult = await client.query(
       `UPDATE wallets
-       SET balance = balance + $1
-       WHERE user_id = $2 AND currency = $3
-       RETURNING id, balance`,
-      [amount, userId, currency]
+       SET balance = balance + $1, usd_value = usd_value + $2
+       WHERE user_id = $3 AND currency = $4
+       RETURNING id, balance, usd_value`,
+      [amount, usdValueToAdd, userId, currency]
     );
 
     if (walletResult.rows.length === 0) {
@@ -67,14 +93,14 @@ const walletService = {
     if (amount <= 0) throw new AppError('Debit amount must be positive', 400);
 
     await client.query(
-      `INSERT INTO wallets (user_id, currency, balance, locked_balance)
-       VALUES ($1, $2, 0, 0)
+      `INSERT INTO wallets (user_id, currency, balance, locked_balance, usd_value)
+       VALUES ($1, $2, 0, 0, 0)
        ON CONFLICT (user_id, currency) DO NOTHING`,
       [userId, currency]
     );
 
     const walletResult = await client.query(
-      `SELECT id, balance FROM wallets
+      `SELECT id, balance, usd_value FROM wallets
        WHERE user_id = $1 AND currency = $2
        FOR UPDATE`,
       [userId, currency]
@@ -90,11 +116,17 @@ const walletService = {
       throw new AppError('INSUFFICIENT_BALANCE', 400);
     }
 
+    // Calculate the proportion of usd_value to subtract
+    const currentTotalBalance = parseFloat(wallet.balance) + parseFloat(wallet.locked_balance);
+    const usdValueToSubtract = currentTotalBalance > 0 
+      ? (amount / currentTotalBalance) * parseFloat(wallet.usd_value) 
+      : 0;
+
     await client.query(
       `UPDATE wallets
-       SET balance = balance - $1
-       WHERE id = $2`,
-      [amount, wallet.id]
+       SET balance = balance - $1, usd_value = usd_value - $2
+       WHERE id = $3`,
+      [amount, usdValueToSubtract, wallet.id]
     );
 
     await client.query(
@@ -246,7 +278,7 @@ const walletService = {
 
   getBalance: async (userId) => {
     const result = await query(
-      `SELECT id, currency, balance, locked_balance, created_at
+      `SELECT id, currency, balance, locked_balance, usd_value, created_at
        FROM wallets
        WHERE user_id = $1
        ORDER BY currency`,
@@ -254,48 +286,20 @@ const walletService = {
     );
     const wallets = result.rows;
     
-    try {
-      // Get all prices from Binance
-      const prices = await binanceService.getAllPrices();
-      const priceMap = new Map(prices.map(p => [p.symbol, p.price]));
-      
-      let totalUSD = 0;
-      
-      const walletsWithUsd = wallets.map(wallet => {
-        let usdValue = 0;
-        
-        // If currency is USDT, value is just balance
-        if (wallet.currency === 'USDT') {
-          usdValue = parseFloat(wallet.balance);
-        } else {
-          // Try to get price for {currency}USDT
-          const symbol = `${wallet.currency}USDT`;
-          const price = priceMap.get(symbol);
-          if (price) {
-            usdValue = parseFloat(wallet.balance) * price;
-          }
-        }
-        
-        totalUSD += usdValue;
-        
-        return {
-          ...wallet,
-          usdValue
-        };
-      });
-      
+    let totalUSD = 0;
+    
+    const walletsWithUsd = wallets.map(wallet => {
+      totalUSD += parseFloat(wallet.usd_value);
       return {
-        wallets: walletsWithUsd,
-        totalUSD
+        ...wallet,
+        usdValue: parseFloat(wallet.usd_value)
       };
-    } catch (err) {
-      console.error('Error fetching prices for wallet balance:', err);
-      // Fallback: return wallets without USD values
-      return {
-        wallets: wallets.map(w => ({ ...w, usdValue: 0 })),
-        totalUSD: 0
-      };
-    }
+    });
+    
+    return {
+      wallets: walletsWithUsd,
+      totalUSD
+    };
   },
 
   getTransactions: async (userId, page = 1, limit = 20) => {
@@ -483,20 +487,43 @@ const walletService = {
     try {
       await client.query('BEGIN');
 
-      // Get the transaction details
+      // Lock the pending deposit so it cannot be approved twice.
       const txResult = await client.query(
-        `SELECT * FROM transactions WHERE id = $1`,
+        `SELECT * FROM transactions
+         WHERE id = $1 AND type = 'deposit'
+         FOR UPDATE`,
         [transactionId]
       );
       if (txResult.rows.length === 0) {
-        throw new AppError('Transaction not found', 404);
+        throw new AppError('Deposit transaction not found', 404);
       }
       const transaction = txResult.rows[0];
 
-      // Credit the user's wallet
-      await walletService.credit(transaction.user_id, transaction.currency, parseFloat(transaction.amount), 'ADMIN_APPROVE', client);
+      if (transaction.status !== 'pending') {
+        throw new AppError(`Deposit is already ${transaction.status}`, 400);
+      }
 
-      // Update the transaction status
+      // Calculate USD value to add
+      const usdValueToAdd = await calculateUsdValue(transaction.currency, transaction.amount);
+
+      const walletResult = await client.query(
+        `UPDATE wallets
+         SET balance = balance + $1, usd_value = usd_value + $2
+         WHERE id = $3 AND user_id = $4 AND currency = $5
+         RETURNING id, user_id, currency, balance, locked_balance, usd_value`,
+        [
+          transaction.amount,
+          usdValueToAdd,
+          transaction.wallet_id,
+          transaction.user_id,
+          transaction.currency
+        ]
+      );
+
+      if (walletResult.rows.length === 0) {
+        throw new AppError('Wallet update failed', 500);
+      }
+
       await client.query(
         `UPDATE transactions 
          SET status = 'completed', confirmed_at = CURRENT_TIMESTAMP 
@@ -505,7 +532,18 @@ const walletService = {
       );
 
       await client.query('COMMIT');
-      return { success: true, message: 'Deposit approved' };
+      return {
+        success: true,
+        message: 'Deposit approved',
+        userId: transaction.user_id,
+        wallet: walletResult.rows[0],
+        transaction: {
+          id: transaction.id,
+          currency: transaction.currency,
+          amount: transaction.amount,
+          status: 'completed'
+        }
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

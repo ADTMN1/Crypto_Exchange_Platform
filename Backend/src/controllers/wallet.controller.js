@@ -2,6 +2,7 @@ import walletService from '../services/wallet.service.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
 import notificationService from '../services/notification.service.js';
+import { emitToUser } from '../websocket/socket.js';
 
 const walletController = {
 
@@ -208,11 +209,18 @@ const walletController = {
         return next(new AppError('Transaction ID is required', 400));
       }
 
-      await walletService.approveDeposit(transactionId, req.user.id);
+      const result = await walletService.approveDeposit(transactionId, req.user.id);
+
+      emitToUser(result.userId, 'wallet:updated', {
+        reason: 'deposit_approved',
+        wallet: result.wallet,
+        transaction: result.transaction
+      });
 
       res.status(200).json({
         success: true,
-        message: 'Deposit approved successfully'
+        message: 'Deposit approved successfully',
+        data: result
       });
 
       auditController.auditingSave(req, 'Approved deposit', 'admin_wallet', null, { transactionId })

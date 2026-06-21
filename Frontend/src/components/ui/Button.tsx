@@ -16,7 +16,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       className={`rounded-lg px-4 py-2 text-white transition-colors ${
-        className || "bg-blue-600 hover:bg-blue-700"
+        className || "bg-[#4CF4A5] hover:bg-[#3bcca0] text-[#0d0d0d]"
       }`}
     >
       {children}

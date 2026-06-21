@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaSpinner } from 'react-icons/fa';
 import {
   createChart,
   type IChartApi,
@@ -346,7 +347,21 @@ export default function TradeChart() {
 
       <div className="trade-chart-container">
         {klinesLoading && (
-          <div className="trade-chart-loading">Loading chart history...</div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '60px 20px',
+            color: '#F7931A',
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            backgroundColor: '#0b0e11'
+          }}>
+            <FaSpinner style={{ fontSize: '48px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '20px', fontSize: '18px' }}>Loading chart history...</p>
+          </div>
         )}
         <div className="trade-chart-ma-legend">
           <span className="trade-ma7">MA(7): {maValues.ma7.toFixed(2)}</span>

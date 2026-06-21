@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   FaBell, FaCheckCircle, FaExclamationTriangle, FaInfoCircle,
   FaArrowDown, FaExchangeAlt, FaShieldAlt, FaUserCheck,
-  FaTrash, FaCheckDouble, FaFilter,
+  FaTrash, FaCheckDouble, FaFilter, FaSpinner,
 } from 'react-icons/fa';
 import { toast } from 'sonner';
 import notificationService, { UserNotification } from '../../services/notification.service';
@@ -141,9 +141,16 @@ export default function NotificationsPage() {
 
       <div className="notifications-content">
         {isLoading ? (
-          <div className="loading-state">
-            <div className="spinner" />
-            <p>Loading notifications...</p>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '60px 20px',
+            color: '#F7931A'
+          }}>
+            <FaSpinner style={{ fontSize: '48px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '20px', fontSize: '18px' }}>Loading notifications...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">

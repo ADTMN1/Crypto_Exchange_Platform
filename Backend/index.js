@@ -8,7 +8,7 @@ import app from './app.js';
 import { query } from './src/config/db.config.js';
 import redisClient from './src/config/redis.config.js';
 import { initializeWebSocket } from './src/websocket/socket.js';
-import './src/jobs/tradeResolver.js';
+import { startBinaryTradeResolver, stopBinaryTradeResolver } from './src/jobs/tradeResolver.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -23,21 +23,55 @@ async function startServer() {
 		await redisClient.ping();
 		console.log('✅ Redis connection established successfully.');
 
+		startBinaryTradeResolver();
+
 		// Wrap Express app in an HTTP server so Socket.IO can share the same port
 		const httpServer = createServer(app);
 
 		// Initialize WebSocket with enhanced trading features
 		const io = initializeWebSocket(httpServer);
 
-		httpServer.listen(PORT, () => {
-			console.log(`🚀 Production runtime active on port [${PORT}] under [${process.env.NODE_ENV || 'development'}] mode.`);
-		});
+		// Robust listen: handle EADDRINUSE and optionally retry on next ports
+		const startingPort = Number(PORT);
+		const maxRetries = Number(process.env.PORT_RETRY_COUNT) || 5;
+
+		const tryListen = (server, port, remainingRetries) => {
+			server.once('error', (err) => {
+				if (err && err.code === 'EADDRINUSE') {
+					console.error(`❌ Port ${port} is already in use.`);
+					if (remainingRetries > 0) {
+						const nextPort = port + 1;
+						console.log(`🔁 Attempting to bind to port ${nextPort} (${remainingRetries} retries left)...`);
+						// try next port
+						tryListen(server, nextPort, remainingRetries - 1);
+						server.listen(nextPort);
+					} else {
+						console.error('❌ No available ports found after retries. Exiting.');
+						process.exit(1);
+					}
+				} else {
+					console.error('❌ Server error during bind:', err);
+					process.exit(1);
+				}
+			});
+
+			server.once('listening', () => {
+				console.log(`🚀 Production runtime active on port [${port}] under [${process.env.NODE_ENV || 'development'}] mode.`);
+				// cleanup transient listeners
+				server.removeAllListeners('error');
+			});
+
+			server.listen(port);
+		};
+
+		tryListen(httpServer, startingPort, maxRetries);
 
 		// --- Graceful Teardown Sequences ---
 		const initiateShutdown = (signal) => {
 			console.log(`\n🚨 Received ${signal}. Stopping server connections smoothly...`);
 
 			httpServer.close(() => {
+				stopBinaryTradeResolver();
 				console.log('🛑 Active HTTP connections drained. Infrastructure closed safely.');
 				process.exit(0);
 			});

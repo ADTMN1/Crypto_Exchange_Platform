@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import Router from "./router";
 import { Toaster } from "sonner";
 import StoreProvider from "./components/StoreProvider";
+import { SocketProvider } from "./components/providers/SocketProvider";
 
 export default function App() {
   useEffect(() => {
@@ -31,8 +32,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <StoreProvider>
-        <Toaster richColors position="top-right" />
-        <Router />
+        <SocketProvider>
+          <Toaster richColors position="top-right" />
+          <Router />
+        </SocketProvider>
       </StoreProvider>
     </BrowserRouter>
   );
