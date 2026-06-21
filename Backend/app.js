@@ -17,7 +17,7 @@ const app = express();
 // Log all incoming requests
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Request headers:', req.headers);
+  // console.log('Request headers:', req.headers);
   next();
 });
 

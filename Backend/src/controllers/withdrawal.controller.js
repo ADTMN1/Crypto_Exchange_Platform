@@ -1,6 +1,7 @@
 import withdrawalService from '../services/withdrawal.service.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
+import notificationService from '../services/notification.service.js';
 
 const withdrawalController = {
 
@@ -32,6 +33,13 @@ const withdrawalController = {
 
       auditController.auditingSave(req, 'Created withdrawal request', 'withdrawal', req.user.id, { amount, currency })
         .catch((err) => console.error('Audit save failed:', err));
+
+      notificationService.sendAdminAlert({
+        type: 'WITHDRAWAL_REQUESTED',
+        title: 'New Withdrawal Request',
+        body: `User ${req.user.email} submitted a withdrawal request for ${amount} ${currency || 'USDT'}.`,
+        metadata: { userId: req.user.id, amount, currency, withdrawalId: withdrawal.id },
+      }).catch((err) => console.error('Admin alert (withdrawal request) failed:', err));
     } catch (error) {
       next(error);
     }
@@ -109,6 +117,13 @@ const withdrawalController = {
 
       auditController.auditingSave(req, `${status} withdrawal`, 'admin_withdrawal', null, { withdrawalId, status })
         .catch((err) => console.error('Audit save failed:', err));
+
+      notificationService.sendAdminAlert({
+        type: status === 'APPROVED' ? 'WITHDRAWAL_APPROVED' : 'WITHDRAWAL_REJECTED',
+        title: `Withdrawal ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
+        body: `Withdrawal ${withdrawalId} was ${status.toLowerCase()} by admin ${req.user.email}.`,
+        metadata: { withdrawalId, status, adminId: req.user.id },
+      }).catch((err) => console.error('Admin alert (withdrawal status) failed:', err));
     } catch (error) {
       next(error);
     }

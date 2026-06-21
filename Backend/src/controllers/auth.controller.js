@@ -1,6 +1,7 @@
 import authService from '../services/auth.service.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
+import notificationService from '../services/notification.service.js';
 import { generateToken, refreshToken } from '../utils/generateToken.js';
 import { cookieOptions } from '../utils/cookiesOption.js';
 import { OAuth2Client } from 'google-auth-library';
@@ -70,6 +71,13 @@ const AuthController = {
             });
             auditController.auditingSave(req, 'User registered', 'user', newUser.id, { email: newUser.email, username: newUser.username }, newUser.id)
                 .catch((err) => console.error('Audit save failed:', err));
+
+            notificationService.sendAdminAlert({
+              type: 'USER_REGISTERED',
+              title: 'New User Registration',
+              body: `${newUser.username} (${newUser.email}) registered a new account.`,
+              metadata: { userId: newUser.id, email: newUser.email, username: newUser.username },
+            }).catch((err) => console.error('Admin alert (registration) failed:', err));
             return;
         } catch (error) {
             next(error); // Bubbles error up to central error handling middleware in app.js

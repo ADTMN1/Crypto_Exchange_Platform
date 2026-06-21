@@ -1,5 +1,6 @@
 import SupportService from '../services/support.service.js';
 import auditController from './audit.controller.js';
+import notificationService from '../services/notification.service.js';
 
 const SupportController = {
     createTicket: async (req, res, next) => {
@@ -37,7 +38,6 @@ const SupportController = {
                 });
             }
 
-            // Async Auditing
             auditController.auditingSave(
                 req,
                 finalIsSpam ? 'Created support ticket (flagged as spam)' : 'Created support ticket',
@@ -45,6 +45,15 @@ const SupportController = {
                 ticket.id,
                 { category, subject, spam_score: finalSpamScore }
             ).catch((err) => console.error('Audit save failed:', err));
+
+            if (!finalIsSpam) {
+              notificationService.sendAdminAlert({
+                type: 'SUPPORT_TICKET_CREATED',
+                title: 'New Support Ticket',
+                body: `${name} opened a support ticket: "${subject}" (${category}).`,
+                metadata: { ticketId: ticket.id, userId, category, subject },
+              }).catch((err) => console.error('Admin alert (support ticket) failed:', err));
+            }
 
         } catch (error) {
             next(error);

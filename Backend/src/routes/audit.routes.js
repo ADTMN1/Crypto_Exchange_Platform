@@ -6,6 +6,7 @@ const auditRouter = express.Router();
 
 auditRouter.use(authenticateToken);
 // Admins only: allow pagination and viewing all audit logs
-auditRouter.get('/audit-logs', requireAdmin, auditController.auditingFetch);
+auditRouter.get('/audit-logs',      requireAdmin, auditController.auditingFetch);
+auditRouter.get('/login-history',   requireAdmin, auditController.loginHistoryFetch);
 
 export default auditRouter;

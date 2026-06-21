@@ -1,6 +1,7 @@
 import userService from '../services/user.sevice.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
+import notificationService from '../services/notification.service.js';
 
 const userController = {
 
@@ -182,6 +183,13 @@ if(!req.user || !req.user.id) {
       res.status(200).json({ success: true, message: 'User banned successfully.' });
       auditController.auditingSave(req, 'Banned user', 'admin_user_management', req.params.userId)
           .catch((err) => console.error('Audit save failed:', err));
+
+      notificationService.sendAdminAlert({
+        type: 'USER_BANNED',
+        title: 'User Account Banned',
+        body: `Admin ${req.user.email} banned user ${req.params.userId}.`,
+        metadata: { targetUserId: req.params.userId, adminId: req.user.id },
+      }).catch((err) => console.error('Admin alert (ban user) failed:', err));
       return;
     } catch (error) {
       next(error);

@@ -1,4 +1,4 @@
-import api from './api.service';
+import api, { API_ENDPOINTS } from './api.service';
 
 export interface UserNotification {
   notification_id: string;
@@ -20,6 +20,20 @@ export interface AdminNotification {
   created_at: string;
 }
 
+// Admin bell notification — one row per notification_recipient for admin users
+export interface AdminBellNotification {
+  id: string; // notification_recipient.id
+  notification_id: string;
+  type: string;
+  title: string;
+  body: string;
+  metadata: Record<string, any> | null;
+  created_at: string;
+  is_read: boolean;
+  read_at: string | null;
+  admin_user_id: string;
+}
+
 export interface UserNotificationsResponse {
   success: boolean;
   message: string;
@@ -35,11 +49,37 @@ export interface AdminNotificationsResponse {
   success: boolean;
   message: string;
   data: {
-    notifications: AdminNotification[];
+    notifications: AdminBellNotification[];
     total: number;
     page: number;
     limit: number;
   };
+}
+
+export interface AdminUnreadCountResponse {
+  success: boolean;
+  data: { unread_count: number };
+}
+
+export interface NotificationHistoryResponse {
+  success: boolean;
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalCount: number;
+  data: Array<{
+    notification_id: string;
+    type: string;
+    title: string;
+    body: string;
+    metadata: any;
+    created_at: string;
+    user_id: string;
+    is_read: boolean;
+    read_at: string | null;
+    recipient_username: string | null;
+    recipient_email: string | null;
+  }>;
 }
 
 const notificationService = {
@@ -51,9 +91,33 @@ const notificationService = {
   },
 
   getAdminNotifications: async (page = 1, limit = 20): Promise<AdminNotificationsResponse> => {
-    const response = await api.get<AdminNotificationsResponse>('/notifications/admin', {
+    const response = await api.get<AdminNotificationsResponse>(API_ENDPOINTS.ADMIN.NOTIFICATIONS, {
       params: { page, limit },
     });
+    return response.data;
+  },
+
+  getAdminUnreadCount: async (): Promise<number> => {
+    const response = await api.get<AdminUnreadCountResponse>(API_ENDPOINTS.ADMIN.NOTIFICATIONS_UNREAD_COUNT);
+    return response.data.data.unread_count;
+  },
+
+  markAdminNotificationRead: async (recipientId: string): Promise<void> => {
+    await api.patch(API_ENDPOINTS.ADMIN.NOTIFICATION_READ(recipientId));
+  },
+
+  markAllAdminNotificationsRead: async (): Promise<void> => {
+    await api.patch(API_ENDPOINTS.ADMIN.NOTIFICATIONS_READ_ALL);
+  },
+
+  getNotificationHistory: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    type?: string;
+    userId?: string;
+  } = {}): Promise<NotificationHistoryResponse> => {
+    const response = await api.get<NotificationHistoryResponse>(API_ENDPOINTS.ADMIN.NOTIFICATION_HISTORY, { params });
     return response.data;
   },
 
