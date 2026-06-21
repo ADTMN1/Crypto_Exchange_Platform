@@ -1,7 +1,6 @@
 import express from 'express';
 import binaryController from '../controllers/binary.controller.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.midlware.js';
-import { checkTradingGateWithAdminBypass } from '../middleware/gate.middleware.js';
 
 const binaryRouter = express.Router();
 
@@ -12,7 +11,8 @@ binaryRouter.get('/settings', binaryController.getSettings);
 binaryRouter.use(authenticateToken);
 
 // ─── USER ROUTES ────────────────────────────────────────────────────────────
-binaryRouter.post('/trade', checkTradingGateWithAdminBypass, binaryController.placeTrade);
+// Note: gate check intentionally removed — gate closed = lose at resolution, not block placement
+binaryRouter.post('/trade', binaryController.placeTrade);
 binaryRouter.get('/my-trades', binaryController.getMyTrades);
 
 // ─── ADMIN ROUTES ───────────────────────────────────────────────────────────
