@@ -16,8 +16,6 @@ export const SUPPORTED_SYMBOLS = [
  * Shared fetch wrapper — adds timeout and normalises Binance error responses.
  */
 const binanceFetch = async (url) => {
-    console.log(`[binanceFetch] Request URL: ${url}`);
-    
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -25,7 +23,6 @@ const binanceFetch = async (url) => {
     try {
         response = await fetch(url, { signal: controller.signal });
     } catch (err) {
-        console.error(`[binanceFetch] Network error:`, err);
         if (err.name === 'AbortError') {
             throw new AppError('Binance API request timed out. Please try again.', 504);
         }
@@ -35,19 +32,14 @@ const binanceFetch = async (url) => {
         clearTimeout(timer);
     }
 
-    console.log(`[binanceFetch] Response status: ${response.status}`);
-    let responseBody;
-    try {
-        responseBody = await response.json();
-        console.log(`[binanceFetch] Response body:`, responseBody);
-    } catch (parseErr) {
-        console.error(`[binanceFetch] Failed to parse response body:`, parseErr);
-        responseBody = null;
-    }
-
     if (!response.ok) {
         let binanceMsg = `Binance API returned status ${response.status}.`;
-        if (responseBody?.msg) binanceMsg = responseBody.msg;
+        try {
+            const body = await response.json();
+            if (body?.msg) binanceMsg = body.msg;
+        } catch {
+            // Body not JSON — keep default message
+        }
 
         // Map Binance HTTP status to meaningful codes
         if (response.status === 400) throw new AppError(binanceMsg, 400);
@@ -56,7 +48,11 @@ const binanceFetch = async (url) => {
         throw new AppError(binanceMsg, response.status);
     }
 
-    return responseBody;
+    try {
+        return await response.json();
+    } catch {
+        throw new AppError('Received malformed response from Binance API.', 502);
+    }
 };
 
 const binanceService = {
@@ -83,13 +79,11 @@ const binanceService = {
     },
 
     /**
-     * GET /fapi/v1/ticker/price?symbol=BTCUSDT
+     * GET /api/v3/ticker/price?symbol=BTCUSDT
      * Fetches latest price for a single symbol.
      */
     getPrice: async (symbol = 'BTCUSDT') => {
-        console.log(`[binanceService.getPrice] Received symbol: ${symbol}`);
         const upper = binanceService.validateSymbol(symbol);
-        console.log(`[binanceService.getPrice] Validated symbol: ${upper}`);
         const url   = `${BINANCE_REST_BASE}/fapi/v1/ticker/price?symbol=${upper}`;
         const data  = await binanceFetch(url);
 

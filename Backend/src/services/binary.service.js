@@ -86,11 +86,9 @@ const binaryService = {
       console.log('[binary.service] Pair validated');
 
       // Get entry price
-    console.log('[binary.service] Getting entry price');
-    console.log('[binary.service] Trading pair from frontend:', pair);
-    console.log('[binary.service] Normalized pair:', normalizedPair);
-    const entryPrice = await priceService.getPrice(normalizedPair);
-    console.log('[binary.service] Got entry price:', entryPrice);
+      console.log('[binary.service] Getting entry price');
+      const entryPrice = await priceService.getPrice(normalizedPair);
+      console.log('[binary.service] Got entry price:', entryPrice);
 
       // Calculate expiry
       const expiresAt = new Date(Date.now() + duration * 1000);

@@ -16,11 +16,8 @@ const priceService = {
    */
   getPrice: async (pair) => {
     try {
-      console.log('[priceService.getPrice] Received pair:', pair);
       const normalizedPair = normalizePair(pair);
-      console.log('[priceService.getPrice] Normalized pair:', normalizedPair);
       const priceData = await binanceService.getPrice(normalizedPair);
-      console.log('[priceService.getPrice] Got price data:', priceData);
       return priceData.price;
     } catch (error) {
       console.error('Error fetching price from Binance:', error.message);
