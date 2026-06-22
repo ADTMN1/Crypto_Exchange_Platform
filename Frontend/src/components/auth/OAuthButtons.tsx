@@ -22,7 +22,7 @@ export default function OAuthButtons() {
     
     if (window.google && buttonDiv && !buttonDiv.hasChildNodes()) {
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
+        client_id: (import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID').trim(),
         callback: handleGoogleLogin,
       });
 
@@ -47,9 +47,17 @@ export default function OAuthButtons() {
       const data = await authService.googleLogin(idToken);
 
       if (data.success) {
-        // Tokens are automatically stored in httpOnly cookies
+        // Store tokens in localStorage and update auth store
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        
         // Update auth state
-        login(data.user);
+        const userToStore = {
+          ...data.user,
+          profile_image: data.user.profile_image || data.user.profile_picture_url,
+          profile_picture_url: data.user.profile_picture_url || data.user.profile_image,
+        };
+        login(userToStore, data.accessToken, data.refreshToken);
         
         toast.success('Google login successful!', {
           style: {
@@ -62,7 +70,7 @@ export default function OAuthButtons() {
         });
         
         // Redirect based on user role
-        if (data.user.role === 'admin') {
+        if (userToStore.role === 'admin') {
           navigate('/admin');
         } else {
           navigate('/');

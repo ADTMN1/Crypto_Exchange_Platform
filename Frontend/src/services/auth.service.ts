@@ -96,16 +96,20 @@ const authService = {
     success: boolean
     message: string
     user: any
+    accessToken: string
+    refreshToken: string
   }> {
     const response = await api.post('/auth/google', { token })
-    const { user, success, message } = response.data
+    const { user, success, message, accessToken, refreshToken } = response.data
     return {
       success,
       message,
       user: {
         ...user,
         profile_image: user.profile_image || user.profile_picture_url
-      }
+      },
+      accessToken,
+      refreshToken
     }
   },
 
