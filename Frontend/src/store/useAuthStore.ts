@@ -46,15 +46,17 @@ export const useAuthStore = create<AuthState>()(
       },
       initialize: () => {
         try {
-          // Check if we have a user stored (but don't rely on tokens from localStorage)
+          // The persist middleware should handle rehydration, but just to be safe
           const authStorage = localStorage.getItem('auth-storage');
           if (authStorage) {
             const parsedStorage = JSON.parse(authStorage);
             const { state } = parsedStorage;
-            if (state?.user) {
+            if (state) {
               set({
-                user: state.user,
-                isAuthenticated: state.isAuthenticated,
+                user: state.user || null,
+                isAuthenticated: state.isAuthenticated || false,
+                accessToken: state.accessToken || null,
+                refreshToken: state.refreshToken || null,
                 isLoading: false,
               });
             } else {
@@ -78,10 +80,12 @@ export const useAuthStore = create<AuthState>()(
           state.isLoading = false;
         }
       },
-      // Add partialize to prevent circular reference issues AND NOT persist tokens in localStorage
+      // Add partialize to prevent circular reference issues
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
     }
   )
