@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 // API Configuration
-const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform.onrender.com'
+const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform-1.onrender.com'
 const API_CONFIG = {
   baseURL: `${VITE_API_BASE}/api`,
   timeout: 30000,

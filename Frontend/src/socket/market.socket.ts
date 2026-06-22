@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform.onrender.com';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform-1.onrender.com';
 
 export interface PriceUpdatePayload {
   symbol: string;
