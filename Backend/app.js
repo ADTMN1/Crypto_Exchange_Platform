@@ -10,6 +10,7 @@ import router from './src/routes/route.index.js';
 import dotenv from 'dotenv';
 import globalErrorHandler from './src/middleware/errorMiddleware.js';
 import AppError from './src/utils/errorHandling.js';
+import { SUPPORTED_SYMBOLS } from './src/services/binance.service.js';
 dotenv.config();
 const app = express();
 
@@ -114,60 +115,48 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken });
 });
 
-// 11. Temporary Binance API debug endpoint
-app.get('/api/test-binance', async (req, res) => {
+// 11. Temporary debug endpoints for Binance symbols
+app.get('/api/test-binance-symbols', async (req, res) => {
+  console.log('[DEBUG] Testing all supported Binance symbols...');
+  const results = [];
   const BINANCE_REST_BASE = process.env.BINANCE_REST_BASEURL || 'https://fapi.binance.com';
-  const url = `${BINANCE_REST_BASE}/fapi/v1/ticker/price?symbol=BTCUSDT`;
-  const REQUEST_TIMEOUT_MS = 8000;
-
-  console.log(`[DEBUG] Calling Binance: ${url}`);
-
-  let response;
-  let responseBody;
-  let responseStatus;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    response = await fetch(url, { signal: controller.signal });
-    responseStatus = response.status;
-    responseBody = await response.json();
-    
-    console.log(`[DEBUG] Binance response status: ${responseStatus}`);
-    console.log(`[DEBUG] Binance response body:`, responseBody);
-
-    res.status(200).json({
-      success: response.ok,
-      url,
-      status: responseStatus,
-      body: responseBody
-    });
-
-  } catch (error) {
-    console.error(`[DEBUG] Binance request failed:`, error);
-
-    const errorResponse = {
-      success: false,
-      url,
-      status: 500,
-      body: error.message
-    };
-
-    if (error.name === 'AbortError') {
-      errorResponse.status = 408;
-      errorResponse.body = 'Request timeout';
-    } else if (error.cause?.code === 'ENOTFOUND') {
-      errorResponse.body = 'Network error: Could not resolve Binance API';
+  
+  for (const symbol of SUPPORTED_SYMBOLS) {
+    console.log(`[DEBUG] Testing symbol: ${symbol}`);
+    try {
+      const url = `${BINANCE_REST_BASE}/fapi/v1/ticker/price?symbol=${symbol}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      const body = await response.json();
+      results.push({
+        symbol,
+        success: response.ok,
+        status: response.status,
+        body,
+      });
+      
+      console.log(`[DEBUG] Symbol ${symbol}: ${response.ok ? 'SUCCESS' : 'FAILED'} (${response.status})`);
+    } catch (err) {
+      results.push({
+        symbol,
+        success: false,
+        error: err.message,
+      });
+      console.error(`[DEBUG] Symbol ${symbol} failed:`, err);
     }
-
-    res.status(200).json(errorResponse);
-  } finally {
-    clearTimeout(timeoutId);
   }
+  
+  res.status(200).json({
+    success: true,
+    results,
+  });
 });
 
-// 11. CSRF protection disabled for debugging - re-enable after verifying login works!
+// 12. CSRF protection disabled for debugging - re-enable after verifying login works!
 // app.use('/api', (req, res, next) => {
 //   // Skip CSRF for GET, HEAD, OPTIONS, and csrf-token endpoint
 //   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/csrf-token') {
