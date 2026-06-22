@@ -61,14 +61,15 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     // Only attempt refresh on 401 — 403 means forbidden (e.g. not admin), not expired token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login') && !originalRequest.url?.includes('/auth/register') && !originalRequest.url?.includes('/auth/send-otp')) {
       originalRequest._retry = true
 
       try {
         const storedRefreshToken = localStorage.getItem('refreshToken')
+        if (!storedRefreshToken) throw new Error('No refresh token available')
 
         // Call refresh — backend reads cookie OR body refreshToken, returns new accessToken in body
-        const refreshResponse = await api.post('/auth/refresh-token', storedRefreshToken ? { refreshToken: storedRefreshToken } : {})
+        const refreshResponse = await api.post('/auth/refresh-token', { refreshToken: storedRefreshToken })
 
         const newAccessToken = refreshResponse.data?.accessToken
         if (!newAccessToken) throw new Error('No access token returned from refresh')
@@ -82,7 +83,10 @@ api.interceptors.response.use(
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('auth-storage')
-        window.location.href = '/login'
+        // Don't redirect if already on login/register page
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+          window.location.href = '/login'
+        }
       }
     }
 
