@@ -13,7 +13,7 @@ const SocketContext = createContext<SocketContextType>({ socket: null });
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const { updateWalletFromEvent } = useWalletStore();
-  const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', {
+  const socket = io(import.meta.env.VITE_WS_URL, {
     auth: {
       token: localStorage.getItem('token') || '',
     },

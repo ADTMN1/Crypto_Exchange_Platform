@@ -19,7 +19,7 @@ export const useWebSocketPrice = (symbol: string) => {
 
   useEffect(() => {
     // Connect to WebSocket server
-    const socket = io(import.meta.env.VITE_WS_URL || 'ws://localhost:5000', {
+    const socket = io(import.meta.env.VITE_WS_URL, {
       transports: ['websocket'],
       autoConnect: true,
     });
