@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const backendUrl = process.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform.onrender.com'
+const backendUrl = process.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform-1.onrender.com'
 
 export default defineConfig({
   plugins: [react()],
