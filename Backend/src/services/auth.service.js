@@ -398,7 +398,7 @@ const authService = {
         // Send OTP via Resend
         try {
             const { data, error } = await resend.emails.send({
-                from: 'Crypto Exchange <onboarding@resend.dev>',
+                from: process.env.RESEND_FROM_EMAIL || 'Crypto Exchange <onboarding@resend.dev>',
                 to: [email],
                 subject: 'Your OTP for Crypto Exchange Registration',
                 html: `
@@ -419,14 +419,22 @@ const authService = {
 
             if (error) {
                 console.error('Resend error:', error);
-                throw new AppError('Failed to send OTP email', 500);
+                throw new AppError(error.message || 'Failed to send OTP email', 500);
             }
         } catch (err) {
             console.error('Error sending OTP:', err);
             // Fallback to logging OTP if email fails
             console.log(`🔐 OTP for ${email}: ${otp}`);
+
+            if (process.env.NODE_ENV === 'development') {
+                return {
+                    message: 'OTP logged to server console (Development fallback)',
+                    otp: otp
+                };
+            }
+            throw err;
         }
-        
+
         return { message: 'OTP sent successfully' };
     },
 
@@ -476,7 +484,7 @@ const authService = {
         try {
             const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
             const { error } = await resend.emails.send({
-                from: 'Crypto Exchange <onboarding@resend.dev>',
+                from: process.env.RESEND_FROM_EMAIL || 'Crypto Exchange <onboarding@resend.dev>',
                 to: [email],
                 subject: 'Reset Your Password',
                 html: `
@@ -497,9 +505,20 @@ const authService = {
 
             if (error) {
                 console.error('Resend error:', error);
+                throw new AppError(error.message || 'Failed to send password reset email', 500);
             }
         } catch (err) {
             console.error('Error sending reset email:', err);
+
+            if (process.env.NODE_ENV === 'development') {
+                const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+                console.log(`🔑 Reset Link for ${email}: ${resetLink}`);
+                return {
+                    message: 'If an account exists for this email, we have sent password reset instructions. (Development fallback: check server console)',
+                    resetLink: resetLink
+                };
+            }
+            throw err;
         }
 
         return { message: 'If an account exists for this email, we have sent password reset instructions.' };

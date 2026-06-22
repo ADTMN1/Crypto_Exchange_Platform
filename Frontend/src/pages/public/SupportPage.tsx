@@ -106,7 +106,7 @@ export default function SupportPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/support/tickets', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/support/tickets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

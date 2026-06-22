@@ -21,7 +21,8 @@ const AuthController = {
             const result = await authService.sendOTP(email);
             res.status(200).json({
                 success: true,
-                message: result.message
+                message: result.message,
+                ...(result.otp && { otp: result.otp })
             });
         } catch (error) {
             next(error);
@@ -258,7 +259,8 @@ if(!email || !password) {
             const result = await authService.forgotPassword(email);
             res.status(200).json({
                 success: true,
-                message: result.message
+                message: result.message,
+                ...(result.resetLink && { resetLink: result.resetLink })
             });
         } catch (error) {
             next(error);

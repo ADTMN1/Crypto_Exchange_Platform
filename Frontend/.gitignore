@@ -9,4 +9,6 @@ build/
 .idea/
 .vscode/
 *.sublime-project
-*.sublime-workspace
+*.sublime-workspace.env.local
+.env.production
+.env.local

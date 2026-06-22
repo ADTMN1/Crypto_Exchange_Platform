@@ -1,10 +1,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 // API Configuration
-const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL
 const API_CONFIG = {
   baseURL: `${VITE_API_BASE}/api`,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
