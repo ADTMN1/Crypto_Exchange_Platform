@@ -1,15 +1,18 @@
-import { FaBell, FaCog, FaUserCircle, FaSearch } from 'react-icons/fa'
+import { FaBell, FaCog, FaUserCircle, FaSearch, FaBars } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
-import Logo from '../assets/image.svg'
+import { useMobileSidebar } from '../context/MobileSidebarContext'
+import Logo from '../assets/logo.svg'
 import AssetDropdown from './AssetDropdown'
 
 function Header() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
+  const { toggle } = useMobileSidebar()
   const [imageError, setImageError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
   // Helper function to check if image URL is valid
   const isValidImageUrl = (url) => {
@@ -26,19 +29,28 @@ function Header() {
     if (e.key === 'Enter' && searchQuery.trim()) {
       // Navigate to markets page with search query as a URL parameter
       navigate(`/markets?search=${encodeURIComponent(searchQuery.trim())}`)
+      setMobileSearchOpen(false)
     }
   }
 
   return (
     <header className="header">
       <div className="header-left">
+        {/* Mobile nav toggle */}
+        <button 
+          className="mobile-nav-toggle icon-btn" 
+          onClick={toggle}
+          title="Menu"
+        >
+          <FaBars size={20} />
+        </button>
         <div className="logo">
           <img src={Logo} alt="CryptoExchange Logo" className="logo-icon" />
           <span className="logo-text">CryptoExchange</span>
         </div>
       </div>
       <div className="header-center">
-        <div className="search-bar">
+        <div className={`search-bar ${mobileSearchOpen ? 'mobile-open' : ''}`}>
           <FaSearch className="search-icon" style={{ color: '#F7931A' }} />
           <input 
             type="text" 
@@ -48,6 +60,13 @@ function Header() {
             onKeyPress={handleSearch}
           />
         </div>
+        {/* Mobile search button */}
+        <button 
+          className="icon-btn" 
+          onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+        >
+          <FaSearch size={20} />
+        </button>
       </div>
       <div className="header-right">
         <AssetDropdown />
