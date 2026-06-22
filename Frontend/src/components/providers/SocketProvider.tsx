@@ -13,7 +13,7 @@ const SocketContext = createContext<SocketContextType>({ socket: null });
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const { updateWalletFromEvent } = useWalletStore();
-  const socket = io(import.meta.env.VITE_WS_URL, {
+  const socket = io(import.meta.env.VITE_WS_URL || 'wss://crypto-exchange-platform.onrender.com', {
     auth: {
       token: localStorage.getItem('token') || '',
     },
