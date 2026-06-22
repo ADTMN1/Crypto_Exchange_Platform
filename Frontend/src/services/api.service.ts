@@ -41,9 +41,11 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
 
-    // Add CSRF token for state-changing requests - fetch new one every time for safety
+    // Add CSRF token for state-changing requests - cache the token to avoid rate limits
     if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
-      await fetchCsrfToken(); // Always fetch fresh token
+      if (!csrfToken) {
+        await fetchCsrfToken();
+      }
       if (csrfToken) {
         config.headers['x-csrf-token'] = csrfToken;
       }
