@@ -8023,4 +8023,191 @@ body {
   .nex-page-grid-2 {
     grid-template-columns: 1fr;
   }
+}/* ==========================
+   MOBILE RESPONSIVE STYLES
+   ========================== */
+
+/* Header responsive */
+@media (max-width: 1024px) {
+  .search-bar {
+    width: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+  }
+
+  .search-bar {
+    display: none;
+  }
+
+  .search-bar.mobile-open {
+    display: flex;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: 100%;
+    border-radius: 0 0 12px 12px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    z-index: 100;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+  
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mobile-nav-toggle {
+    display: flex !important;
+  }
+
+  .header-center {
+    gap: 8px;
+  }
+
+  .header-right .icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Sidebar drawer for mobile */
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 999;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-header {
+    justify-content: space-between;
+    padding: 16px;
+  }
+
+  .mobile-sidebar-close {
+    display: block !important;
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 20px;
+  }
+
+  .mobile-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 998;
+  }
+  
+  .mobile-sidebar-overlay.open {
+    display: block;
+  }
+
+  .content {
+    margin-left: 0;
+    padding: 24px 16px;
+  }
+
+  .content.collapsed {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: 16px 12px;
+  }
+
+  .assets-card {
+    padding: 24px;
+  }
+
+  .assets-amount {
+    font-size: 24px;
+  }
+
+  .coins-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .auth-card {
+    padding: 24px;
+  }
+  
+  .auth-title {
+    font-size: 24px;
+  }
+}
+
+/* Mobile table styles */
+@media (max-width: 768px) {
+  .admin-table-row {
+    grid-template-columns: 1fr;
+    min-width: auto;
+    gap: 8px;
+    padding: 16px;
+  }
+  
+  .admin-table-row.head {
+    display: none;
+  }
+  
+  .admin-table-row div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .admin-table-row div::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  
+  .admin-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Trading page responsive */
+@media (max-width: 1024px) {
+  .trade-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Wallet cards responsive */
+@media (max-width: 640px) {
+  .action-buttons-container {
+    width: 100%;
+  }
+  
+  .btn-deposit {
+    width: 100%;
+  }
+  
+  .news-item {
+    flex-direction: column;
+  }
 }
