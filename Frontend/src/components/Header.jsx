@@ -2,7 +2,7 @@ import { FaBell, FaCog, FaUserCircle, FaSearch } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
-import Logo from '../assets/logo.svg'
+import Logo from '../assets/image.svg'
 import AssetDropdown from './AssetDropdown'
 
 function Header() {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "../../store";
+import logoImage from "../../assets/image.svg";
 import {
   FaAward,
   FaBell,
@@ -278,7 +279,7 @@ export default function AdminOverviewPage() {
       <div className="nex-admin-shell">
         <aside className="nex-sidebar">
           <div className="nex-brand">
-            <div className="nex-brand-mark">C</div>
+            <img src={logoImage} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
             <span>CryptoProp</span>
           </div>
 
