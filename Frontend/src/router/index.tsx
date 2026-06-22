@@ -432,6 +432,7 @@ export default function Router() {
                 "/admin/manage-referral",
                 "/admin/subscribers",
                 "/admin/report",
+                "/admin/report-request",
               ];
               return !unwantedPaths.some((prefix) => section.path.startsWith(prefix));
             })
