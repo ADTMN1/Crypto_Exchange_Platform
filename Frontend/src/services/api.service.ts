@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 // API Configuration
-const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL
+const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform.onrender.com'
 const API_CONFIG = {
   baseURL: `${VITE_API_BASE}/api`,
   timeout: 30000,
@@ -41,11 +41,9 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
 
-    // Add CSRF token for state-changing requests
+    // Add CSRF token for state-changing requests - fetch new one every time for safety
     if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
-      if (!csrfToken) {
-        await fetchCsrfToken();
-      }
+      await fetchCsrfToken(); // Always fetch fresh token
       if (csrfToken) {
         config.headers['x-csrf-token'] = csrfToken;
       }

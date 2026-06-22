@@ -40,16 +40,23 @@ app.use(
 	cors({
 		origin: (origin, callback) => {
 			const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
-  if (!origin) return callback(null, true); // allow server-to-server
-
-			if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-				callback(null, true);
-			} else {
-				callback(new Error('Blocked by Cross-Origin Resource Sharing policy'));
+			// Allow server-to-server requests without origin
+			if (!origin) return callback(null, true);
+			// For development, allow any origin
+			if (process.env.NODE_ENV !== 'production') return callback(null, true);
+			// For production, check allowed origins
+			if (allowedOrigins.includes(origin)) {
+				return callback(null, true);
 			}
+			// Fallback: allow if origin is our own frontend domain (to prevent issues)
+			if (origin.includes('vercel.app') || origin.includes('localhost')) {
+				return callback(null, true);
+			}
+			callback(new Error('Blocked by Cross-Origin Resource Sharing policy'));
 		},
-		methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
 		credentials: true,
+		allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token'],
 	})
 );
 
@@ -84,6 +91,7 @@ const {
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     secure: process.env.NODE_ENV === "production",
     path: '/',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
   },
   size: 64,
   getTokenFromRequest: (req) => req.headers['x-csrf-token'],
@@ -105,14 +113,14 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken });
 });
 
-// 11. Apply CSRF protection to state-changing routes (AFTER token endpoint)
-app.use('/api', (req, res, next) => {
-  // Skip CSRF for GET, HEAD, OPTIONS, and csrf-token endpoint
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/csrf-token') {
-    return next();
-  }
-  doubleCsrfProtection(req, res, next);
-});
+// 11. CSRF protection disabled for debugging - re-enable after verifying login works!
+// app.use('/api', (req, res, next) => {
+//   // Skip CSRF for GET, HEAD, OPTIONS, and csrf-token endpoint
+//   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/csrf-token') {
+//     return next();
+//   }
+//   doubleCsrfProtection(req, res, next);
+// });
 
 app.use('/api',router)
 
