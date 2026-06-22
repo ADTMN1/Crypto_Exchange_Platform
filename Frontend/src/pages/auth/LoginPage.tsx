@@ -54,20 +54,31 @@ const loginUserInStore = useAuthStore((state) => state.login);
       });
 
       if (response?.user) {
-        // We don't store tokens in localStorage anymore - they're in httpOnly cookies!
-        
-        // First, set initial login to get latest profile data from backend!
-        const latestUser = await userService.getProfile();
-        const userToStore = {
-          ...latestUser,
-          profile_image: latestUser.profile_image || latestUser.profile_picture_url,
-          profile_picture_url: latestUser.profile_picture_url || latestUser.profile_image,
+        // First, store tokens in localStorage and update auth store
+        localStorage.setItem('token', response.accessToken);
+        localStorage.setItem('refreshToken', response.refreshToken);
+        const initialUserToStore = {
+          ...response.user,
+          profile_image: response.user.profile_image || response.user.profile_picture_url,
+          profile_picture_url: response.user.profile_picture_url || response.user.profile_image,
         };
-        
-        loginUserInStore(userToStore, response.accessToken ?? null, response.refreshToken ?? null)
+        loginUserInStore(initialUserToStore, response.accessToken, response.refreshToken);
+
+        // Now try to get the latest profile data (optional, but nice to have)
+        try {
+          const latestUser = await userService.getProfile();
+          const userToStore = {
+            ...latestUser,
+            profile_image: latestUser.profile_image || latestUser.profile_picture_url,
+            profile_picture_url: latestUser.profile_picture_url || latestUser.profile_image,
+          };
+          loginUserInStore(userToStore, response.accessToken, response.refreshToken);
+        } catch (profileError) {
+          console.warn("Could not fetch latest profile, using initial user data:", profileError);
+        }
 
         // Redirect based on user role
-        if (userToStore.role === "admin") {
+        if (initialUserToStore.role === "admin") {
           navigate("/admin");
         } else {
           navigate("/");

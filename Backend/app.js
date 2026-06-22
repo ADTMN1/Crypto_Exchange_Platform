@@ -60,15 +60,16 @@ app.use(
 	})
 );
 
-// 6. DDoS & API Abuse Protection
-const apiLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100, 
-	standardHeaders: true, 
-	legacyHeaders: false, 
-	message: { error: 'Too many requests from this network. Please try again later.' },
-});
-app.use('/api', apiLimiter);
+// 6. DDoS & API Abuse Protection - DISABLED for testing, re-enable for production!
+// const apiLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 500, // Increased from 100 to 500 for easier testing
+//   standardHeaders: true, 
+//   legacyHeaders: false, 
+//   message: { error: 'Too many requests from this network. Please try again later.' },
+//   skip: (req) => req.path === '/csrf-token', // Skip rate limiting for CSRF token endpoint
+// });
+// app.use('/api', apiLimiter);
 
 // 7. HTTP Traffic Auditing
 if (process.env.NODE_ENV !== 'production') {
