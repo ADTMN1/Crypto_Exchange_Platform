@@ -30,27 +30,27 @@ export default function StoreProvider({ children }: StoreProviderProps) {
   }, [initialize]);
 
   // Fetch user profile on app load if authenticated
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (isAuthenticated && updateUser) {
-        try {
-          const profile = await userService.getProfile();
-          // Ensure both profile_image and profile_picture_url are set
-          updateUser({
-            ...profile,
-            profile_image: profile.profile_image || profile.profile_picture_url,
-            profile_picture_url: profile.profile_picture_url || profile.profile_image,
-          });
-        } catch (error) {
-          console.error('Failed to fetch user profile on load:', error);
-        }
-      }
-    };
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (isAuthenticated && updateUser) {
+                try {
+                    const profile = await userService.getProfile();
+                    // Ensure both profile_image and profile_picture_url are set
+                    updateUser({
+                        ...profile,
+                        profile_image: profile.profile_image || profile.profile_picture_url,
+                        profile_picture_url: profile.profile_picture_url || profile.profile_image,
+                    });
+                } catch (error) {
+                    console.error('Failed to fetch user profile on load:', error);
+                }
+            }
+        };
 
-    if (isInitialized) {
-      fetchProfile();
-    }
-  }, [isAuthenticated, isInitialized, updateUser]);
+        if (isInitialized && isAuthenticated) {
+            fetchProfile();
+        }
+    }, [isInitialized, isAuthenticated, updateUser]);
 
   if (!isInitialized) {
     return (

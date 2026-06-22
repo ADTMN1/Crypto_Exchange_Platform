@@ -58,34 +58,21 @@ const loginUserInStore = useAuthStore((state) => state.login);
         localStorage.setItem('token', response.accessToken);
         localStorage.setItem('refreshToken', response.refreshToken);
         const initialUserToStore = {
-          ...response.user,
-          profile_image: response.user.profile_image || response.user.profile_picture_url,
-          profile_picture_url: response.user.profile_picture_url || response.user.profile_image,
+            ...response.user,
+            profile_image: response.user.profile_image || response.user.profile_picture_url,
+            profile_picture_url: response.user.profile_picture_url || response.user.profile_image,
         };
         loginUserInStore(initialUserToStore, response.accessToken, response.refreshToken);
 
-        // Now try to get the latest profile data (optional, but nice to have)
-        try {
-          const latestUser = await userService.getProfile();
-          const userToStore = {
-            ...latestUser,
-            profile_image: latestUser.profile_image || latestUser.profile_picture_url,
-            profile_picture_url: latestUser.profile_picture_url || latestUser.profile_image,
-          };
-          loginUserInStore(userToStore, response.accessToken, response.refreshToken);
-        } catch (profileError) {
-          console.warn("Could not fetch latest profile, using initial user data:", profileError);
-        }
-
         // Redirect based on user role
         if (initialUserToStore.role === "admin") {
-          navigate("/admin");
+            navigate("/admin");
         } else {
-          navigate("/");
+            navigate("/dashboard"); // Navigate to dashboard instead of home
         }
-      } else {
+    } else {
         navigate("/");
-      }
+    }
     } catch (error: any) {
 
       const message =  error?.response?.data?.message || error?.message || "Login failed.";
