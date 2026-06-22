@@ -32,20 +32,7 @@ export function useAuth() {
     }
     
     // Update store with initial user data
-    loginStore(initialUser, response.accessToken, response.refreshToken)
-    
-    // Try to fetch latest profile data
-    try {
-      const latestUser = await userService.getProfile()
-      const userToStore: User = {
-        ...latestUser,
-        profile_image: latestUser.profile_image || latestUser.profile_picture_url,
-        profile_picture_url: latestUser.profile_picture_url || latestUser.profile_image,
-      }
-      loginStore(userToStore, response.accessToken, response.refreshToken)
-    } catch (profileError) {
-      console.warn("Could not fetch latest profile, using initial user data:", profileError)
-    }
+        loginStore(initialUser, response.accessToken, response.refreshToken)
     
     return response
   }, [loginStore])

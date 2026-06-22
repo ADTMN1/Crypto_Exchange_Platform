@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import { useAuthStore } from '../store'
 
 // API Configuration
 const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform-1.onrender.com'
@@ -35,8 +36,9 @@ api.interceptors.request.use(
   async (config) => {
     console.log('Making API request to:', config.baseURL + config.url, 'with config:', config)
     
-    // Add auth token from localStorage (fallback for cookie)
-    const token = localStorage.getItem('token')
+    // Add auth token from store (fallback to localStorage for cookie)
+    const store = useAuthStore.getState()
+    const token = store.accessToken || localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -67,7 +69,8 @@ api.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        const storedRefreshToken = localStorage.getItem('refreshToken')
+        const store = useAuthStore.getState()
+        const storedRefreshToken = store.refreshToken || localStorage.getItem('refreshToken')
         if (!storedRefreshToken) throw new Error('No refresh token available')
 
         // Call refresh — backend reads cookie OR body refreshToken, returns new accessToken in body
@@ -76,19 +79,15 @@ api.interceptors.response.use(
         const newAccessToken = refreshResponse.data?.accessToken
         if (!newAccessToken) throw new Error('No access token returned from refresh')
 
-        // Persist new token and retry
+        // Persist new token and update store!
         localStorage.setItem('token', newAccessToken)
+        useAuthStore.setState({ accessToken: newAccessToken })
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
         return api(originalRequest)
-      } catch {
-        // Refresh failed — clear everything and send to login
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('auth-storage')
-        // Don't redirect if already on login/register page
-        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-          window.location.href = '/login'
-        }
+      } catch (err) {
+        // Only clear everything if not on login/register page
+        console.warn('Refresh token failed:', err)
+        // Don't clear auth store or redirect immediately - let the protected route handle it
       }
     }
 
