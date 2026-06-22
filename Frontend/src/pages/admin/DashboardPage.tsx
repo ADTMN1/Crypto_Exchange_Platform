@@ -165,7 +165,6 @@ const menuItems = [
   { label: "Audit Log",            path: "/admin/audit",                icon: FaHistory   },
   { label: "Notification History", path: "/admin/notification-history", icon: FaBell      },
   { label: "System Setting",       path: "/admin/system-settings",      icon: FaCog       },
-  { label: "Report & Request",     path: "/admin/report-request",       icon: FaClipboard },
 ];
 
 // ─── component ───────────────────────────────────────────────────────────────

@@ -163,6 +163,11 @@ body {
   gap: 16px;
 }
 
+/* Hide mobile hamburger on desktop by default */
+.mobile-nav-toggle {
+  display: none !important;
+}
+
 .logo {
   display: flex;
   align-items: center;
