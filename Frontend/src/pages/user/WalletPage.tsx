@@ -100,188 +100,191 @@ export default function WalletPage() {
         <>
           {/* Total Assets Card */}
           <div className="assets-card">
-        <div className="assets-header">
-          <div>
-            <h3 className="assets-label">Total Assets</h3>
-            <div className="assets-amount-container">
-              <h1 className="assets-amount">
-                {showBalance ? formatAmount(totalUSD, 'USDT') : '***********'}
-              </h1>
-              <button 
-                className="toggle-balance-btn" 
-                onClick={() => setShowBalance(!showBalance)}
-                title={showBalance ? 'Hide balance' : 'Show balance'}
-              >
-                {showBalance ? <FaEyeSlash /> : <FaEye />}
+            <div className="assets-header">
+              <div>
+                <h3 className="assets-label">Total Assets</h3>
+                <div className="assets-amount-container" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <h1 className="assets-amount">
+                    {showBalance ? formatAmount(totalUSD, 'USDT') : '***********'}
+                  </h1>
+                  <button 
+                    className="toggle-balance-btn" 
+                    onClick={() => setShowBalance(!showBalance)}
+                    title={showBalance ? 'Hide balance' : 'Show balance'}
+                    style={{ minWidth: '44px', minHeight: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {showBalance ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+                <p className="assets-change positive">
+                  <FaArrowUp /> {wallets.length} currencies
+                </p>
+              </div>
+              <div className="action-buttons-container">
+                <button className="btn-deposit" onClick={() => {
+                  navigate('/wallet/deposit');
+                  setOpen(true);
+                }} style={{ minHeight: '48px' }}>Deposit</button>
+                <button className="btn-deposit" onClick={() => navigate('/wallet/withdraw')} style={{ background: 'var(--surface-hover)', color: 'var(--primary)', border: '1px solid var(--primary)', minHeight: '48px' }}>Withdraw</button>
+              </div>
+              <DepositModal open={open} onClose={() => {
+                setOpen(false);
+                if (location.pathname === '/wallet/deposit') {
+                  navigate('/wallet');
+                }
+              }} />
+            </div>
+          </div>
+
+          {/* Wallet Balances */}
+          {!loading && wallets.length > 0 && (
+            <div className="top-cryptos-section" style={{ marginTop: '24px' }}>
+              <div className="section-header">
+                <h2 className="section-title">Your Wallets</h2>
+              </div>
+              <div className="crypto-table" style={{ overflowX: 'auto', width: '100%', borderRadius: '16px' }}>
+                {wallets.map((wallet, index) => (
+                  <div key={index} className="crypto-row" style={{ minWidth: '320px' }}>
+                    <div className="crypto-info">
+                      <span className="crypto-symbol">{wallet.currency}</span>
+                      <span className="crypto-volume">
+                        Locked: {parseFloat(wallet.locked_balance).toFixed(8)}
+                      </span>
+                    </div>
+                    <div className="crypto-stats">
+                      <span className="crypto-price">
+                        {parseFloat(wallet.balance).toFixed(8)}
+                      </span>
+                      <span className="crypto-change positive">
+                        Available
+                      </span>
+                      <span style={{ color: '#10b981', fontSize: '0.875rem' }}>
+                        {formatAmount(wallet.usdValue, 'USDT')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Transactions */}
+          {!loading && transactions.length > 0 && (
+            <div className="market-insights-section" style={{ marginTop: '24px' }}>
+              <div className="section-header">
+                <h2 className="section-title">Recent Transactions</h2>
+              </div>
+              <div className="news-list">
+                {transactions.slice(0, 5).map((tx, index) => (
+                  <div key={index} className="news-item" style={{ minHeight: '64px' }}>
+                    <span 
+                      className="news-tag" 
+                      style={{ 
+                        backgroundColor: tx.type === 'deposit' ? '#28a745' : '#dc3545',
+                        minWidth: '80px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {tx.type.toUpperCase()}
+                    </span>
+                    <div className="news-content">
+                      <h4 className="news-title">
+                        {tx.amount} {tx.currency} - {tx.status}
+                      </h4>
+                      <p className="news-meta">
+                        {new Date(tx.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="quick-actions-section" style={{ marginTop: '24px' }}>
+            <h2 className="section-title">Quick Actions</h2>
+            <div className="quick-actions-grid">
+              <button className="action-card" onClick={() => navigate('/history')} style={{ minHeight: '120px' }}>
+                <FaExchangeAlt className="action-icon" />
+                <span>Transactions</span>
+              </button>
+              <button className="action-card" onClick={() => navigate('/trade')} style={{ minHeight: '120px' }}>
+                <FaChartLine className="action-icon" />
+                <span>Trades</span>
+              </button>
+              <button className="action-card" onClick={() => navigate('/support')} style={{ minHeight: '120px' }}>
+                <FaHeadset className="action-icon" />
+                <span>Support</span>
+              </button>
+              <button className="action-card" style={{ minHeight: '120px' }}>
+                <FaComments className="action-icon" />
+                <span>Live Chat</span>
               </button>
             </div>
-            <p className="assets-change positive">
-              <FaArrowUp /> {wallets.length} currencies
-            </p>
           </div>
-          <div className="action-buttons-container">
-            <button className="btn-deposit" onClick={() => {
-              navigate('/wallet/deposit');
-              setOpen(true);
-            }}>Deposit</button>
-            <button className="btn-deposit" onClick={() => navigate('/wallet/withdraw')} style={{ background: 'var(--surface-hover)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Withdraw</button>
-          </div>
-          <DepositModal open={open} onClose={() => {
-            setOpen(false);
-            if (location.pathname === '/wallet/deposit') {
-              navigate('/wallet');
-            }
-          }} />
-        </div>
-      </div>
 
-      {/* Wallet Balances */}
-      {!loading && wallets.length > 0 && (
-        <div className="top-cryptos-section">
-          <div className="section-header">
-            <h2 className="section-title">Your Wallets</h2>
-          </div>
-          <div className="crypto-table">
-            {wallets.map((wallet, index) => (
-              <div key={index} className="crypto-row">
-                <div className="crypto-info">
-                  <span className="crypto-symbol">{wallet.currency}</span>
-                  <span className="crypto-volume">
-                    Locked: {parseFloat(wallet.locked_balance).toFixed(8)}
-                  </span>
-                </div>
-                <div className="crypto-stats">
-                  <span className="crypto-price">
-                    {parseFloat(wallet.balance).toFixed(8)}
-                  </span>
-                  <span className="crypto-change positive">
-                    Available
-                  </span>
-                  <span style={{ color: '#10b981', fontSize: '0.875rem' }}>
-                    {formatAmount(wallet.usdValue, 'USDT')}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Transactions */}
-      {!loading && transactions.length > 0 && (
-        <div className="market-insights-section">
-          <div className="section-header">
-            <h2 className="section-title">Recent Transactions</h2>
-          </div>
-          <div className="news-list">
-            {transactions.slice(0, 5).map((tx, index) => (
-              <div key={index} className="news-item">
-                <span 
-                  className="news-tag" 
-                  style={{ 
-                    backgroundColor: tx.type === 'deposit' ? '#28a745' : '#dc3545' 
-                  }}
-                >
-                  {tx.type.toUpperCase()}
-                </span>
-                <div className="news-content">
-                  <h4 className="news-title">
-                    {tx.amount} {tx.currency} - {tx.status}
-                  </h4>
-                  <p className="news-meta">
-                    {new Date(tx.created_at).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Quick Actions */}
-      <div className="quick-actions-section">
-        <h2 className="section-title">Quick Actions</h2>
-        <div className="quick-actions-grid">
-          <button className="action-card" onClick={() => navigate('/history')}>
-            <FaExchangeAlt className="action-icon" />
-            <span>Transactions</span>
-          </button>
-          <button className="action-card" onClick={() => navigate('/trade')}>
-            <FaChartLine className="action-icon" />
-            <span>Trades</span>
-          </button>
-          <button className="action-card" onClick={() => navigate('/support')}>
-            <FaHeadset className="action-icon" />
-            <span>Support</span>
-          </button>
-          <button className="action-card">
-            <FaComments className="action-icon" />
-            <span>Live Chat</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Market Insights */}
-      <div className="market-insights-section">
-        <div className="section-header">
-          <h2 className="section-title">Market Insights</h2>
-          <a href="#" className="view-all-link">View All</a>
-        </div>
-        {newsLoading ? (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            padding: '40px 20px',
-            color: '#F7931A'
-          }}>
-            <FaSpinner style={{ fontSize: '36px', animation: 'spin 1s linear infinite' }} />
-            <p style={{ marginTop: '16px', fontSize: '14px' }}>Loading news...</p>
-          </div>
-        ) : (
-          <div className="news-list">
-            {newsItems.map((news, index) => (
-              <div key={index} className="news-item">
-                <span className="news-tag" style={{ backgroundColor: news.tagColor }}>
-                  {news.tag}
-                </span>
-                <div className="news-content">
-                  <h4 className="news-title">{news.title}</h4>
-                  <p className="news-meta">
-                    {news.source} • {news.time}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Top Cryptos */}
-      <div className="top-cryptos-section">
-        <div className="section-header">
-          <h2 className="section-title">Top Cryptos</h2>
-          <a href="#" className="view-all-link">View More</a>
-        </div>
-        <div className="crypto-table">
-          {cryptoData.map((crypto, index) => (
-            <div key={index} className="crypto-row">
-              <div className="crypto-info">
-                <span className="crypto-symbol">{crypto.symbol}</span>
-                <span className="crypto-volume">Vol: {crypto.volume}</span>
-              </div>
-              <div className="crypto-stats">
-                <span className="crypto-price">{crypto.price}</span>
-                <span className={`crypto-change ${crypto.positive ? 'positive' : 'negative'}`}>
-                  {crypto.change}
-                </span>
-              </div>
+          {/* Market Insights */}
+          <div className="market-insights-section" style={{ marginTop: '24px' }}>
+            <div className="section-header">
+              <h2 className="section-title">Market Insights</h2>
+              <a href="#" className="view-all-link" style={{ minHeight: '32px', display: 'inline-flex', alignItems: 'center' }}>View All</a>
             </div>
-          ))}
-        </div>
-      </div>
-      </>
+            {newsLoading ? (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                padding: '40px 20px',
+                color: '#F7931A'
+              }}>
+                <FaSpinner style={{ fontSize: '36px', animation: 'spin 1s linear infinite' }} />
+                <p style={{ marginTop: '16px', fontSize: '14px' }}>Loading news...</p>
+              </div>
+            ) : (
+              <div className="news-list">
+                {newsItems.map((news, index) => (
+                  <div key={index} className="news-item" style={{ minHeight: '64px' }}>
+                    <span className="news-tag" style={{ backgroundColor: news.tagColor }}>
+                      {news.tag}
+                    </span>
+                    <div className="news-content">
+                      <h4 className="news-title" style={{ wordBreak: 'break-word' }}>{news.title}</h4>
+                      <p className="news-meta">
+                        {news.source} • {news.time}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Top Cryptos */}
+          <div className="top-cryptos-section" style={{ marginTop: '24px' }}>
+            <div className="section-header">
+              <h2 className="section-title">Top Cryptos</h2>
+              <a href="#" className="view-all-link" style={{ minHeight: '32px', display: 'inline-flex', alignItems: 'center' }}>View More</a>
+            </div>
+            <div className="crypto-table" style={{ overflowX: 'auto', width: '100%', borderRadius: '16px' }}>
+              {cryptoData.map((crypto, index) => (
+                <div key={index} className="crypto-row" style={{ minWidth: '320px' }}>
+                  <div className="crypto-info">
+                    <span className="crypto-symbol">{crypto.symbol}</span>
+                    <span className="crypto-volume">Vol: {crypto.volume}</span>
+                  </div>
+                  <div className="crypto-stats">
+                    <span className="crypto-price">{crypto.price}</span>
+                    <span className={`crypto-change ${crypto.positive ? 'positive' : 'negative'}`}>
+                      {crypto.change}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </main>
   );

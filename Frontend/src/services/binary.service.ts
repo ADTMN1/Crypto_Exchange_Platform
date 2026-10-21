@@ -24,6 +24,7 @@ export interface BinarySettings {
   max_trade_amount: number;
   allowed_expirations: number[];
   allowed_pairs: string[];
+  duration_payouts?: Record<string, number>;
   updated_at: string;
   updated_by?: string;
 }
@@ -36,6 +37,12 @@ export interface PlaceTradeRequest {
 }
 
 export interface PlaceTradeResponse {
+  success: boolean;
+  message: string;
+  data: BinaryTrade;
+}
+
+export interface GetTradeResponse {
   success: boolean;
   message: string;
   data: BinaryTrade;
@@ -76,6 +83,7 @@ const transformBinarySettings = (settings: any): BinarySettings => {
     min_trade_amount: Number(settings.min_trade_amount),
     max_trade_amount: Number(settings.max_trade_amount),
     allowed_expirations: settings.allowed_expirations.map((e: any) => Number(e)),
+    duration_payouts: settings.duration_payouts || {},
   };
 };
 
@@ -102,6 +110,14 @@ export const binaryService = {
         ...response.data.data,
         trades: response.data.data.trades.map(transformBinaryTrade)
       }
+    };
+  },
+
+  getTradeById: async (tradeId: string): Promise<GetTradeResponse> => {
+    const response = await api.get(API_ENDPOINTS.BINARY.GET_TRADE(tradeId));
+    return {
+      ...response.data,
+      data: transformBinaryTrade(response.data.data)
     };
   },
 

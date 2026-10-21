@@ -14,9 +14,7 @@ export default function OrdersPage() {
     setError(null);
     try {
       const response = await adminService.getAllOrders({ status: statusFilter || undefined });
-      if (response.success) {
-        setOrders(response.data);
-      }
+      setOrders(response.data);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load orders';
       setError(msg);
@@ -142,78 +140,160 @@ export default function OrdersPage() {
               <p>Loading orders...</p>
             </div>
           ) : (
-            <div className="nex-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>User</th>
-                    <th>Pair</th>
-                    <th>Side</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                    <th>Rate</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.length === 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className="nex-table-wrapper nex-desktop-only">
+                <table>
+                  <thead>
                     <tr>
-                      <td colSpan={10} className="nex-empty-state">
-                        <div>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                          </svg>
-                          <p>No orders found</p>
-                        </div>
-                      </td>
+                      <th>Date</th>
+                      <th>User</th>
+                      <th>Pair</th>
+                      <th>Side</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th>Rate</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Action</th>
                     </tr>
-                  ) : (
-                    filteredOrders.map((order) => {
-                      const quantity = parseFloat(order.quantity);
-                      const price = parseFloat(order.price || '0');
-                      const filledQty = parseFloat(order.filled_qty);
-                      const total = quantity * price;
-                      const isCancelable = ['open', 'partially_filled'].includes(order.status);
+                  </thead>
+                  <tbody>
+                    {filteredOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="nex-empty-state">
+                          <div>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <p>No orders found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredOrders.map((order) => {
+                        const quantity = parseFloat(order.quantity);
+                        const price = parseFloat(order.price || '0');
+                        const filledQty = parseFloat(order.filled_qty);
+                        const total = quantity * price;
+                        const isCancelable = ['open', 'partially_filled'].includes(order.status);
 
-                      return (
-                        <tr key={order.id}>
-                          <td>{formatDate(order.created_at)}</td>
-                          <td>{order.username}</td>
-                          <td><strong>{order.pair}</strong></td>
-                          <td>{getSideBadge(order.side)}</td>
-                          <td>{getTypeBadge(order.type)}</td>
-                          <td>{formatNumber(quantity)}</td>
-                          <td>${formatNumber(price)}</td>
-                          <td><strong>${formatNumber(total)}</strong></td>
-                          <td>{getStatusBadge(order.status)}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                              <button
-                                onClick={() => console.log('View order:', order.id)}
-                                className="nex-btn-xs nex-btn-primary"
-                              >
-                                View
-                              </button>
-                              {isCancelable && (
+                        return (
+                          <tr key={order.id}>
+                            <td>{formatDate(order.created_at)}</td>
+                            <td>{order.username}</td>
+                            <td><strong>{order.pair}</strong></td>
+                            <td>{getSideBadge(order.side)}</td>
+                            <td>{getTypeBadge(order.type)}</td>
+                            <td>{formatNumber(quantity)}</td>
+                            <td>${formatNumber(price)}</td>
+                            <td><strong>${formatNumber(total)}</strong></td>
+                            <td>{getStatusBadge(order.status)}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
-                                  onClick={() => handleCancelOrder(order.id)}
-                                  className="nex-btn-xs nex-btn-danger"
+                                  onClick={() => console.log('View order:', order.id)}
+                                  className="nex-btn-xs nex-btn-primary"
                                 >
-                                  Cancel
+                                  View
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                                {isCancelable && (
+                                  <button
+                                    onClick={() => handleCancelOrder(order.id)}
+                                    className="nex-btn-xs nex-btn-danger"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="nex-mobile-cards nex-mobile-only">
+                {filteredOrders.length === 0 ? (
+                  <div className="nex-empty-state">
+                    <div>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                      <p>No orders found</p>
+                    </div>
+                  </div>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const quantity = parseFloat(order.quantity);
+                    const price = parseFloat(order.price || '0');
+                    const filledQty = parseFloat(order.filled_qty);
+                    const total = quantity * price;
+                    const isCancelable = ['open', 'partially_filled'].includes(order.status);
+
+                    return (
+                      <div key={order.id} className="nex-order-card">
+                        <div className="nex-order-card-header">
+                          <div className="nex-order-pair">
+                            <strong>{order.pair}</strong>
+                          </div>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <div className="nex-order-card-body">
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">User:</span>
+                            <span className="nex-order-value">{order.username}</span>
+                          </div>
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">Date:</span>
+                            <span className="nex-order-value">{formatDate(order.created_at)}</span>
+                          </div>
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">Side:</span>
+                            <span className="nex-order-value">{getSideBadge(order.side)}</span>
+                          </div>
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">Type:</span>
+                            <span className="nex-order-value">{getTypeBadge(order.type)}</span>
+                          </div>
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">Amount:</span>
+                            <span className="nex-order-value">{formatNumber(quantity)}</span>
+                          </div>
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">Rate:</span>
+                            <span className="nex-order-value">${formatNumber(price)}</span>
+                          </div>
+                          <div className="nex-order-info-row">
+                            <span className="nex-order-label">Total:</span>
+                            <span className="nex-order-value nex-order-total">${formatNumber(total)}</span>
+                          </div>
+                        </div>
+                        <div className="nex-order-card-actions">
+                          <button
+                            onClick={() => console.log('View order:', order.id)}
+                            className="nex-btn-xs nex-btn-primary"
+                          >
+                            View
+                          </button>
+                          {isCancelable && (
+                            <button
+                              onClick={() => handleCancelOrder(order.id)}
+                              className="nex-btn-xs nex-btn-danger"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
           )}
 
           {!isLoading && filteredOrders.length > 0 && (

@@ -8,12 +8,24 @@ import app from './app.js';
 import { query } from './src/config/db.config.js';
 import redisClient from './src/config/redis.config.js';
 import { initializeWebSocket } from './src/websocket/socket.js';
-import { startBinaryTradeResolver, stopBinaryTradeResolver } from './src/jobs/tradeResolver.js';
+import { activateResolverIfNeeded, stopBinaryTradeResolver } from './src/jobs/tradeResolver.js';
+import { startArchivalJob } from './src/jobs/archivalJob.js';
+import { startDatabaseMonitoring } from './src/jobs/databaseMonitor.js';
+import { startRedisMonitoring } from './src/jobs/redisMonitor.js';
+import { initSmtp } from './src/services/auth.service.js';
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
 	try {
+		console.log('🔄 [STARTUP] =========================================');
+		console.log('🔄 [STARTUP] Starting server initialization...');
+		console.log('🔄 [STARTUP] Environment loaded from:', path.resolve(process.cwd(), '.env'));
+		console.log('🔄 [STARTUP] NODE_ENV:', process.env.NODE_ENV || 'development');
+		console.log('🔄 [STARTUP] =========================================');
+		console.log('🔄 [STARTUP] Initializing SMTP...');
+		await initSmtp();
+
 		console.log('🔄 Verifying database infrastructure availability...');
 
 		await query('SELECT 1');
@@ -23,7 +35,35 @@ async function startServer() {
 		await redisClient.ping();
 		console.log('✅ Redis connection established successfully.');
 
-		startBinaryTradeResolver();
+		// Event-driven resolver startup: Check for existing running trades
+		console.log('🔄 Checking for existing running trades...');
+		const hasRunningTrades = await query(
+			`SELECT EXISTS(
+			   SELECT 1 FROM binary_trades WHERE status = 'running'
+			 ) as has_trades`
+		);
+
+		if (hasRunningTrades.rows[0].has_trades) {
+			console.log('🔄 Running trades detected, activating resolver on startup');
+			await activateResolverIfNeeded();
+		} else {
+			console.log('✅ No running trades, resolver will remain stopped until needed');
+		}
+
+		// Start archival job (daily at 2:00 AM UTC)
+		console.log('🔄 Starting archival job...');
+		startArchivalJob();
+		console.log('✅ Archival job scheduled');
+
+		// Start database monitoring (daily at 3:00 AM UTC)
+		console.log('🔄 Starting database monitoring...');
+		startDatabaseMonitoring();
+		console.log('✅ Database monitoring scheduled');
+
+		// Start Redis memory monitoring (every 5 minutes)
+		console.log('🔄 Starting Redis memory monitoring...');
+		startRedisMonitoring();
+		console.log('✅ Redis memory monitoring scheduled');
 
 		// Wrap Express app in an HTTP server so Socket.IO can share the same port
 		const httpServer = createServer(app);

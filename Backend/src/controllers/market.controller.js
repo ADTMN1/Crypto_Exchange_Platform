@@ -284,14 +284,19 @@ export const saveFavoriteSymbols = async (req, res) => {
     const userId = req.user.id;
     
     // Clear existing favorites
-    await query('DELETE FROM user_favorite_symbols WHERE user_id = ?', [userId]);
+    await query('DELETE FROM user_favorite_symbols WHERE user_id = $1', [userId]);
     
     // Insert new favorites
     if (symbols && symbols.length > 0) {
-      const values = symbols.map(symbol => [userId, symbol]);
+      const values = [];
+      const placeholders = symbols.map((symbol, i) => {
+        values.push(userId, symbol);
+        return `($${i * 2 + 1}, $${i * 2 + 2})`;
+      });
       await query(
-        'INSERT INTO user_favorite_symbols (user_id, symbol) VALUES ?',
-        [values]
+        `INSERT INTO user_favorite_symbols (user_id, symbol) VALUES ${placeholders.join(', ')}
+         ON CONFLICT (user_id, symbol) DO NOTHING`,
+        values
       );
     }
     
@@ -315,11 +320,11 @@ export const getFavoriteSymbols = async (req, res) => {
     const userId = req.user.id;
     
     const favorites = await query(
-      'SELECT symbol FROM user_favorite_symbols WHERE user_id = ?',
+      'SELECT symbol FROM user_favorite_symbols WHERE user_id = $1',
       [userId]
     );
     
-    const symbols = favorites.map(fav => fav.symbol);
+    const symbols = favorites.rows.map(fav => fav.symbol);
     
     res.status(200).json({
       success: true,

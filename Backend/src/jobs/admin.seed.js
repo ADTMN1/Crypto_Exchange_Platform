@@ -11,11 +11,11 @@ dotenv.config({ path: envPath });
 
 // Default admin credentials (CHANGE THESE IN PRODUCTION!)
 const DEFAULT_ADMIN = {
-    email: 'admin@cryptoexchange.com',
+    email: 'admin@primealfatrade.com',
     username: 'Admin User',
     phone_number: '+1234567890',
     password: 'Admin@123456', // Strong password with uppercase, lowercase, number, and special char
-};
+}; 
 
 async function seedAdmin() {
     console.log('🔐 Initializing Admin User Seeding Sequence...');

@@ -1,4 +1,4 @@
-import userService from '../services/user.sevice.js';
+import userService from '../services/user.service.js';
 import AppError from '../utils/errorHandling.js';
 import auditController from './audit.controller.js';
 import notificationService from '../services/notification.service.js';

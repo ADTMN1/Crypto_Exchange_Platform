@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import adminService, { AdminUser } from '../../services/admin.service';
 import { toast } from 'sonner';
 import UserActionMenu from '../../components/admin/UserActionMenu';
 
 export default function AdminUsersPage() {
-  const [users, setUsers]         = useState<AdminUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const [users, setUsers]             = useState<AdminUser[]>([]);
+  const [isLoading, setIsLoading]     = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalUsers, setTotalUsers]   = useState(0);
   const [error, setError]             = useState<string | null>(null);
@@ -15,7 +17,7 @@ export default function AdminUsersPage() {
     setError(null);
     try {
       const response = await adminService.getAllUsers({
-        page: 1, limit: 20,
+        page: 1, limit: 50,
         search: searchQuery || undefined,
       });
       setUsers(response.data.users);
@@ -31,7 +33,6 @@ export default function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => fetchUsers(), 500);
     return () => clearTimeout(timer);
@@ -46,36 +47,42 @@ export default function AdminUsersPage() {
     setTotalUsers(prev => prev - 1);
   }, []);
 
-  const formatDate = (dateString: string) =>
-    new Intl.DateTimeFormat('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    }).format(new Date(dateString));
+  const formatDate = (d: string) =>
+    new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      .format(new Date(d));
 
-  const getStatusBadge = (status: AdminUser['account_status'] | null | undefined) => {
-    const s = status ?? 'pending';
-    const map: Record<string, string> = {
-      active: 'nex-badge-success', pending: 'nex-badge-warning',
-      suspended: 'nex-badge-orange', banned: 'nex-badge-danger',
-    };
-    return (
-      <span className={`nex-badge ${map[s] ?? 'nex-badge-warning'}`}>
-        {s.charAt(0).toUpperCase() + s.slice(1)}
-      </span>
-    );
+  const getTimeSince = (d: string) => {
+    const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return '1d ago';
+    if (days < 30)  return `${days}d ago`;
+    const m = Math.floor(days / 30);
+    if (m < 12) return `${m}mo ago`;
+    return `${Math.floor(m / 12)}y ago`;
   };
 
-  const getRoleBadge = (role: string | null | undefined) => {
-    const r = role ?? 'user';
-    return (
-      <span className={`nex-badge ${r === 'admin' ? 'nex-badge-purple' : 'nex-badge-info'}`}>
-        {r.charAt(0).toUpperCase() + r.slice(1)}
-      </span>
-    );
+  const statusClass = (s: string | null | undefined) => {
+    const v = s ?? 'pending';
+    if (v === 'active')    return 'mu-badge mu-badge--active';
+    if (v === 'banned')    return 'mu-badge mu-badge--banned';
+    if (v === 'suspended') return 'mu-badge mu-badge--suspended';
+    return 'mu-badge mu-badge--pending';
   };
+
+  const roleClass = (r: string | null | undefined) =>
+    (r ?? 'user') === 'admin'
+      ? 'mu-badge mu-badge--role-admin'
+      : 'mu-badge mu-badge--role-user';
+
+  const label = (v: string | null | undefined, fallback = 'pending') =>
+    (v ?? fallback).charAt(0).toUpperCase() + (v ?? fallback).slice(1);
+
+  const initials = (u: string | null | undefined) =>
+    (u ?? '?').charAt(0).toUpperCase();
 
   return (
     <main className="nex-admin-section-page">
+      {/* ── Page header ── */}
       <section className="nex-section-header">
         <div>
           <h1>All Users</h1>
@@ -84,108 +91,168 @@ export default function AdminUsersPage() {
       </section>
 
       <section className="nex-section-body">
-        <div className="nex-card">
-          <div className="nex-card-title">
-            <h2>User List</h2>
-            <div className="nex-search-box">
+        <div className="nex-card mu-card">
+
+          {/* ── Toolbar ── */}
+          <div className="mu-toolbar">
+            <div className="mu-toolbar-left">
+              <span className="mu-count">{totalUsers} users</span>
+            </div>
+            <div className="mu-search-wrap">
+              <svg className="mu-search-icon" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 type="text"
-                placeholder="Search by email or username..."
+                className="mu-search-input"
+                placeholder="Search email or username…"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="nex-search-input"
+                onChange={e => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button className="mu-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear">✕</button>
+              )}
             </div>
           </div>
 
+          {/* ── Error bar ── */}
           {error && (
-            <div style={{ padding: '1rem', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444' }}>
+            <div className="nex-error-bar">
               {error}
-              <button onClick={fetchUsers} style={{ marginLeft: '1rem', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: '#ef4444' }}>
-                Retry
-              </button>
+              <button onClick={fetchUsers} className="nex-error-retry">Retry</button>
             </div>
           )}
 
+          {/* ── Loading ── */}
           {isLoading ? (
             <div className="nex-loading">
               <div className="nex-spinner" />
-              <p>Loading users...</p>
+              <p>Loading users…</p>
             </div>
+
+          ) : users.length === 0 ? (
+            <div className="nex-empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+              <p>No users found</p>
+              {searchQuery && (
+                <button className="mu-clear-search-btn" onClick={() => setSearchQuery('')}>Clear search</button>
+              )}
+            </div>
+
           ) : (
-            <div className="nex-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Contact</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Verification</th>
-                    <th>Joined At</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.length === 0 ? (
+            <>
+              {/* ── Desktop table ── */}
+              <div className="mu-table-wrap">
+                <table className="mu-table">
+                  <thead>
                     <tr>
-                      <td colSpan={7} className="nex-empty-state">
-                        <div>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                          </svg>
-                          <p>No users found</p>
-                        </div>
-                      </td>
+                      <th>User</th>
+                      <th>Contact</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Verification</th>
+                      <th>Joined</th>
+                      <th style={{ width: 56 }}></th>
                     </tr>
-                  ) : (
-                    users.map((user) => (
-                      <tr key={user.id}>
+                  </thead>
+                  <tbody>
+                    {users.map(user => (
+                      <tr
+                        key={user.id}
+                        className="mu-table-row"
+                        onClick={() => navigate(`/admin/users/${user.id}`)}
+                      >
                         <td>
-                          <div className="nex-user-cell">
-                            <div className="nex-avatar-circle">
-                              {(user.username ?? '?').charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <strong>{user.username}</strong>
-                              <div className="nex-table-meta">@{user.username}</div>
-                            </div>
+                          <div className="mu-user-cell">
+                            <div className="mu-avatar">{initials(user.username)}</div>
+                            <span className="mu-username">{user.username}</span>
                           </div>
                         </td>
                         <td>
-                          <div>{user.email}</div>
-                          {user.phone_number && <div className="nex-table-meta">{user.phone_number}</div>}
+                          <span className="mu-email">{user.email}</span>
+                          {user.phone_number && <span className="mu-phone">{user.phone_number}</span>}
                         </td>
-                        <td>{getRoleBadge(user.role)}</td>
-                        <td>{getStatusBadge(user.account_status)}</td>
                         <td>
-                          <div className="nex-verification-badges">
-                            {user.email_verified  && <span className="nex-badge nex-badge-xs nex-badge-success">✓ Email</span>}
-                            {user.phone_verified  && <span className="nex-badge nex-badge-xs nex-badge-success">✓ Phone</span>}
-                            {user.two_fa_enabled  && <span className="nex-badge nex-badge-xs nex-badge-info">🔒 2FA</span>}
+                          <span className={roleClass(user.role)}>{label(user.role, 'user')}</span>
+                        </td>
+                        <td>
+                          <span className={statusClass(user.account_status)}>
+                            {label(user.account_status)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="aup-verif-row">
+                            <span className={`mu-badge ${user.email_verified ? 'mu-badge--active' : 'mu-badge--banned'}`}>
+                              {user.email_verified ? '✓' : '✗'} Email
+                            </span>
+                            {user.phone_verified && (
+                              <span className="mu-badge mu-badge--active">✓ Phone</span>
+                            )}
+                            {user.two_fa_enabled && (
+                              <span className="mu-badge mu-badge--pending">🔒 2FA</span>
+                            )}
                           </div>
                         </td>
                         <td>
-                          <div>{formatDate(user.created_at)}</div>
-                          {user.last_login_at && <div className="nex-table-meta">Last: {formatDate(user.last_login_at)}</div>}
+                          <span className="mu-date">{formatDate(user.created_at)}</span>
+                          <span className="mu-date-ago">{getTimeSince(user.created_at)}</span>
                         </td>
-                        <td>
-                          <UserActionMenu
-                            user={user}
-                            onUpdated={handleUpdated}
-                            onDeleted={handleDeleted}
-                          />
+                        <td onClick={e => e.stopPropagation()}>
+                          <UserActionMenu user={user} onUpdated={handleUpdated} onDeleted={handleDeleted} />
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── Mobile cards ── */}
+              <div className="mu-card-list">
+                {users.map(user => (
+                  <div
+                    key={user.id}
+                    className="mu-user-card"
+                    onClick={() => navigate(`/admin/users/${user.id}`)}
+                  >
+                    {/* Top row: avatar + info + status */}
+                    <div className="mu-card-row">
+                      <div className="mu-avatar mu-avatar--lg">{initials(user.username)}</div>
+                      <div className="mu-card-info">
+                        <span className="mu-username">{user.username}</span>
+                        <span className="mu-email">{user.email}</span>
+                        {user.phone_number && <span className="mu-phone">{user.phone_number}</span>}
+                        {/* Role + verif badges inline */}
+                        <div className="aup-card-badges">
+                          <span className={roleClass(user.role)}>{label(user.role, 'user')}</span>
+                          {user.email_verified && <span className="mu-badge mu-badge--active">✓ Email</span>}
+                          {user.two_fa_enabled && <span className="mu-badge mu-badge--pending">🔒 2FA</span>}
+                        </div>
+                      </div>
+                      <span className={statusClass(user.account_status)}>
+                        {label(user.account_status)}
+                      </span>
+                    </div>
+
+                    {/* Footer: joined + actions */}
+                    <div className="mu-card-footer">
+                      <span className="mu-date-ago">Joined {getTimeSince(user.created_at)}</span>
+                      <div onClick={e => e.stopPropagation()}>
+                        <UserActionMenu user={user} onUpdated={handleUpdated} onDeleted={handleDeleted} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {!isLoading && users.length > 0 && (
-            <div style={{ marginTop: '1rem', padding: '1rem', borderTop: '1px solid rgba(169,255,232,0.12)', color: 'var(--text-muted)', fontSize: '14px' }}>
+            <div className="mu-footer">
               Showing {users.length} of {totalUsers} users
             </div>
           )}

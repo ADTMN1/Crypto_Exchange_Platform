@@ -13,9 +13,7 @@ export default function OrderHistoryPage() {
     setError(null);
     try {
       const response = await adminService.getOrderHistory();
-      if (response.success) {
-        setOrders(response.data);
-      }
+      setOrders(response.data);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load order history';
       setError(msg);

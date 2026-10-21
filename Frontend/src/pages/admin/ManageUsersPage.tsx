@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import adminService, { AdminUser } from '../../services/admin.service';
 import { toast } from 'sonner';
 import UserActionMenu from '../../components/admin/UserActionMenu';
@@ -10,6 +11,7 @@ interface ManageUsersPageProps {
 }
 
 export default function AdminManageUsersPage({ title, description }: ManageUsersPageProps) {
+  const navigate = useNavigate();
   const [users, setUsers]             = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading]     = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +50,6 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
     }
   };
 
-  // Determine which API call to make based on page title
   const getUserFilterType = (): 'all' | 'active' | 'banned' | 'email-unverified' | 'kyc-unverified' | 'kyc-pending' => {
     if (title === 'Active Users') return 'active';
     if (title === 'Banned Users') return 'banned';
@@ -58,97 +59,54 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
     return 'all';
   };
 
-  // Fetch users based on page type
   const fetchUsers = useCallback(async () => {
-    if (isNotification) return; // Don't fetch for notification page
-
+    if (isNotification) return;
     setIsLoading(true);
     setError(null);
-
     try {
       const filterType = getUserFilterType();
       let response;
-
       switch (filterType) {
         case 'active':
-          response = await adminService.getActiveUsers({
-            page: 1,
-            limit: 50,
-            search: searchQuery || undefined,
-          });
+          response = await adminService.getActiveUsers({ page: 1, limit: 50, search: searchQuery || undefined });
           break;
-        
         case 'banned':
-          response = await adminService.getBannedUsers({
-            page: 1,
-            limit: 50,
-            search: searchQuery || undefined,
-          });
+          response = await adminService.getBannedUsers({ page: 1, limit: 50, search: searchQuery || undefined });
           break;
-        
         case 'email-unverified':
-          response = await adminService.getAllUsers({
-            page: 1,
-            limit: 50,
-            search: searchQuery || undefined,
-          });
-          response.data.users = response.data.users.filter(u => !u.email_verified);
+          response = await adminService.getAllUsers({ page: 1, limit: 50, search: searchQuery || undefined });
+          response.data.users = response.data.users.filter((u: AdminUser) => !u.email_verified);
           response.data.total = response.data.users.length;
           break;
-        
         case 'kyc-unverified':
-          response = await adminService.getAllUsers({
-            page: 1,
-            limit: 50,
-            search: searchQuery || undefined,
-          });
-          response.data.users = response.data.users.filter(u => u.kyc_status === 'unverified');
+          response = await adminService.getAllUsers({ page: 1, limit: 50, search: searchQuery || undefined });
+          response.data.users = response.data.users.filter((u: AdminUser) => u.kyc_status === 'unverified');
           response.data.total = response.data.users.length;
           break;
-        
         case 'kyc-pending':
-          response = await adminService.getAllUsers({
-            page: 1,
-            limit: 50,
-            search: searchQuery || undefined,
-          });
-          response.data.users = response.data.users.filter(u => u.kyc_status === 'pending');
+          response = await adminService.getAllUsers({ page: 1, limit: 50, search: searchQuery || undefined });
+          response.data.users = response.data.users.filter((u: AdminUser) => u.kyc_status === 'pending');
           response.data.total = response.data.users.length;
           break;
-        
         default:
-          response = await adminService.getAllUsers({
-            page: 1,
-            limit: 50,
-            search: searchQuery || undefined,
-          });
+          response = await adminService.getAllUsers({ page: 1, limit: 50, search: searchQuery || undefined });
       }
-
       setUsers(response.data.users);
       setTotalUsers(response.data.total);
     } catch (err: any) {
-      console.error('Error fetching users:', err);
-      const errorMessage = err?.response?.data?.message || 'Failed to fetch users';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const msg = err?.response?.data?.message || 'Failed to fetch users';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   }, [title, searchQuery, isNotification]);
 
-  // Initial load
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Debounced search
   useEffect(() => {
     if (isNotification) return;
-
-    const timer = setTimeout(() => {
-      fetchUsers();
-    }, 500);
-
+    const timer = setTimeout(() => fetchUsers(), 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -162,36 +120,41 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
   }, []);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+      year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(dateString));
   };
 
   const getTimeSince = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-    
-    if (diffInDays === 0) return 'Today';
-    if (diffInDays === 1) return '1 day ago';
-    if (diffInDays < 30) return `${diffInDays} days ago`;
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    if (diffInMonths === 1) return '1 month ago';
-    if (diffInMonths < 12) return `${diffInMonths} months ago`;
-    
-    const diffInYears = Math.floor(diffInMonths / 12);
-    return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`;
+    const diffInMs = Date.now() - new Date(dateString).getTime();
+    const days = Math.floor(diffInMs / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return '1d ago';
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    return `${Math.floor(months / 12)}y ago`;
   };
+
+  const statusClass = (status: string | null | undefined) => {
+    const s = status ?? 'pending';
+    if (s === 'active')    return 'mu-badge mu-badge--active';
+    if (s === 'banned')    return 'mu-badge mu-badge--banned';
+    if (s === 'suspended') return 'mu-badge mu-badge--suspended';
+    return 'mu-badge mu-badge--pending';
+  };
+
+  const statusLabel = (status: string | null | undefined) => {
+    const s = status ?? 'pending';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  const initials = (username: string | null | undefined) =>
+    (username ?? '?').charAt(0).toUpperCase();
 
   return (
     <main className="nex-admin-section-page">
+      {/* ── Page header ── */}
       <section className="nex-section-header">
         <div>
           <h1>{title}</h1>
@@ -200,18 +163,17 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
       </section>
 
       {isNotification ? (
+        /* ── Send Notification form ── */
         <section className="nex-section-body">
           <div className="nex-card nex-card-form">
             <h2>Send Notification</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 8 }}>Send a message to selected users or all users.</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 8 }}>
+              Send a message to selected users or all users.
+            </p>
             <form className="nex-form-grid" onSubmit={handleNotifSubmit}>
-
               <label htmlFor="notification-target">Recipient Group</label>
-              <select
-                id="notification-target"
-                value={notifForm.target}
-                onChange={e => setNotifForm(p => ({ ...p, target: e.target.value }))}
-              >
+              <select id="notification-target" value={notifForm.target}
+                onChange={e => setNotifForm(p => ({ ...p, target: e.target.value }))}>
                 <option value="all">All Users</option>
                 <option value="active">Active Users</option>
                 <option value="suspended">Suspended Users</option>
@@ -220,11 +182,8 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
               </select>
 
               <label htmlFor="notification-type">Type</label>
-              <select
-                id="notification-type"
-                value={notifForm.type}
-                onChange={e => setNotifForm(p => ({ ...p, type: e.target.value }))}
-              >
+              <select id="notification-type" value={notifForm.type}
+                onChange={e => setNotifForm(p => ({ ...p, type: e.target.value }))}>
                 <option value="info">Info</option>
                 <option value="success">Success</option>
                 <option value="warning">Warning</option>
@@ -235,24 +194,16 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
               </select>
 
               <label htmlFor="notification-title">Title</label>
-              <input
-                id="notification-title"
-                type="text"
-                placeholder="Notification title"
+              <input id="notification-title" type="text" placeholder="Notification title"
                 value={notifForm.title_}
                 onChange={e => setNotifForm(p => ({ ...p, title_: e.target.value }))}
-                required
-              />
+                required />
 
               <label htmlFor="notification-message">Message</label>
-              <textarea
-                id="notification-message"
-                rows={6}
-                placeholder="Write your notification here"
+              <textarea id="notification-message" rows={6} placeholder="Write your notification here"
                 value={notifForm.body}
                 onChange={e => setNotifForm(p => ({ ...p, body: e.target.value }))}
-                required
-              />
+                required />
 
               <button type="submit" className="btn-primary" disabled={notifLoading}>
                 {notifLoading ? 'Sending…' : 'Send Notification'}
@@ -261,126 +212,154 @@ export default function AdminManageUsersPage({ title, description }: ManageUsers
           </div>
         </section>
       ) : (
+        /* ── User list ── */
         <section className="nex-section-body">
-          <div className="nex-card">
-            <div className="nex-card-title">
-              <h2>{title}</h2>
-              <div className="nex-search-box">
+          <div className="nex-card mu-card">
+
+            {/* ── Toolbar ── */}
+            <div className="mu-toolbar">
+              <div className="mu-toolbar-left">
+                <span className="mu-count">{totalUsers} users</span>
+              </div>
+              <div className="mu-search-wrap">
+                <svg className="mu-search-icon" width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
                 <input
                   type="text"
-                  placeholder="Search by email or username..."
+                  className="mu-search-input"
+                  placeholder="Search email or username…"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="nex-search-input"
+                  onChange={e => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <button className="mu-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
 
+            {/* ── Error bar ── */}
             {error && (
-              <div style={{ 
-                padding: '1rem', 
-                marginBottom: '1rem', 
-                background: 'rgba(239, 68, 68, 0.1)', 
-                border: '1px solid rgba(239, 68, 68, 0.3)', 
-                borderRadius: '8px', 
-                color: '#ef4444' 
-              }}>
+              <div className="nex-error-bar">
                 {error}
-                <button 
-                  onClick={fetchUsers} 
-                  style={{ 
-                    marginLeft: '1rem', 
-                    textDecoration: 'underline', 
-                    cursor: 'pointer', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: '#ef4444' 
-                  }}
-                >
-                  Retry
-                </button>
+                <button onClick={fetchUsers} className="nex-error-retry">Retry</button>
               </div>
             )}
 
+            {/* ── Loading ── */}
             {isLoading ? (
               <div className="nex-loading">
-                <div className="nex-spinner"></div>
-                <p>Loading users...</p>
+                <div className="nex-spinner" />
+                <p>Loading users…</p>
               </div>
+
+            ) : users.length === 0 ? (
+              /* ── Empty state ── */
+              <div className="nex-empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                </svg>
+                <p>No {title.toLowerCase()} found</p>
+                {searchQuery && (
+                  <button className="mu-clear-search-btn" onClick={() => setSearchQuery('')}>
+                    Clear search
+                  </button>
+                )}
+              </div>
+
             ) : (
-              <div className="nex-table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Email - Mobile</th>
-                      <th>Status</th>
-                      <th>Joined At</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.length === 0 ? (
+              <>
+                {/* ── Desktop table ── */}
+                <div className="mu-table-wrap">
+                  <table className="mu-table">
+                    <thead>
                       <tr>
-                        <td colSpan={5} className="nex-empty-state">
-                          <div>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                            </svg>
-                            <p>No {title.toLowerCase()} found</p>
-                          </div>
-                        </td>
+                        <th>User</th>
+                        <th>Contact</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                        <th style={{ width: 56 }}></th>
                       </tr>
-                    ) : (
-                      users.map((user) => (
-                        <tr key={user.id}>
+                    </thead>
+                    <tbody>
+                      {users.map(user => (
+                        <tr
+                          key={user.id}
+                          className="mu-table-row"
+                          onClick={() => navigate(`/admin/users/${user.id}`)}
+                        >
                           <td>
-                            <strong>{user.username}</strong>
-                            <div className="nex-table-meta">@{user.username}</div>
+                            <div className="mu-user-cell">
+                              <div className="mu-avatar">{initials(user.username)}</div>
+                              <div className="mu-user-text">
+                                <span className="mu-username">{user.username}</span>
+                              </div>
+                            </div>
                           </td>
                           <td>
-                            <div>{user.email}</div>
-                            <div className="nex-table-meta">{user.phone_number || 'N/A'}</div>
+                            <span className="mu-email">{user.email}</span>
+                            {user.phone_number && (
+                              <span className="mu-phone">{user.phone_number}</span>
+                            )}
                           </td>
                           <td>
-                            <span className={`nex-badge ${
-                              (user.account_status ?? '') === 'active' ? 'nex-badge-success' :
-                              (user.account_status ?? '') === 'banned' ? 'nex-badge-danger' :
-                              (user.account_status ?? '') === 'suspended' ? 'nex-badge-orange' :
-                              'nex-badge-warning'
-                            }`}>
-                              {(user.account_status ?? 'pending').charAt(0).toUpperCase() + (user.account_status ?? 'pending').slice(1)}
+                            <span className={statusClass(user.account_status)}>
+                              {statusLabel(user.account_status)}
                             </span>
                           </td>
                           <td>
-                            <div>{formatDate(user.created_at)}</div>
-                            <div className="nex-table-meta">{getTimeSince(user.created_at)}</div>
+                            <span className="mu-date">{formatDate(user.created_at)}</span>
+                            <span className="mu-date-ago">{getTimeSince(user.created_at)}</span>
                           </td>
-                          <td>
-                            <UserActionMenu
-                              user={user}
-                              onUpdated={handleUpdated}
-                              onDeleted={handleDeleted}
-                            />
+                          <td onClick={e => e.stopPropagation()}>
+                            <UserActionMenu user={user} onUpdated={handleUpdated} onDeleted={handleDeleted} />
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-            {!isLoading && users.length > 0 && (
-              <div style={{ 
-                marginTop: '1rem', 
-                padding: '1rem', 
-                borderTop: '1px solid rgba(169, 255, 232, 0.12)', 
-                color: 'var(--text-muted)', 
-                fontSize: '14px' 
-              }}>
-                Showing {users.length} of {totalUsers} users
-              </div>
+                {/* ── Mobile cards ── */}
+                <div className="mu-card-list">
+                  {users.map(user => (
+                    <div
+                      key={user.id}
+                      className="mu-user-card"
+                      onClick={() => navigate(`/admin/users/${user.id}`)}
+                    >
+                      <div className="mu-card-row">
+                        <div className="mu-avatar mu-avatar--lg">{initials(user.username)}</div>
+                        <div className="mu-card-info">
+                          <span className="mu-username">{user.username}</span>
+                          <span className="mu-email">{user.email}</span>
+                          {user.phone_number && (
+                            <span className="mu-phone">{user.phone_number}</span>
+                          )}
+                        </div>
+                        <span className={statusClass(user.account_status)}>
+                          {statusLabel(user.account_status)}
+                        </span>
+                      </div>
+                      <div className="mu-card-footer">
+                        <span className="mu-date-ago">Joined {getTimeSince(user.created_at)}</span>
+                        <div onClick={e => e.stopPropagation()}>
+                          <UserActionMenu user={user} onUpdated={handleUpdated} onDeleted={handleDeleted} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Footer ── */}
+                <div className="mu-footer">
+                  Showing {users.length} of {totalUsers} users
+                </div>
+              </>
             )}
           </div>
         </section>

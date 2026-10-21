@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Zap, Shield, Smartphone, Gem, BarChart3, Headphones } from "lucide-react";
+import Logo from "../../assets/logo.webp";
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -95,8 +96,8 @@ export default function LandingPage() {
       <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="nav-container">
           <div className="logo">
-            <div className="logo-icon">CR</div>
-            <span className="logo-text">CryptoRise</span>
+            <img src={Logo} alt="PrimeAlfaTrade Logo" className="logo-icon" />
+            <span className="logo-text">PrimeAlfaTrade</span>
           </div>
           <div className="nav-links">
             <a href="#markets">Markets</a>
@@ -173,8 +174,8 @@ export default function LandingPage() {
                             {/* Screen Content */}
                             <div className="screen-content">
                               <div className="app-header">
-                                <div className="app-logo">CR</div>
-                                <span className="app-title">CryptoRise</span>
+                                <img src={Logo} alt="PrimeAlfaTrade Logo" style={{ width: '24px', height: '24px' }} />
+                        <span className="app-title">PrimeAlfaTrade</span>
                               </div>
                               
                               <div className="price-section">
@@ -407,7 +408,7 @@ export default function LandingPage() {
       {/* Features Section */}
       <section id="features" className="features fade-section">
         <div className="container">
-          <h2 className="section-title">Why Choose CryptoRise?</h2>
+          <h2 className="section-title">Why Choose PrimeAlfaTrade?</h2>
           
           <div className="features-grid">
             {[
@@ -436,7 +437,7 @@ export default function LandingPage() {
           
           <div className="testimonials-grid">
             {[
-              { name: 'Sarah Chen', role: 'Day Trader', text: 'Best crypto exchange I have ever used! The speed is incredible.' },
+              { name: 'Sarah Chen', role: 'Day Trader', text: 'Best crypto platform I have ever used! The speed is incredible.' },
               { name: 'Marcus Johnson', role: 'HODLer', text: 'Security is top notch. My funds have never been safer.' },
               { name: 'Elena Rodriguez', role: 'Crypto Investor', text: 'Low fees and amazing customer support. Highly recommend!' },
             ].map((testimonial, i) => (
@@ -470,12 +471,12 @@ export default function LandingPage() {
         <div className="container">
           <div className="footer-grid">
             <div className="footer-col">
-              <div className="footer-logo">
-                <div className="logo-icon small">CR</div>
-                <span>CryptoRise</span>
-              </div>
-              <p className="footer-desc">The most trusted crypto exchange.</p>
-            </div>
+                    <div className="footer-logo">
+                      <img src={Logo} alt="PrimeAlfaTrade Logo" className="logo-icon small" />
+                      <span>PrimeAlfaTrade</span>
+                    </div>
+                    <p className="footer-desc">The most trusted crypto platform.</p>
+                  </div>
             <div className="footer-col">
               <h4>Products</h4>
               <a href="#">Spot Trading</a>
@@ -496,7 +497,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2024 CryptoRise. All rights reserved.</span>
+            <span>© 2024 PrimeAlfaTrade. All rights reserved.</span>
           </div>
         </div>
       </footer>
@@ -926,8 +927,6 @@ export default function LandingPage() {
         .logo-icon {
           width: 44px;
           height: 44px;
-          background: linear-gradient(135deg, #f7931a, #fbbf24);
-          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;

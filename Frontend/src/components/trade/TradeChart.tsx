@@ -14,6 +14,7 @@ import { useMarketData } from '../../hooks/useMarketData';
 import { calculateSMA } from '../../utils/technicalIndicators';
 import TradePopup from './TradePopup';
 import binaryService, { BinaryTrade } from '../../services/binary.service';
+import { useWalletStore } from '../../store/useWalletStore';
 
 const INTERVALS = [
   { label: '30s', value: '30s' },
@@ -31,6 +32,7 @@ const MA25_COLOR = '#e040fb';
 const MA99_COLOR = '#ff6b9d';
 
 export default function TradeChart() {
+  const { fetchWallet } = useWalletStore();
   const {
     symbol, interval, setChartInterval, klines, kline, livePrice,
     klinesLoading, loadMoreKlines,
@@ -58,15 +60,60 @@ export default function TradeChart() {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Dropdown states for mobile
+  const [intervalDropdownOpen, setIntervalDropdownOpen] = useState(false);
+  const [durationDropdownOpen, setDurationDropdownOpen] = useState(false);
+  const intervalDropdownRef = useRef<HTMLDivElement>(null);
+  const durationDropdownRef = useRef<HTMLDivElement>(null);
+  // Binary settings
+  const [binarySettings, setBinarySettings] = useState<any>(null);
 
-  // Update current time every second for the button display
+  // Fetch binary settings
   useEffect(() => {
-    if (!activeTrade) return;
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
+    const fetchSettings = async () => {
+      try {
+        const res = await binaryService.getSettings();
+        setBinarySettings(res.data);
+        // Set default duration if not already set
+        if (res.data.allowed_expirations.length > 0) {
+          const defaultDuration = `${res.data.allowed_expirations[0]}s`;
+          setDuration(defaultDuration);
+        }
+      } catch (err) {
+        console.error('Failed to fetch binary settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        intervalDropdownRef.current &&
+        !intervalDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIntervalDropdownOpen(false);
+      }
+      if (
+        durationDropdownRef.current &&
+        !durationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setDurationDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Always tick currentTime every second — drives the countdown display in the button
+  useEffect(() => {
+    setCurrentTime(Date.now());
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [activeTrade]);
+  }, []);
 
   // Check for active running trade on component mount
   useEffect(() => {
@@ -83,43 +130,108 @@ export default function TradeChart() {
     fetchActiveTrade();
   }, []);
 
+  // Listen for trade completion via WebSocket event
+  useEffect(() => {
+    if (!activeTrade || activeTrade.status !== 'running') return;
+
+    const handleTradeCompleted = (event: CustomEvent) => {
+      const data = event.detail;
+      if (data.tradeId === activeTrade.id) {
+        console.log('Trade completed via WebSocket event:', data);
+        setActiveTrade({
+          ...activeTrade,
+          status: data.status,
+          payout: data.payout,
+          close_price: data.closePrice,
+          resolved_at: new Date().toISOString()
+        });
+        fetchWallet();
+      }
+    };
+
+    // Check sessionStorage for any pending trade completion event
+    const storedEvent = sessionStorage.getItem('trade_completed_event');
+    if (storedEvent) {
+      try {
+        const data = JSON.parse(storedEvent);
+        if (data.tradeId === activeTrade.id) {
+          handleTradeCompleted({ detail: data } as CustomEvent);
+          sessionStorage.removeItem('trade_completed_event');
+        }
+      } catch (err) {
+        console.error('Failed to parse stored trade event:', err);
+      }
+    }
+
+    window.addEventListener('trade_completed', handleTradeCompleted as EventListener);
+    return () => {
+      window.removeEventListener('trade_completed', handleTradeCompleted as EventListener);
+    };
+  }, [activeTrade?.id, activeTrade?.status, fetchWallet]);
+
   // focus amount input when symbol changes (user selects a new chart pair)
   useEffect(() => {
-    // small async to ensure input is mounted
     const t = window.setTimeout(() => amountInputRef.current?.focus(), 80);
     return () => window.clearTimeout(t);
   }, [symbol]);
 
-  // Poll for trade status updates
+  // Poll for trade status.
+  // Directly fetch the trade by ID once expired — avoids pagination issues where
+  // the resolved trade could be on page 2+ of the paginated list.
   useEffect(() => {
-    if (!activeTrade) return;
-    if (activeTrade.status !== 'running') return;
+    if (!activeTrade || activeTrade.status !== 'running') return;
 
-    const pollTradeStatus = async () => {
+    const tradeId = activeTrade.id;
+    const expiresAt = new Date(activeTrade.expires_at).getTime();
+    // Match TradePopup buffer — keep poll start and UI transition in sync
+    const PROCESSING_BUFFER_MS = 1500;
+    // Safety: if backend resolver hangs/crashes, force-stop polling after this timeout
+    // and show an error state instead of spinning forever.
+    const MAX_POLL_DURATION_MS = 300_000; // 5 minutes hard timeout (increased from 1 minute)
+    const serverExpiry = expiresAt + PROCESSING_BUFFER_MS;
+
+    let isFetching = false;
+    let cancelled = false;
+
+    const poll = async () => {
+      if (isFetching || cancelled) return;
+      // Only hit the server after the trade has definitely expired server-side
+      if (Date.now() < serverExpiry) return;
+
+      if (Date.now() - serverExpiry > MAX_POLL_DURATION_MS) {
+        console.error(`Poller gave up waiting for trade ${tradeId} after ${MAX_POLL_DURATION_MS}ms`);
+        clearInterval(timer);
+        return;
+      }
+
+      isFetching = true;
       try {
-        const response = await binaryService.getMyTrades('running', 1);
-        const currentTrade = response.data.trades.find(t => t.id === activeTrade.id);
-        
-        if (currentTrade) {
-          if (currentTrade.status !== activeTrade.status) {
-            setActiveTrade(currentTrade);
-          }
-        } else {
-          // Trade is no longer in running status, fetch all to see what happened
-          const allResponse = await binaryService.getMyTrades('all', 1);
-          const updatedTrade = allResponse.data.trades.find(t => t.id === activeTrade.id);
-          if (updatedTrade) {
-            setActiveTrade(updatedTrade);
-          }
+        const res = await binaryService.getTradeById(tradeId);
+        const trade = res.data;
+        if (!cancelled && trade && trade.status !== 'running') {
+          setActiveTrade(trade);
+          fetchWallet();
+          clearInterval(timer); // Found it — stop polling immediately
         }
-      } catch (err) {
-        console.error('Failed to poll trade status:', err);
+      } catch (err: any) {
+        if (err?.response?.status === 404) {
+          console.warn(`Trade ${tradeId} returned 404 during poll`);
+        } else {
+          console.error('Failed to poll trade status:', err?.message || err);
+        }
+      } finally {
+        isFetching = false;
       }
     };
 
-    const pollInterval = setInterval(pollTradeStatus, 3000);
-    return () => clearInterval(pollInterval);
-  }, [activeTrade]);
+    // Run every 500ms. The callback is a no-op until serverExpiry is reached.
+    const timer = setInterval(poll, 500);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTrade?.id, activeTrade?.status]);
 
   // Init chart
   useEffect(() => {
@@ -210,12 +322,15 @@ export default function TradeChart() {
       chartRef.current = null;
       candleRef.current = null;
       volumeRef.current = null;
+      ma7Ref.current = null;
+      ma25Ref.current = null;
+      ma99Ref.current = null;
     };
   }, [symbol, interval, loadMoreKlines]);
 
   // Load historical klines
   useEffect(() => {
-    if (!klines.length || !candleRef.current) return;
+    if (!klines.length || !candleRef.current || !chartRef.current) return;
 
     const candleData: CandlestickData[] = klines.map((k) => ({
       time: (k.openTime / 1000) as Time,
@@ -243,62 +358,88 @@ export default function TradeChart() {
     const toLine = (vals: number[]): LineData[] =>
       vals.map((v, i) => ({ time: times[i], value: v })).filter((d) => d.value > 0);
 
-    candleRef.current.setData(candleData);
-    volumeRef.current?.setData(volData);
-    ma7Ref.current?.setData(toLine(ma7));
-    ma25Ref.current?.setData(toLine(ma25));
-    ma99Ref.current?.setData(toLine(ma99));
-    chartRef.current?.timeScale().fitContent();
+    try {
+      candleRef.current.setData(candleData);
+      volumeRef.current?.setData(volData);
+      ma7Ref.current?.setData(toLine(ma7));
+      ma25Ref.current?.setData(toLine(ma25));
+      ma99Ref.current?.setData(toLine(ma99));
+      chartRef.current?.timeScale().fitContent();
 
-    if (containerRef.current && chartRef.current) {
-      const el = containerRef.current;
-      const w = el.clientWidth;
-      const h = el.clientHeight;
-      if (w > 0 && h > 0) chartRef.current.applyOptions({ width: w, height: h });
+      if (containerRef.current) {
+        const el = containerRef.current;
+        const w = el.clientWidth;
+        const h = el.clientHeight;
+        if (w > 0 && h > 0) chartRef.current.applyOptions({ width: w, height: h });
+      }
+
+      const last = klines[klines.length - 1];
+      setOhlc({
+        o: last.open, h: last.high, l: last.low, c: last.close,
+        chg: last.close - last.open,
+        chgPct: last.open ? ((last.close - last.open) / last.open) * 100 : 0,
+      });
+      setMaValues({
+        ma7: ma7[ma7.length - 1] || 0,
+        ma25: ma25[ma25.length - 1] || 0,
+        ma99: ma99[ma99.length - 1] || 0,
+      });
+      setVolInfo({
+        vol: last.volume,
+        ma5: volMa5[volMa5.length - 1] || 0,
+        ma10: volMa10[volMa10.length - 1] || 0,
+      });
+    } catch (err) {
+      // Ignore "Object is disposed" errors
+      console.log("Chart update skipped (object disposed)", err);
     }
-
-    const last = klines[klines.length - 1];
-    setOhlc({
-      o: last.open, h: last.high, l: last.low, c: last.close,
-      chg: last.close - last.open,
-      chgPct: last.open ? ((last.close - last.open) / last.open) * 100 : 0,
-    });
-    setMaValues({
-      ma7: ma7[ma7.length - 1] || 0,
-      ma25: ma25[ma25.length - 1] || 0,
-      ma99: ma99[ma99.length - 1] || 0,
-    });
-    setVolInfo({
-      vol: last.volume,
-      ma5: volMa5[volMa5.length - 1] || 0,
-      ma10: volMa10[volMa10.length - 1] || 0,
-    });
   }, [klines]);
 
   // Live kline update
   useEffect(() => {
-    if (!kline || !candleRef.current) return;
-    const t = (kline.openTime / 1000) as Time;
-    candleRef.current.update({
-      time: t, open: kline.open, high: kline.high, low: kline.low, close: kline.close,
-    });
-    volumeRef.current?.update({
-      time: t,
-      value: kline.volume,
-      color: kline.close >= kline.open ? 'rgba(14,203,129,0.5)' : 'rgba(246,70,93,0.5)',
-    });
-    setOhlc({
-      o: kline.open, h: kline.high, l: kline.low, c: kline.close,
-      chg: kline.close - kline.open,
-      chgPct: kline.open ? ((kline.close - kline.open) / kline.open) * 100 : 0,
-    });
+    if (!kline || !candleRef.current || !chartRef.current) return;
+    try {
+      const t = (kline.openTime / 1000) as Time;
+      candleRef.current.update({
+        time: t, open: kline.open, high: kline.high, low: kline.low, close: kline.close,
+      });
+      volumeRef.current?.update({
+        time: t,
+        value: kline.volume,
+        color: kline.close >= kline.open ? 'rgba(14,203,129,0.5)' : 'rgba(246,70,93,0.5)',
+      });
+      setOhlc({
+        o: kline.open, h: kline.high, l: kline.low, c: kline.close,
+        chg: kline.close - kline.open,
+        chgPct: kline.open ? ((kline.close - kline.open) / kline.open) * 100 : 0,
+      });
+    } catch (err) {
+      // Ignore "Object is disposed" errors
+      console.log("Live kline update skipped (object disposed)", err);
+    }
   }, [kline]);
 
   const isUp = ohlc.chg >= 0;
   const chgClass = isUp ? 'val-up' : 'val-down';
 
+  // Compute button label based on current time tick
+  const tradeButtonLabel = (() => {
+    if (isLoading) return 'Placing Trade...';
+    if (!activeTrade) return 'Confirm Trade';
+    if (activeTrade.status === 'running') {
+      const msLeft = new Date(activeTrade.expires_at).getTime() - currentTime;
+      if (msLeft <= 0) return 'Processing Result...';
+      // Match TradePopup countdown: ceil of raw ms / 1000, no buffer added
+      const sec = Math.max(0, Math.ceil(msLeft / 1000));
+      return `Trade Active (${sec}s)`;
+    }
+    const pnl = Number(activeTrade.payout ?? 0) - Number(activeTrade.amount);
+    const label = activeTrade.status === 'win' ? 'Win' : activeTrade.status === 'lose' ? 'Lose' : activeTrade.status;
+    return `Trade ${label} (${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString()})`;
+  })();
+
   return (
-    <div className={`trade-col-chart ${isFullscreen ? 'trade-col-chart-fullscreen' : ''}`}>
+    <div className={isFullscreen ? 'trade-col-chart-fullscreen' : ''}>
       <div className="trade-chart-toolbar">
         <div className="trade-chart-tabs">
           <div className="trade-chart-tab active">Chart</div>
@@ -307,15 +448,43 @@ export default function TradeChart() {
           <div className="trade-chart-tab">Trading Analysis</div>
         </div>
         <div className="trade-chart-intervals">
-          {INTERVALS.map((iv) => (
+          {/* Desktop: Buttons */}
+          <div className="trade-interval-buttons">
+            {INTERVALS.map((iv) => (
+              <button
+                key={iv.value}
+                className={`trade-interval-btn ${interval === iv.value ? 'active' : ''}`}
+                onClick={() => setChartInterval(iv.value)}
+              >
+                {iv.label}
+              </button>
+            ))}
+          </div>
+          {/* Mobile: Dropdown */}
+          <div className="trade-interval-dropdown" ref={intervalDropdownRef}>
             <button
-              key={iv.value}
-              className={`trade-interval-btn ${interval === iv.value ? 'active' : ''}`}
-              onClick={() => setChartInterval(iv.value)}
+              className="trade-interval-dropdown-btn"
+              onClick={() => setIntervalDropdownOpen(!intervalDropdownOpen)}
             >
-              {iv.label}
+              {INTERVALS.find((i) => i.value === interval)?.label || interval} ▾
             </button>
-          ))}
+            {intervalDropdownOpen && (
+              <div className="trade-interval-dropdown-menu">
+                {INTERVALS.map((iv) => (
+                  <button
+                    key={iv.value}
+                    className={`trade-interval-dropdown-item ${interval === iv.value ? 'active' : ''}`}
+                    onClick={() => {
+                      setChartInterval(iv.value);
+                      setIntervalDropdownOpen(false);
+                    }}
+                  >
+                    {iv.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="trade-chart-tools">
           <span>Original</span>
@@ -396,95 +565,111 @@ export default function TradeChart() {
 
           <div className="order-right">
             <div className="trade-durations">
-              {[
-                { key: '30s', label: '30s (10%)' },
-                { key: '60s', label: '60s (15%)' },
-                { key: '90s', label: '90s (20%)' },
-                { key: '120s', label: '120s (20%)' },
-                { key: '180s', label: '180s (25%)' },
-                { key: '300s', label: '300s (30%)' },
-              ].map((d) => (
+              {/* Desktop: Buttons */}
+              <div className="trade-duration-buttons">
+                {(binarySettings?.allowed_expirations || [30, 60, 90, 120, 180, 300]).map((d: number) => {
+                  const key = `${d}s`;
+                  const payout = binarySettings?.duration_payouts?.[d] || 0;
+                  return (
+                    <button
+                      key={key}
+                      className={`trade-duration-btn ${duration === key ? 'active' : ''}`}
+                      onClick={() => setDuration(key)}
+                    >
+                      {d}s ({payout}%)
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Mobile: Dropdown */}
+              <div className="trade-duration-dropdown" ref={durationDropdownRef}>
                 <button
-                  key={d.key}
-                  className={`trade-duration-btn ${duration === d.key ? 'active' : ''}`}
-                  onClick={() => setDuration(d.key)}
+                  className="trade-duration-dropdown-btn"
+                  onClick={() => setDurationDropdownOpen(!durationDropdownOpen)}
                 >
-                  {d.label}
+                  {(() => {
+                    const durations = binarySettings?.allowed_expirations || [30, 60, 90, 120, 180, 300];
+                    const d = durations.find((num: number) => `${num}s` === duration) || durations[0];
+                    const payout = binarySettings?.duration_payouts?.[d] || 0;
+                    return `${d}s (${payout}%)`;
+                  })()} ▾
                 </button>
-              ))}
+                {durationDropdownOpen && (
+                  <div className="trade-duration-dropdown-menu">
+                    {(binarySettings?.allowed_expirations || [30, 60, 90, 120, 180, 300]).map((d: number) => {
+                      const key = `${d}s`;
+                      const payout = binarySettings?.duration_payouts?.[d] || 0;
+                      return (
+                        <button
+                          key={key}
+                          className={`trade-duration-dropdown-item ${duration === key ? 'active' : ''}`}
+                          onClick={() => {
+                            setDuration(key);
+                            setDurationDropdownOpen(false);
+                          }}
+                        >
+                          {d}s ({payout}%)
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         <div className="order-row actions-row">
-            <div className="trade-side-actions">
-              <button
-                className={`trade-side-btn buy ${side === 'buy' ? 'active' : ''}`}
-                onClick={() => setSide('buy')}
-              >BUY {base}</button>
-              <button
-                className={`trade-side-btn sell ${side === 'sell' ? 'active' : ''}`}
-                onClick={() => setSide('sell')}
-              >SELL {base}</button>
-            </div>
+          <div className="trade-side-actions">
+            <button
+              className={`trade-side-btn buy ${side === 'buy' ? 'active' : ''}`}
+              onClick={() => setSide('buy')}
+            >BUY {base}</button>
+            <button
+              className={`trade-side-btn sell ${side === 'sell' ? 'active' : ''}`}
+              onClick={() => setSide('sell')}
+            >SELL {base}</button>
+          </div>
 
           <div className="trade-confirm">
             <button
               className="trade-confirm-btn"
+              disabled={isLoading}
               onClick={async () => {
                 if (activeTrade) {
-                  // If there's an active trade, open the popup
                   setPopupOpen(true);
-                } else {
-                  // Validate amount first
-                  const parsed = parseFloat(amount.replace(/,/g, ''));
-                  
-                  if (!parsed || parsed <= 0) {
-                    setError('Please enter a valid amount greater than 0');
-                    amountInputRef.current?.focus();
-                    return;
-                  }
-                  
-                  console.log('Placing trade request:', {
+                  return;
+                }
+
+                const parsed = parseFloat(amount.replace(/,/g, ''));
+                if (!parsed || parsed <= 0) {
+                  setError('Please enter a valid amount greater than 0');
+                  amountInputRef.current?.focus();
+                  return;
+                }
+
+                try {
+                  setIsLoading(true);
+                  setError(null);
+                  const numericDuration = parseInt(duration.replace('s', ''), 10);
+                  const response = await binaryService.placeTrade({
                     pair: symbol,
                     direction: side === 'buy' ? 'BUY' : 'SELL',
                     amount: parsed,
-                    duration: parseInt(duration.replace('s', ''), 10)
+                    duration: numericDuration,
                   });
-                  
-                  // Start a new trade
-                  try {
-                    setIsLoading(true);
-                    setError(null);
-                    
-                    const numericDuration = parseInt(duration.replace('s', ''), 10);
-                    
-                    const response = await binaryService.placeTrade({
-                      pair: symbol,
-                      direction: side === 'buy' ? 'BUY' : 'SELL',
-                      amount: parsed,
-                      duration: numericDuration
-                    });
-                    
-                    setActiveTrade(response.data);
-                    setPopupOpen(true);
-                  } catch (err: any) {
-                    setError(err.response?.data?.message || 'Failed to place trade');
-                    console.error('Trade placement failed:', err);
-                  } finally {
-                    setIsLoading(false);
-                  }
+                  setActiveTrade(response.data);
+                  setPopupOpen(true);
+                  fetchWallet();
+                } catch (err: any) {
+                  setError(err.response?.data?.message || 'Failed to place trade');
+                  console.error('Trade placement failed:', err);
+                } finally {
+                  setIsLoading(false);
                 }
               }}
-              disabled={isLoading}
             >
-              {isLoading ? 'Placing Trade...' : (
-                activeTrade ? (
-                  activeTrade.status === 'running' 
-                    ? `Trade Active (${Math.max(0, Math.ceil((new Date(activeTrade.expires_at).getTime() - currentTime) / 1000))}s)`
-                    : `Trade ${(activeTrade.status === 'win' ? 'Win' : activeTrade.status === 'lose' ? 'Lose' : activeTrade.status.charAt(0).toUpperCase() + activeTrade.status.slice(1))} (${(Number(activeTrade.payout || 0) - Number(activeTrade.amount)) >= 0 ? '+' : ''}$${(Number(activeTrade.payout || 0) - Number(activeTrade.amount)).toLocaleString()})`
-                ) : 'Confirm Trade'
-              )}
+              {tradeButtonLabel}
             </button>
           </div>
         </div>

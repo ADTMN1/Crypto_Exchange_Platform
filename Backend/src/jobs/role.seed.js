@@ -29,7 +29,7 @@ const DEFAULT_ROLES = [
 ];
 
 async function seedRoles() {
-    console.log('🌱 Initializing Crypto Exchange Role Seeding Sequence...');
+    console.log('🌱 Initializing PrimeAlfaTrade Role Seeding Sequence...');
     
     const client = await pool.connect();
 

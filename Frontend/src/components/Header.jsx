@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useMobileSidebar } from '../context/MobileSidebarContext'
-import Logo from '../assets/logo.svg'
+import Logo from '../assets/logo.webp';
 import AssetDropdown from './AssetDropdown'
 
 function Header() {
@@ -45,8 +45,8 @@ function Header() {
           <FaBars size={20} />
         </button>
         <div className="logo">
-          <img src={Logo} alt="CryptoExchange Logo" className="logo-icon" />
-          <span className="logo-text">CryptoExchange</span>
+          <img src={Logo} alt="PrimeAlfaTrade Logo" className="logo-icon" />
+            <span className="logo-text">PrimeAlfaTrade</span>
         </div>
       </div>
       <div className="header-center">
@@ -61,12 +61,7 @@ function Header() {
           />
         </div>
         {/* Mobile search button */}
-        <button 
-          className="icon-btn" 
-          onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-        >
-          <FaSearch size={20} />
-        </button>
+       
       </div>
       <div className="header-right">
         <AssetDropdown />

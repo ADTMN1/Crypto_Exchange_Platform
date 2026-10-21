@@ -25,7 +25,7 @@ function Hero() {
               The crypto platform for <span className="highlight">every trader</span>
             </h2>
             <p className="dashboard-hero-subtitle">
-              CryptoExchange is a trader-first platform that helps you buy, sell, and trade digital assets with ease.
+              PrimeAlfaTrade is a trader-first platform that helps you buy, sell, and trade digital assets with ease.
             </p>
           </>
         ) : (
@@ -34,7 +34,7 @@ function Hero() {
               The crypto platform for <span className="highlight">every trader</span>
             </h1>
             <p className="dashboard-hero-subtitle">
-              CryptoExchange is a trader-first platform that helps you buy, sell, and trade digital assets with ease.
+              PrimeAlfaTrade is a trader-first platform that helps you buy, sell, and trade digital assets with ease.
             </p>
           </>
         )}

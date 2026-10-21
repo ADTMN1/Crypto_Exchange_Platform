@@ -1,4 +1,4 @@
-import { useEffect, useState, ReactNode } from 'react';
+import { useEffect, useState, ReactNode, useRef } from 'react';
 import { useAuthStore } from '../store';
 import userService from '../services/user.service';
 
@@ -8,51 +8,54 @@ interface StoreProviderProps {
 
 export default function StoreProvider({ children }: StoreProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const initialize = useAuthStore((state) => state?.initialize);
   const isAuthenticated = useAuthStore((state) => state?.isAuthenticated);
+  const isLoading = useAuthStore((state) => state?.isLoading);
   const updateUser = useAuthStore((state) => state?.updateUser);
+  const setHydrated = useAuthStore((state) => state?.setHydrated);
+  const user = useAuthStore((state) => state?.user);
+
+  const profileFetched = useRef(false);
 
   useEffect(() => {
-    const initializeStores = async () => {
+    // Ensure hydration completes even if no persisted state exists
+    const timeout = setTimeout(() => {
+      if (setHydrated) {
+        setHydrated();
+      }
+      setIsInitialized(true);
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [setHydrated]);
+
+  useEffect(() => {
+    if (!isInitialized || !isAuthenticated || profileFetched.current) return;
+
+    // Skip profile fetch if user data already exists from login or hydration
+    if (user && user.id && user.email) {
+      profileFetched.current = true;
+      return;
+    }
+
+    const fetchProfile = async () => {
+      profileFetched.current = true;
       try {
-        // Initialize auth store
-        if (initialize) {
-          await initialize();
+        const profile = await userService.getProfile();
+        if (updateUser) {
+          updateUser({
+            ...profile,
+            profile_image: profile.profile_image || profile.profile_picture_url,
+            profile_picture_url: profile.profile_picture_url || profile.profile_image,
+          });
         }
-        setIsInitialized(true);
       } catch (error) {
-        console.error('Error initializing stores:', error);
-        setIsInitialized(true); // Still set to true to prevent infinite loading
+        console.error('Failed to fetch user profile on load:', error);
       }
     };
 
-    initializeStores();
-  }, [initialize]);
+    fetchProfile();
+  }, [isInitialized, isAuthenticated, updateUser, user]);
 
-  // Fetch user profile on app load if authenticated
-    useEffect(() => {
-        const fetchProfile = async () => {
-            if (isAuthenticated && updateUser) {
-                try {
-                    const profile = await userService.getProfile();
-                    // Ensure both profile_image and profile_picture_url are set
-                    updateUser({
-                        ...profile,
-                        profile_image: profile.profile_image || profile.profile_picture_url,
-                        profile_picture_url: profile.profile_picture_url || profile.profile_image,
-                    });
-                } catch (error) {
-                    console.error('Failed to fetch user profile on load:', error);
-                }
-            }
-        };
-
-        if (isInitialized && isAuthenticated) {
-            fetchProfile();
-        }
-    }, [isInitialized, isAuthenticated, updateUser]);
-
-  if (!isInitialized) {
+  if (!isInitialized || isLoading) {
     return (
       <div style={{
         display: 'flex',

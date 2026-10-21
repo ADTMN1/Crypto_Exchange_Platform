@@ -190,118 +190,166 @@ export default function TradingPairsPage() {
               <p>Loading trading pairs...</p>
             </div>
           ) : (
-            <div className="nex-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Pair</th>
-                    <th>Min Order</th>
-                    <th>Max Order</th>
-                    <th>Price Precision</th>
-                    <th>Qty Precision</th>
-                    <th>Maker Fee</th>
-                    <th>Taker Fee</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPairs.length === 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className="nex-table-wrapper nex-desktop-only">
+                <table>
+                  <thead>
                     <tr>
-                      <td colSpan={9} className="nex-empty-state">
-                        <div>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                          </svg>
-                          <p>No trading pairs found</p>
-                        </div>
-                      </td>
+                      <th>Pair</th>
+                      <th>Min Order</th>
+                      <th>Max Order</th>
+                      <th>Price Precision</th>
+                      <th>Qty Precision</th>
+                      <th>Maker Fee</th>
+                      <th>Taker Fee</th>
+                      <th>Status</th>
+                      <th>Action</th>
                     </tr>
-                  ) : (
-                    filteredPairs.map((pair) => (
-                      <tr key={pair.id}>
-                        <td>
-                          <strong style={{ fontSize: '1rem' }}>{pair.base_currency}/{pair.quote_currency}</strong>
-                        </td>
-                        <td>{pair.min_order_size}</td>
-                        <td>{pair.max_order_size}</td>
-                        <td>{pair.price_precision}</td>
-                        <td>{pair.qty_precision}</td>
-                        <td>{(pair.maker_fee * 100).toFixed(2)}%</td>
-                        <td>{(pair.taker_fee * 100).toFixed(2)}%</td>
-                        <td>{getStatusBadge(pair.is_active)}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <button
-                              onClick={() => handleEdit(pair)}
-                              className="nex-btn-xs nex-btn-primary"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(pair)}
-                              className="nex-btn-xs nex-btn-danger"
-                            >
-                              Delete
-                            </button>
+                  </thead>
+                  <tbody>
+                    {filteredPairs.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="nex-empty-state">
+                          <div>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            <p>No trading pairs found</p>
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      filteredPairs.map((pair) => (
+                        <tr key={pair.id}>
+                          <td>
+                            <strong style={{ fontSize: '1rem' }}>{pair.base_currency}/{pair.quote_currency}</strong>
+                          </td>
+                          <td>{pair.min_order_size}</td>
+                          <td>{pair.max_order_size}</td>
+                          <td>{pair.price_precision}</td>
+                          <td>{pair.qty_precision}</td>
+                          <td>{(pair.maker_fee * 100).toFixed(2)}%</td>
+                          <td>{(pair.taker_fee * 100).toFixed(2)}%</td>
+                          <td>{getStatusBadge(pair.is_active)}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => handleEdit(pair)}
+                                className="nex-btn-xs nex-btn-primary"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(pair)}
+                                className="nex-btn-xs nex-btn-danger"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="nex-mobile-cards nex-mobile-only">
+                {filteredPairs.length === 0 ? (
+                  <div className="nex-empty-state">
+                    <div>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <p>No trading pairs found</p>
+                    </div>
+                  </div>
+                ) : (
+                  filteredPairs.map((pair) => (
+                    <div key={pair.id} className="nex-trading-pair-card">
+                      <div className="nex-trading-pair-card-header">
+                        <div className="nex-trading-pair-symbol">
+                          <strong>{pair.base_currency}/{pair.quote_currency}</strong>
+                        </div>
+                        {getStatusBadge(pair.is_active)}
+                      </div>
+                      <div className="nex-trading-pair-card-body">
+                        <div className="nex-trading-pair-info-row">
+                          <span className="nex-trading-pair-label">Min Order:</span>
+                          <span className="nex-trading-pair-value">{pair.min_order_size}</span>
+                        </div>
+                        <div className="nex-trading-pair-info-row">
+                          <span className="nex-trading-pair-label">Max Order:</span>
+                          <span className="nex-trading-pair-value">{pair.max_order_size}</span>
+                        </div>
+                        <div className="nex-trading-pair-info-row">
+                          <span className="nex-trading-pair-label">Price Precision:</span>
+                          <span className="nex-trading-pair-value">{pair.price_precision}</span>
+                        </div>
+                        <div className="nex-trading-pair-info-row">
+                          <span className="nex-trading-pair-label">Qty Precision:</span>
+                          <span className="nex-trading-pair-value">{pair.qty_precision}</span>
+                        </div>
+                        <div className="nex-trading-pair-info-row">
+                          <span className="nex-trading-pair-label">Maker Fee:</span>
+                          <span className="nex-trading-pair-value">{(pair.maker_fee * 100).toFixed(2)}%</span>
+                        </div>
+                        <div className="nex-trading-pair-info-row">
+                          <span className="nex-trading-pair-label">Taker Fee:</span>
+                          <span className="nex-trading-pair-value">{(pair.taker_fee * 100).toFixed(2)}%</span>
+                        </div>
+                      </div>
+                      <div className="nex-trading-pair-card-actions">
+                        <button
+                          onClick={() => handleEdit(pair)}
+                          className="nex-btn-xs nex-btn-primary"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(pair)}
+                          className="nex-btn-xs nex-btn-danger"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
       </section>
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(4px)'
-        }} onClick={() => setIsModalOpen(false)}>
-          <div style={{
-            background: 'var(--surface)',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '600px',
-            width: '100%',
-            margin: '1rem',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.5rem' }}>
+        <div className="nex-modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="nex-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="nex-modal-header">
+              <h2 className="nex-modal-title">
                 {editingPair ? 'Edit Trading Pair' : 'Create Trading Pair'}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '2rem', cursor: 'pointer', padding: '0.25rem' }}
+                className="nex-modal-close"
               >
                 ×
               </button>
             </div>
             
             {error && (
-              <div style={{ padding: '1rem', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#ef4444' }}>
+              <div className="nex-modal-error">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div>
-                  <label htmlFor="base_currency" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+            <form onSubmit={handleSubmit} className="nex-modal-form">
+              <div className="nex-modal-grid">
+                <div className="nex-modal-field">
+                  <label htmlFor="base_currency" className="nex-modal-label">
                     Base Currency
                   </label>
                   <input
@@ -315,8 +363,8 @@ export default function TradingPairsPage() {
                     className="nex-input"
                   />
                 </div>
-                <div>
-                  <label htmlFor="quote_currency" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <div className="nex-modal-field">
+                  <label htmlFor="quote_currency" className="nex-modal-label">
                     Quote Currency
                   </label>
                   <input
@@ -332,9 +380,9 @@ export default function TradingPairsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div>
-                  <label htmlFor="min_order_size" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+              <div className="nex-modal-grid">
+                <div className="nex-modal-field">
+                  <label htmlFor="min_order_size" className="nex-modal-label">
                     Min Order Size
                   </label>
                   <input
@@ -349,8 +397,8 @@ export default function TradingPairsPage() {
                     className="nex-input"
                   />
                 </div>
-                <div>
-                  <label htmlFor="max_order_size" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <div className="nex-modal-field">
+                  <label htmlFor="max_order_size" className="nex-modal-label">
                     Max Order Size
                   </label>
                   <input
@@ -367,9 +415,9 @@ export default function TradingPairsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div>
-                  <label htmlFor="price_precision" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+              <div className="nex-modal-grid">
+                <div className="nex-modal-field">
+                  <label htmlFor="price_precision" className="nex-modal-label">
                     Price Precision
                   </label>
                   <input
@@ -384,8 +432,8 @@ export default function TradingPairsPage() {
                     className="nex-input"
                   />
                 </div>
-                <div>
-                  <label htmlFor="qty_precision" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <div className="nex-modal-field">
+                  <label htmlFor="qty_precision" className="nex-modal-label">
                     Quantity Precision
                   </label>
                   <input
@@ -402,9 +450,9 @@ export default function TradingPairsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div>
-                  <label htmlFor="maker_fee" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+              <div className="nex-modal-grid">
+                <div className="nex-modal-field">
+                  <label htmlFor="maker_fee" className="nex-modal-label">
                     Maker Fee (%)
                   </label>
                   <input
@@ -420,8 +468,8 @@ export default function TradingPairsPage() {
                     className="nex-input"
                   />
                 </div>
-                <div>
-                  <label htmlFor="taker_fee" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <div className="nex-modal-field">
+                  <label htmlFor="taker_fee" className="nex-modal-label">
                     Taker Fee (%)
                   </label>
                   <input
@@ -439,21 +487,21 @@ export default function TradingPairsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div className="nex-modal-checkbox">
                 <input
                   type="checkbox"
                   id="is_active"
                   name="is_active"
                   checked={formData.is_active}
                   onChange={handleChange}
-                  style={{ width: '1.25rem', height: '1.25rem' }}
+                  className="nex-modal-checkbox-input"
                 />
-                <label htmlFor="is_active" style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <label htmlFor="is_active" className="nex-modal-checkbox-label">
                   Active
                 </label>
               </div>
 
-              <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <div className="nex-modal-actions">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

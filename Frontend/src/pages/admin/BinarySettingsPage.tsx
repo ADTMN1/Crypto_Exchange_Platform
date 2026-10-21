@@ -15,7 +15,9 @@ export default function BinarySettingsPage() {
     max_trade_amount: 10000,
     allowed_expirations: '30,60,300,600',
     allowed_pairs: 'BTC/USDT,ETH/USDT,SOL/USDT',
+    duration_payouts: {} as Record<string, number>,
   });
+  const [durationInputValues, setDurationInputValues] = useState({} as Record<string, string>);
 
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
@@ -23,6 +25,12 @@ export default function BinarySettingsPage() {
     try {
       const response = await binaryService.getSettings();
       setSettings(response.data);
+      const initialDurationPayouts = response.data.duration_payouts || {};
+      const initialDurationInputs: Record<string, string> = {};
+      Object.keys(initialDurationPayouts).forEach(dur => {
+        initialDurationInputs[dur] = String(initialDurationPayouts[dur]);
+      });
+      
       setFormData({
         is_enabled: response.data.is_enabled,
         payout_percentage: response.data.payout_percentage,
@@ -30,7 +38,9 @@ export default function BinarySettingsPage() {
         max_trade_amount: response.data.max_trade_amount,
         allowed_expirations: response.data.allowed_expirations.join(','),
         allowed_pairs: response.data.allowed_pairs.join(','),
+        duration_payouts: initialDurationPayouts,
       });
+      setDurationInputValues(initialDurationInputs);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load binary settings';
       setError(msg);
@@ -49,6 +59,49 @@ export default function BinarySettingsPage() {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleDurationPayoutChange = (duration: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    let rawValue = e.target.value;
+    
+    // Allow only digits and one decimal point
+    rawValue = rawValue.replace(/[^0-9.]/g, '');
+    
+    // Remove extra decimal points
+    const parts = rawValue.split('.');
+    let sanitizedValue = '';
+    if (parts.length === 1) {
+      sanitizedValue = parts[0];
+    } else if (parts.length >= 2) {
+      sanitizedValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Remove leading zeros (but preserve "0" and "0."
+    if (sanitizedValue.length > 0) {
+      if (sanitizedValue.startsWith('0') && sanitizedValue.length > 1 && sanitizedValue[1] !== '.') {
+        sanitizedValue = sanitizedValue.replace(/^0+/, '');
+      }
+    }
+    
+    // Update both the display string state and numeric form data
+    setDurationInputValues(prev => ({
+      ...prev,
+      [duration]: sanitizedValue,
+    }));
+    
+    let numericValue = 0;
+    if (sanitizedValue) {
+      const parsed = parseFloat(sanitizedValue);
+      numericValue = isNaN(parsed) ? 0 : parsed;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      duration_payouts: {
+        ...prev.duration_payouts,
+        [duration]: numericValue,
+      },
     }));
   };
 
@@ -202,6 +255,38 @@ export default function BinarySettingsPage() {
                 placeholder="BTC/USDT,ETH/USDT,SOL/USDT"
                 className="nex-input"
               />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                Duration-Based Payout Percentages (%)
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                {formData.allowed_expirations.split(',').map(durationStr => {
+                  const duration = durationStr.trim();
+                  // If no display value exists, initialize it
+                  const currentDisplayValue = durationInputValues[duration] ?? 
+                    (formData.duration_payouts[duration] !== undefined ? String(formData.duration_payouts[duration]) : '');
+                  return (
+                    <div key={duration}>
+                      <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        {duration}s
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={currentDisplayValue}
+                        onChange={(e) => handleDurationPayoutChange(duration, e)}
+                        className="nex-input"
+                        placeholder="0"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                Set different payout percentages for each trade duration
+              </div>
             </div>
 
             <div style={{ marginTop: '1rem' }}>

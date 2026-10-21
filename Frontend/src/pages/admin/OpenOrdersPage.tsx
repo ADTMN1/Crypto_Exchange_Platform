@@ -13,9 +13,7 @@ export default function OpenOrdersPage() {
     setError(null);
     try {
       const response = await adminService.getOpenOrders();
-      if (response.success) {
-        setOrders(response.data);
-      }
+      setOrders(response.data);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load orders';
       setError(msg);

@@ -1,57 +1,90 @@
-import { Redis } from "@upstash/redis";
-import dotenv from "dotenv";
+import { Redis as UpstashRedis } from "@upstash/redis";
 
-dotenv.config();
+// ------------------------------
+// Check required environment variables
+// ------------------------------
+const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// 1. Strict Environment Variable Validation (Fail-Fast)
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-if (!redisUrl || !redisToken) {
+if (!upstashUrl || !upstashToken) {
   const missing = [];
-  if (!redisUrl) missing.push("UPSTASH_REDIS_REST_URL");
-  if (!redisToken) missing.push("UPSTASH_REDIS_REST_TOKEN");
+  if (!upstashUrl) missing.push("UPSTASH_REDIS_REST_URL");
+  if (!upstashToken) missing.push("UPSTASH_REDIS_REST_TOKEN");
   
   throw new Error(
-    `❌ Redis Initialization Failed: Missing environment variable(s): ${missing.join(", ")}. ` +
-    `Ensure your .env file is loaded correctly.`
+    `❌ Redis initialization failed: Missing required environment variables: ${missing.join(", ")}`
   );
 }
 
-// 2. Safe Instance Instantiation
-let redisClient;
+// ------------------------------
+// Initialize Upstash Redis client
+// ------------------------------
+console.log("🚀 Initializing Upstash Redis client...");
 
-try {
-  redisClient = new Redis({
-    url: redisUrl,
-    token: redisToken,
-  });
-} catch (error) {
-  throw new Error(`❌ Failed to instantiate Upstash Redis client: ${error.message}`);
-}
+const client = new UpstashRedis({
+  url: upstashUrl,
+  token: upstashToken,
+});
 
-// 3. Proactive Runtime Connectivity Check (Asynchronous Health Check)
+// ------------------------------
+// Create adapter with consistent method names
+// ------------------------------
+const redisClient = {
+  setEx: async (key, ttl, value) => {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    return await client.set(key, serialized, { ex: ttl });
+  },
+  get: async (key) => {
+    const result = await client.get(key);
+    // If result is already an object (Upstash auto-parsed it), return it as-is
+    // If it's a string, try to parse it as JSON, if fails, return as string
+    if (typeof result === 'object' && result !== null) {
+      return result;
+    }
+    if (typeof result === 'string') {
+      try {
+        return JSON.parse(result);
+      } catch {
+        return result;
+      }
+    }
+    return result;
+  },
+  del: async (key) => await client.del(key),
+  ping: async () => await client.ping(),
+};
+
+// ------------------------------
+// Health check function
+// ------------------------------
 export const checkRedisHealth = async () => {
   try {
-    const pingResponse = await redisClient.ping();
-    if (pingResponse === "PONG") {
-      return true;
-    }
-    console.warn(`⚠️ Redis health check returned unexpected response: ${pingResponse}`);
-    return false;
+    await redisClient.ping();
+    console.log("✅ Upstash Redis connection successful");
+    return true;
   } catch (error) {
-    console.error("❌ Redis health check failed:", error);
+    console.error("❌ Upstash Redis connection failed:", error);
     return false;
   }
 };
 
-// Auto-run health check in development environments to catch misconfigurations instantly
-if (process.env.NODE_ENV !== "production") {
-  checkRedisHealth().then((isHealthy) => {
-    if (isHealthy) {
-      console.log("🚀 Upstash Redis connected and authenticated successfully.");
-    }
-  });
-}
+// ------------------------------
+// Run health check on startup
+// ------------------------------
+checkRedisHealth();
+
+// ------------------------------
+// Run startup test
+// ------------------------------
+(async () => {
+  try {
+    await redisClient.setEx("test:key", 60, "working");
+    const testValue = await redisClient.get("test:key");
+    console.log("Redis test:", testValue);
+    await redisClient.del("test:key");
+  } catch (error) {
+    console.error("Redis startup test failed:", error);
+  }
+})();
 
 export default redisClient;

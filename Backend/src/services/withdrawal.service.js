@@ -1,6 +1,7 @@
 import pool, { query } from '../config/db.config.js';
 import AppError from '../utils/errorHandling.js';
 import walletService from './wallet.service.js';
+import logger from '../utils/logger.js';
 
 const withdrawalService = {
 
@@ -10,26 +11,55 @@ const withdrawalService = {
     try {
       await client.query('BEGIN');
 
-      // Get wallet with lock
+      // Ensure USDT wallet exists (create if needed)
+      await client.query(
+        `INSERT INTO wallets (user_id, currency, balance, locked_balance, usd_value)
+         VALUES ($1, 'USDT', 0, 0, 0)
+         ON CONFLICT (user_id, currency) DO NOTHING`,
+        [userId]
+      );
+
+      // Get USDT wallet with lock
       const walletRes = await client.query(
-        `SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE`,
-        [userId, currency]
+        `SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = 'USDT' FOR UPDATE`,
+        [userId]
       );
 
       if (walletRes.rows.length === 0) {
-        throw new AppError(`No ${currency} wallet found`, 404);
+        throw new AppError('No USDT wallet found', 404);
       }
 
       const wallet = walletRes.rows[0];
       const parsedAmount = parseFloat(amount);
       const parsedFee = parseFloat(fee);
 
-      if (parseFloat(wallet.balance) < parsedAmount) {
-        throw new AppError('Insufficient balance', 400);
+      // Calculate USD value if withdrawing non-USDT currency
+      let usdAmountToLock = parsedAmount;
+      if (currency !== 'USDT') {
+        // Calculate USD value (we can use calculateUsdValue from wallet.service, but let's just import it or duplicate it here? Wait, let's see—wait, calculateUsdValue is a helper in wallet.service.js, but it's not exported. Let's just handle it here for now
+        const binanceService = (await import('./binance.service.js')).default;
+        try {
+          const prices = await binanceService.getAllPrices();
+          const priceMap = new Map(prices.map(p => [p.symbol, p.price]));
+          const symbol = `${currency}USDT`;
+          const price = priceMap.get(symbol);
+          if (price) {
+            usdAmountToLock = parsedAmount * price;
+          }
+        } catch (err) {
+          logger.error('Error fetching price for withdrawal', { error: err.message });
+        }
       }
 
-      // Lock the withdrawal amount (moves from balance to locked_balance)
-      await walletService.lock(userId, currency, parsedAmount, client);
+      if (parseFloat(wallet.balance) < usdAmountToLock) {
+        throw new AppError(
+          `Insufficient available balance. Available: ${parseFloat(wallet.balance).toFixed(2)} USDT, Required: ${usdAmountToLock.toFixed(2)} USDT. Some funds may be locked in pending trades or withdrawals.`,
+          400
+        );
+      }
+
+      // Lock the withdrawal amount (in USD value)
+      await walletService.lock(userId, currency, usdAmountToLock, client);
 
       const result = await client.query(
         `INSERT INTO withdrawals
@@ -156,11 +186,44 @@ const withdrawalService = {
         throw new AppError(`Cannot approve a ${withdrawal.status} withdrawal`, 400);
       }
 
-      // Burn the locked withdrawal amount (permanently deduct from locked_balance)
-      await walletService.burn(withdrawal.user_id, withdrawal.currency, parseFloat(withdrawal.amount), client);
+      // The amount that was locked at request time (always USDT value)
+      const lockedAmount = parseFloat(withdrawal.amount);
 
-      // Record the debit transaction (already done in burn, but let's make sure? Wait no, wallet.service.js burn does that!)
-      // Wait let's check wallet.service.js burn() to confirm... Yes, it inserts a transaction!
+      // Get the wallet to check actual locked_balance
+      const walletRes = await client.query(
+        `SELECT id, locked_balance FROM wallets
+         WHERE user_id = $1 AND currency = 'USDT'
+         FOR UPDATE`,
+        [withdrawal.user_id]
+      );
+
+      if (walletRes.rows.length === 0) throw new AppError('User wallet not found', 404);
+      const wallet = walletRes.rows[0];
+      const actualLocked = parseFloat(wallet.locked_balance);
+
+      // Use the lesser of the two to avoid "Insufficient locked balance" on sync issues
+      // but never deduct more than was originally locked for this withdrawal
+      const amountToBurn = Math.min(lockedAmount, actualLocked);
+
+      if (amountToBurn <= 0) {
+        throw new AppError('No locked balance available to settle this withdrawal', 400);
+      }
+
+      // Burn from locked_balance and reduce usd_value
+      await client.query(
+        `UPDATE wallets
+         SET locked_balance = locked_balance - $1,
+             usd_value = GREATEST(0, usd_value - $1)
+         WHERE id = $2`,
+        [amountToBurn, wallet.id]
+      );
+
+      // Record the withdrawal transaction
+      await client.query(
+        `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
+         VALUES ($1, $2, 'withdrawal', 'USDT', $3, $4, 'completed', NOW())`,
+        [withdrawal.user_id, wallet.id, amountToBurn, parseFloat(withdrawal.fee || 0)]
+      );
 
       // Update withdrawal status
       const now = new Date();
@@ -205,8 +268,32 @@ const withdrawalService = {
         throw new AppError('Rejection reason is required', 400);
       }
 
-      // Release the locked withdrawal amount (move back to available balance)
-      await walletService.release(withdrawal.user_id, withdrawal.currency, parseFloat(withdrawal.amount), client);
+      const lockedAmount = parseFloat(withdrawal.amount);
+
+      // Get wallet to check actual locked_balance
+      const walletRes = await client.query(
+        `SELECT id, locked_balance FROM wallets
+         WHERE user_id = $1 AND currency = 'USDT'
+         FOR UPDATE`,
+        [withdrawal.user_id]
+      );
+
+      if (walletRes.rows.length === 0) throw new AppError('User wallet not found', 404);
+      const wallet = walletRes.rows[0];
+      const actualLocked = parseFloat(wallet.locked_balance);
+
+      // Release back to available balance — use the lesser to avoid going negative
+      const amountToRelease = Math.min(lockedAmount, actualLocked);
+
+      if (amountToRelease > 0) {
+        await client.query(
+          `UPDATE wallets
+           SET locked_balance = locked_balance - $1,
+               balance = balance + $1
+           WHERE id = $2`,
+          [amountToRelease, wallet.id]
+        );
+      }
 
       const now = new Date();
       const updated = await client.query(
@@ -234,12 +321,13 @@ const withdrawalService = {
     try {
       await client.query('BEGIN');
 
+      // First, ensure we're working with a USDT wallet
       const walletRes = await client.query(
-        `SELECT id, user_id, currency, balance FROM wallets WHERE id = $1 FOR UPDATE`,
+        `SELECT id, user_id, currency, balance FROM wallets WHERE id = $1 AND currency = 'USDT' FOR UPDATE`,
         [walletId]
       );
 
-      if (walletRes.rows.length === 0) throw new AppError('Wallet not found', 404);
+      if (walletRes.rows.length === 0) throw new AppError('USDT wallet not found', 404);
       const wallet = walletRes.rows[0];
       const parsedAmount = parseFloat(amount);
 
@@ -248,13 +336,13 @@ const withdrawalService = {
           throw new AppError('Insufficient balance', 400);
         }
         await client.query(
-          `UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
+          `UPDATE wallets SET balance = balance - $1, usd_value = usd_value - $1, updated_at = NOW() WHERE id = $2`,
           [parsedAmount, walletId]
         );
         await client.query(
           `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
-           VALUES ($1, $2, 'withdrawal', $3, $4, 0, 'completed', NOW())`,
-          [wallet.user_id, walletId, wallet.currency, parsedAmount]
+           VALUES ($1, $2, 'withdrawal', 'USDT', $3, 0, 'completed', NOW())`,
+          [wallet.user_id, walletId, parsedAmount]
         );
       } else {
         throw new AppError('Only DEBIT operation supported on this endpoint', 400);

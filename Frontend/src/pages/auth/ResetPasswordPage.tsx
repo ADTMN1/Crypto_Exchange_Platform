@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import AuthLayout from "../../components/auth/AuthLayout";
 import AuthForm from "../../components/auth/AuthForm";
 import { authService } from "../../services";
 import { toast } from "sonner";
-import Spinner from "../../components/ui/Spinner";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,8 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -51,105 +54,94 @@ export default function ResetPasswordPage() {
 
   if (isSuccess) {
     return (
-      <div className="auth-page">
+      <AuthLayout>
         <AuthForm
           title="Password Reset Successful!"
           subtitle="Your password has been updated. You can now log in with your new password."
         >
-          <div style={{
-            textAlign: 'center',
-            padding: '20px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              background: '#24c576',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '48px',
-              color: 'white',
-              marginBottom: '24px',
-              fontWeight: 700
-            }}>
-              ✓
+          <div className="auth-success">
+            <div className="auth-success-icon">✓</div>
+            <div className="auth-success-actions">
+              <Link to="/login" className="auth-btn">
+                Go to Login
+              </Link>
             </div>
-            <Link
-              to="/login"
-              className="auth-btn"
-              style={{
-                width: '100%',
-                padding: '14px 24px',
-                background: '#f3921f',
-                color: '#1a1a1a',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                textDecoration: 'none',
-                display: 'block',
-                textAlign: 'center'
-              }}
-            >
-              Go to Login
-            </Link>
           </div>
         </AuthForm>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="auth-page">
+    <AuthLayout>
       <AuthForm
         title="Reset Password"
         subtitle="Enter your new password below to update your account."
       >
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           <div className="auth-form-group">
-            <label className="auth-label">New Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="auth-input"
-              placeholder="••••••••"
-              required
-              disabled={isLoading}
-            />
+            <label className="auth-label" htmlFor="reset-password">New Password</label>
+            <div className="auth-field">
+              <FaLock className="auth-field-icon" aria-hidden="true" />
+              <input
+                id="reset-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="auth-input auth-input--icon auth-input--toggle"
+                placeholder="••••••••"
+                required
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="auth-input-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
           </div>
+
           <div className="auth-form-group">
-            <label className="auth-label">Confirm Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="auth-input"
-              placeholder="••••••••"
-              required
-              disabled={isLoading}
-            />
+            <label className="auth-label" htmlFor="reset-confirm">Confirm Password</label>
+            <div className="auth-field">
+              <FaLock className="auth-field-icon" aria-hidden="true" />
+              <input
+                id="reset-confirm"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="auth-input auth-input--icon auth-input--toggle"
+                placeholder="••••••••"
+                required
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="auth-input-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
           </div>
-          <button
-            type="submit"
-            className="auth-btn flex items-center justify-center gap-2"
-            disabled={isLoading || !token}
-          >
+
+          <button type="submit" className="auth-btn" disabled={isLoading || !token}>
             {isLoading ? (
-              <>
-                <Spinner />
-                Resetting...
-              </>
+              <span className="btn-loading">
+                <span className="spinner" />
+                Resetting…
+              </span>
             ) : (
               "Reset Password"
             )}
           </button>
+
           <p className="auth-footer">
             Remember your password?{" "}
             <Link to="/login" className="auth-link">
@@ -158,6 +150,6 @@ export default function ResetPasswordPage() {
           </p>
         </form>
       </AuthForm>
-    </div>
+    </AuthLayout>
   );
 }

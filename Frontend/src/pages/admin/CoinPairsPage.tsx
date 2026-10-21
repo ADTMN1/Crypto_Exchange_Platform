@@ -122,80 +122,158 @@ export default function CoinPairsPage() {
               <p>Loading trading pairs...</p>
             </div>
           ) : (
-            <div className="nex-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th>Base</th>
-                    <th>Quote</th>
-                    <th>Current Price</th>
-                    <th>Min Order</th>
-                    <th>Max Order</th>
-                    <th>Maker Fee</th>
-                    <th>Taker Fee</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPairs.length === 0 ? (
+            <>
+              {/* Desktop Table View */}
+              <div className="nex-table-wrapper nex-desktop-only">
+                <table>
+                  <thead>
                     <tr>
-                      <td colSpan={10} className="nex-empty-state">
-                        <div>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                          </svg>
-                          <p>No trading pairs found</p>
-                        </div>
-                      </td>
+                      <th>Symbol</th>
+                      <th>Base</th>
+                      <th>Quote</th>
+                      <th>Current Price</th>
+                      <th>Min Order</th>
+                      <th>Max Order</th>
+                      <th>Maker Fee</th>
+                      <th>Taker Fee</th>
+                      <th>Status</th>
+                      <th>Action</th>
                     </tr>
-                  ) : (
-                    filteredPairs.map((pair) => (
-                      <tr key={pair.id}>
-                        <td>
-                          <strong style={{ fontSize: '16px' }}>{pair.symbol}</strong>
-                        </td>
-                        <td><strong>{pair.base_currency}</strong></td>
-                        <td><strong>{pair.quote_currency}</strong></td>
-                        <td>
-                          <div style={{ color: 'var(--color-success)' }}>
-                            <strong>{formatPrice(pair.current_price)}</strong>
-                          </div>
-                        </td>
-                        <td>{formatNumber(pair.min_order_size)}</td>
-                        <td>{formatNumber(pair.max_order_size)}</td>
-                        <td>{(parseFloat(pair.maker_fee) * 100).toFixed(2)}%</td>
-                        <td>{(parseFloat(pair.taker_fee) * 100).toFixed(2)}%</td>
-                        <td>{getStatusBadge(pair.is_active)}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <button 
-                              onClick={() => handleEdit(pair.id)}
-                              className="nex-btn-xs nex-btn-primary"
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              onClick={() => handleToggleStatus(pair.id, pair.is_active)}
-                              className={`nex-btn-xs ${pair.is_active ? 'nex-btn-secondary' : 'nex-btn-success'}`}
-                            >
-                              {pair.is_active ? 'Disable' : 'Enable'}
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(pair.id, pair.symbol)}
-                              className="nex-btn-xs nex-btn-danger"
-                            >
-                              Delete
-                            </button>
+                  </thead>
+                  <tbody>
+                    {filteredPairs.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="nex-empty-state">
+                          <div>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <p>No trading pairs found</p>
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      filteredPairs.map((pair) => (
+                        <tr key={pair.id}>
+                          <td>
+                            <strong style={{ fontSize: '16px' }}>{pair.symbol}</strong>
+                          </td>
+                          <td><strong>{pair.base_currency}</strong></td>
+                          <td><strong>{pair.quote_currency}</strong></td>
+                          <td>
+                            <div style={{ color: 'var(--color-success)' }}>
+                              <strong>{formatPrice(pair.current_price)}</strong>
+                            </div>
+                          </td>
+                          <td>{formatNumber(pair.min_order_size)}</td>
+                          <td>{formatNumber(pair.max_order_size)}</td>
+                          <td>{(parseFloat(pair.maker_fee) * 100).toFixed(2)}%</td>
+                          <td>{(parseFloat(pair.taker_fee) * 100).toFixed(2)}%</td>
+                          <td>{getStatusBadge(pair.is_active)}</td>
+                          <td>
+                            <div className="nex-action-buttons">
+                              <button 
+                                onClick={() => handleEdit(pair.id)}
+                                className="nex-btn-xs nex-btn-primary"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleToggleStatus(pair.id, pair.is_active)}
+                                className={`nex-btn-xs ${pair.is_active ? 'nex-btn-secondary' : 'nex-btn-success'}`}
+                              >
+                                {pair.is_active ? 'Disable' : 'Enable'}
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(pair.id, pair.symbol)}
+                                className="nex-btn-xs nex-btn-danger"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="nex-mobile-cards nex-mobile-only">
+                {filteredPairs.length === 0 ? (
+                  <div className="nex-empty-state">
+                    <div>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                      <p>No trading pairs found</p>
+                    </div>
+                  </div>
+                ) : (
+                  filteredPairs.map((pair) => (
+                    <div key={pair.id} className="nex-pair-card">
+                      <div className="nex-pair-card-header">
+                        <div className="nex-pair-symbol">
+                          <strong>{pair.symbol}</strong>
+                        </div>
+                        {getStatusBadge(pair.is_active)}
+                      </div>
+                      <div className="nex-pair-card-body">
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Base:</span>
+                          <span className="nex-pair-value">{pair.base_currency}</span>
+                        </div>
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Quote:</span>
+                          <span className="nex-pair-value">{pair.quote_currency}</span>
+                        </div>
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Price:</span>
+                          <span className="nex-pair-value nex-pair-price">{formatPrice(pair.current_price)}</span>
+                        </div>
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Min Order:</span>
+                          <span className="nex-pair-value">{formatNumber(pair.min_order_size)}</span>
+                        </div>
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Max Order:</span>
+                          <span className="nex-pair-value">{formatNumber(pair.max_order_size)}</span>
+                        </div>
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Maker Fee:</span>
+                          <span className="nex-pair-value">{(parseFloat(pair.maker_fee) * 100).toFixed(2)}%</span>
+                        </div>
+                        <div className="nex-pair-info-row">
+                          <span className="nex-pair-label">Taker Fee:</span>
+                          <span className="nex-pair-value">{(parseFloat(pair.taker_fee) * 100).toFixed(2)}%</span>
+                        </div>
+                      </div>
+                      <div className="nex-pair-card-actions">
+                        <button 
+                          onClick={() => handleEdit(pair.id)}
+                          className="nex-btn-xs nex-btn-primary"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleToggleStatus(pair.id, pair.is_active)}
+                          className={`nex-btn-xs ${pair.is_active ? 'nex-btn-secondary' : 'nex-btn-success'}`}
+                        >
+                          {pair.is_active ? 'Disable' : 'Enable'}
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(pair.id, pair.symbol)}
+                          className="nex-btn-xs nex-btn-danger"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
 
           {!isLoading && filteredPairs.length > 0 && (

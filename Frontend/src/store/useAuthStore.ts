@@ -12,8 +12,7 @@ interface AuthState {
   logout: () => void
   setTokens: (accessToken: string | null, refreshToken: string | null) => void
   updateUser: (updates: Partial<User>) => void
-  initialize: () => void
-  setLoading: (loading: boolean) => void
+  setHydrated: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -23,7 +22,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       accessToken: null,
       refreshToken: null,
-      isLoading: true,
+      isLoading: true, // Start as true (hydrating)
       login: (user, accessToken = null, refreshToken = null) => {
         if (!user) {
           console.error('Cannot login with undefined user');
@@ -44,33 +43,7 @@ export const useAuthStore = create<AuthState>()(
           user: state.user ? { ...state.user, ...updates } : null,
         }));
       },
-      initialize: () => {
-        try {
-          // The persist middleware should handle rehydration, but just to be safe
-          const authStorage = localStorage.getItem('auth-storage');
-          if (authStorage) {
-            const parsedStorage = JSON.parse(authStorage);
-            const { state } = parsedStorage;
-            if (state) {
-              set({
-                user: state.user || null,
-                isAuthenticated: state.isAuthenticated || false,
-                accessToken: state.accessToken || null,
-                refreshToken: state.refreshToken || null,
-                isLoading: false,
-              });
-            } else {
-              set({ isLoading: false });
-            }
-          } else {
-            set({ isLoading: false });
-          }
-        } catch (error) {
-          console.error('Error initializing auth store:', error);
-          set({ isLoading: false });
-        }
-      },
-      setLoading: (loading) => set({ isLoading: loading }),
+      setHydrated: () => set({ isLoading: false }),
     }),
     {
       name: 'auth-storage',
@@ -80,13 +53,15 @@ export const useAuthStore = create<AuthState>()(
           state.isLoading = false;
         }
       },
-      // Add partialize to prevent circular reference issues
+      // Add partialize to prevent circular reference issues (exclude isLoading from persistence)
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
       }),
+      // Ensure hydration is marked complete even with empty storage
+      version: 1,
     }
   )
 )

@@ -15,7 +15,6 @@ DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS trading_pairs CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS wallets CASCADE;
-DROP TABLE IF EXISTS sessions CASCADE;
 DROP TABLE IF EXISTS user_status CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -80,19 +79,7 @@ CREATE TABLE user_status (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 🔐 4. Sessions Table
-CREATE TABLE sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    refresh_token TEXT NOT NULL,
-    ip_address INET,
-    user_agent TEXT,
-    is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- 💰 5. Wallets Table
+-- � 4. Wallets Table
 CREATE TABLE wallets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -113,6 +100,10 @@ CREATE TABLE transactions (
     amount NUMERIC(28,8) NOT NULL,
     fee NUMERIC(28,8) NOT NULL DEFAULT 0.00000000,
     status transaction_status_enum NOT NULL DEFAULT 'pending',
+    tx_hash TEXT,
+    from_address TEXT,
+    to_address TEXT,
+    confirmations INTEGER NOT NULL DEFAULT 0,
     confirmed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -304,9 +295,6 @@ ON support_tickets(last_reply_at DESC);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_phone ON users(phone_number);
 CREATE INDEX idx_users_role ON users(role_id);
-
-CREATE INDEX idx_sessions_user_revoked ON sessions(user_id, is_revoked);
-CREATE INDEX idx_sessions_token ON sessions(refresh_token);
 
 CREATE INDEX idx_wallets_user_currency ON wallets(user_id, currency);
 

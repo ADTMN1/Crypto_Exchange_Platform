@@ -14,6 +14,7 @@ binaryRouter.use(authenticateToken);
 // Note: gate check intentionally removed — gate closed = lose at resolution, not block placement
 binaryRouter.post('/trade', binaryController.placeTrade);
 binaryRouter.get('/my-trades', binaryController.getMyTrades);
+binaryRouter.get('/my-trades/:id', binaryController.getTrade);
 
 // ─── ADMIN ROUTES ───────────────────────────────────────────────────────────
 binaryRouter.get('/admin/trades/:status', requireAdmin, binaryController.getAdminTrades);

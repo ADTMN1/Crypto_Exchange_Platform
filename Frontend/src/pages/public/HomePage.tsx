@@ -7,7 +7,7 @@ export default function HomePage() {
   const coins = [
     {
       name: "Bitcoin",
-      symbol: "BTCK",
+      symbol: "BTC",
       change: "+2.45%",
       price: "$68,245.30",
       positive: true,

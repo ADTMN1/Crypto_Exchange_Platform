@@ -3,17 +3,12 @@ import { z } from "zod";
 // Regex for international phone numbers (E.164 format: e.g., +1234567890)
 
 export const signUpSchema = z.object({
-  firstName: z
+  fullName: z
     .string()
-    .min(3, { message: "First name must be at least 3 characters" })
-    .max(20, { message: "First name cannot exceed 20 characters" })
+    .min(3, { message: "Full name must be at least 3 characters" })
+    .max(40, { message: "Full name cannot exceed 40 characters" })
     .trim(),
-  lastName: z
-    .string()
-    .min(3, { message: "Last name must be at least 3 characters" })
-    .max(20, { message: "Last name cannot exceed 20 characters" })
-    .trim(),
- email: z
+  email: z
   .string()
   .min(1, { message: "Email is required" })
   .email({ message: "Invalid email" })

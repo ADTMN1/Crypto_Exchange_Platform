@@ -44,12 +44,8 @@ app.use(
 			if (!origin) return callback(null, true);
 			// For development, allow any origin
 			if (process.env.NODE_ENV !== 'production') return callback(null, true);
-			// For production, check allowed origins
+			// For production, check exact allowed origins
 			if (allowedOrigins.includes(origin)) {
-				return callback(null, true);
-			}
-			// Fallback: allow if origin is our own frontend domain (to prevent issues)
-			if (origin.includes('vercel.app') || origin.includes('localhost')) {
 				return callback(null, true);
 			}
 			callback(new Error('Blocked by Cross-Origin Resource Sharing policy'));
@@ -85,7 +81,7 @@ const {
   validateRequest,
   doubleCsrfProtection,
 } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'fallback-secret-change-in-production',
+  getSecret: () => process.env.CSRF_SECRET || 'CHANGE-THIS-IN-PRODUCTION-USE-ENV-VAR',
   cookieName: 'x-csrf-token',
   cookieOptions: {
     httpOnly: true,
@@ -100,12 +96,54 @@ const {
 });
 
 // 9. Infrastructure Health Checks & Base Route
-app.get('/health', (req, res) => {
-	res.status(200).json({
-		status: 'healthy',
-		timestamp: new Date().toISOString(),
-		uptime: process.uptime(),
-	});
+app.get('/health', async (req, res) => {
+	try {
+		const pool = (await import('./src/config/db.config.js')).default;
+		
+		// Check database connectivity
+		let dbStatus = 'ok';
+		let dbLatency = null;
+		const dbStart = Date.now();
+		try {
+			await pool.query('SELECT 1');
+			dbLatency = Date.now() - dbStart;
+		} catch (dbError) {
+			dbStatus = 'error';
+			console.error('Health check database error:', dbError.message);
+		}
+
+		// Check pool status
+		const poolStatus = {
+			totalCount: pool.totalCount,
+			idleCount: pool.idleCount,
+			waitingCount: pool.waitingCount
+		};
+
+		const healthData = {
+			api: 'ok',
+			database: dbStatus,
+			databaseLatency: dbLatency,
+			pool: poolStatus,
+			timestamp: new Date().toISOString(),
+			uptime: process.uptime(),
+		};
+
+		// Return 200 if all critical services are healthy
+		if (dbStatus === 'ok') {
+			res.status(200).json(healthData);
+		} else {
+			res.status(503).json(healthData);
+		}
+	} catch (error) {
+		console.error('Health check error:', error.message);
+		res.status(503).json({
+			api: 'error',
+			database: 'unknown',
+			timestamp: new Date().toISOString(),
+			uptime: process.uptime(),
+			error: error.message
+		});
+	}
 });
 
 // 10. Endpoint to get CSRF token (MUST be before CSRF protection middleware)
@@ -114,19 +152,19 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken });
 });
 
-// 11. CSRF protection disabled for debugging - re-enable after verifying login works!
-// app.use('/api', (req, res, next) => {
-//   // Skip CSRF for GET, HEAD, OPTIONS, and csrf-token endpoint
-//   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/csrf-token') {
-//     return next();
-//   }
-//   doubleCsrfProtection(req, res, next);
-// });
+// 11. CSRF protection enabled for state-changing endpoints
+app.use('/api', (req, res, next) => {
+  // Skip CSRF for GET, HEAD, OPTIONS, and csrf-token endpoint
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/csrf-token') {
+    return next();
+  }
+  doubleCsrfProtection(req, res, next);
+});
 
 app.use('/api',router)
 
 app.get('/api', (req, res) => {
-	res.json({ message: 'Crypto Exchange Tier-1 Backend Running Securely.' });
+	res.json({ message: 'PrimeAlfaTrade Tier-1 Backend Running Securely.' });
 });
 
 app.get('/', (req, res) => {

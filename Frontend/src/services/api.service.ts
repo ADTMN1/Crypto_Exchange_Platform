@@ -1,11 +1,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
-import { useAuthStore } from '../store'
 
 // API Configuration
-const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://crypto-exchange-platform-1.onrender.com'
+const VITE_API_BASE = import.meta.env.VITE_API_BASE_URL
 const API_CONFIG = {
   baseURL: `${VITE_API_BASE}/api`,
-  timeout: 30000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,14 +35,13 @@ api.interceptors.request.use(
   async (config) => {
     console.log('Making API request to:', config.baseURL + config.url, 'with config:', config)
     
-    // Add auth token from store (fallback to localStorage for cookie)
-    const store = useAuthStore.getState()
-    const token = store.accessToken || localStorage.getItem('token')
+    // Add auth token from localStorage (fallback for cookie)
+    const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
 
-    // Add CSRF token for state-changing requests - cache the token to avoid rate limits
+    // Add CSRF token for state-changing requests
     if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
       if (!csrfToken) {
         await fetchCsrfToken();
@@ -65,29 +63,28 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     // Only attempt refresh on 401 — 403 means forbidden (e.g. not admin), not expired token
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login') && !originalRequest.url?.includes('/auth/register') && !originalRequest.url?.includes('/auth/send-otp')) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
-        const store = useAuthStore.getState()
-        const storedRefreshToken = store.refreshToken || localStorage.getItem('refreshToken')
-        if (!storedRefreshToken) throw new Error('No refresh token available')
+        const storedRefreshToken = localStorage.getItem('refreshToken')
 
         // Call refresh — backend reads cookie OR body refreshToken, returns new accessToken in body
-        const refreshResponse = await api.post('/auth/refresh-token', { refreshToken: storedRefreshToken })
+        const refreshResponse = await api.post('/auth/refresh-token', storedRefreshToken ? { refreshToken: storedRefreshToken } : {})
 
         const newAccessToken = refreshResponse.data?.accessToken
         if (!newAccessToken) throw new Error('No access token returned from refresh')
 
-        // Persist new token and update store!
+        // Persist new token and retry
         localStorage.setItem('token', newAccessToken)
-        useAuthStore.setState({ accessToken: newAccessToken })
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
         return api(originalRequest)
-      } catch (err) {
-        // Only clear everything if not on login/register page
-        console.warn('Refresh token failed:', err)
-        // Don't clear auth store or redirect immediately - let the protected route handle it
+      } catch {
+        // Refresh failed — clear everything and send to login
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('auth-storage')
+        window.location.href = '/login'
       }
     }
 
@@ -111,8 +108,8 @@ export const API_ENDPOINTS = {
   // User endpoints
   USER: {
     PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/profile/update',
-    CHANGE_PASSWORD: '/user/change-password',
+    UPDATE_PROFILE: '/user/profile',
+    CHANGE_PASSWORD: '/user/profile/password',
   },
   // Wallet endpoints
   WALLET: {
@@ -125,6 +122,8 @@ export const API_ENDPOINTS = {
     ADMIN_DEPOSITS: (status: string) => `/wallet/admin/deposits/${status}`,
     ADMIN_APPROVE_DEPOSIT: (transactionId: string) => `/wallet/admin/deposit/${transactionId}/approve`,
     ADMIN_REJECT_DEPOSIT: (transactionId: string) => `/wallet/admin/deposit/${transactionId}/reject`,
+    ADMIN_TOPUP: '/wallet/admin/topup',
+    ADMIN_DEBIT: '/wallet/admin/debit',
   },
   // Trade endpoints
   TRADE: {

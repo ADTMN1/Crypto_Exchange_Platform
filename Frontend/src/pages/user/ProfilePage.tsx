@@ -75,27 +75,22 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // For now, just update local state without calling the API
-      // TODO: Backend endpoint needs to be created
-      
-      // Simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Update local state
+      // Map frontend fields to backend schema:
+      // username = firstName + lastName (combined), email stays, phone_number = phone
+      const username = `${editedData.firstName} ${editedData.lastName}`.trim() || undefined;
+      const updated = await userService.updateProfile({
+        username,
+        email: editedData.email || undefined,
+        phone_number: editedData.phone || undefined,
+      });
+
+      // Refresh user data in the store from the authoritative server response
+      useAuthStore.getState().updateUser(updated);
+
       setProfileData({ ...editedData });
       setIsEditing(false);
-      
-      // Optionally show a success message
-      alert('Profile updated successfully! (Note: Changes are only saved locally for now)');
-      
-      // If you want to call the API in the future, uncomment this:
-      // await userService.updateProfile({
-      //   firstName: editedData.firstName,
-      //   lastName: editedData.lastName,
-      //   email: editedData.email,
-      //   phone: editedData.phone,
-      // });
-      
+
+      alert('Profile updated successfully!');
     } catch (error) {
       console.error('Failed to update profile:', error);
       alert('Failed to update profile. Please try again.');
@@ -141,11 +136,8 @@ export default function ProfilePage() {
         setProfileImage(data.imageUrl);
         setImageError(false);
         
-        // Update the auth store with the new user data
-        const login = useAuthStore.getState().login;
-        if (data.user) {
-          login(data.user);
-        }
+        // Update the auth store with the new user data (preserving tokens)
+        useAuthStore.getState().updateUser(data.user);
         
         alert('Profile image updated successfully!');
       } else {

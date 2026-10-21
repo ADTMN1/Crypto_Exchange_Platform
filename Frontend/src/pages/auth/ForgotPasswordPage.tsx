@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { FaEnvelope } from "react-icons/fa";
+import AuthLayout from "../../components/auth/AuthLayout";
 import AuthForm from "../../components/auth/AuthForm";
 import { authService } from "../../services";
 import { toast } from "sonner";
-import Spinner from "../../components/ui/Spinner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -30,131 +31,71 @@ export default function ForgotPasswordPage() {
 
   if (isSubmitted) {
     return (
-      <div className="auth-page">
+      <AuthLayout>
         <AuthForm
           title="Check Your Email"
           subtitle="We've sent password reset instructions to your email"
         >
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '20px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              background: '#24c576',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '48px',
-              color: 'white',
-              marginBottom: '24px',
-              fontWeight: 700
-            }}>
-              ✓
-            </div>
-            
-            <p style={{
-              fontSize: '16px',
-              color: '#e0e0e0',
-              marginBottom: '16px',
-              lineHeight: '1.6',
-              maxWidth: '100%'
-            }}>
-              If an account exists for <strong style={{ color: '#f3921f' }}>{email}</strong>, you will receive password reset instructions shortly.
+          <div className="auth-success">
+            <div className="auth-success-icon">✓</div>
+
+            <p className="auth-success-text">
+              If an account exists for <strong>{email}</strong>, you will receive password
+              reset instructions shortly.
             </p>
-            
-            <p style={{
-              fontSize: '14px',
-              color: '#a0a0a0',
-              marginBottom: '32px',
-              lineHeight: '1.5'
-            }}>
-              Didn't receive the email? Check your spam folder or try again.
+
+            <p className="auth-success-text auth-success-text--muted">
+              Didn&apos;t receive the email? Check your spam folder or try again.
             </p>
-            
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              width: '100%'
-            }}>
+
+            <div className="auth-success-actions">
               <button
+                type="button"
                 onClick={() => setIsSubmitted(false)}
-                style={{
-                  width: '100%',
-                  padding: '14px 24px',
-                  background: 'transparent',
-                  color: '#f3921f',
-                  border: '2px solid #f3921f',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(243, 146, 31, 0.1)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                className="auth-btn-outline"
               >
                 Try Another Email
               </button>
-              <Link 
-                to="/login" 
-                className="auth-btn"
-                style={{
-                  width: '100%',
-                  padding: '14px 24px',
-                  background: '#f3921f',
-                  color: '#1a1a1a',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  textDecoration: 'none',
-                  display: 'block',
-                  textAlign: 'center'
-                }}
-              >
+              <Link to="/login" className="auth-btn">
                 Back to Login
               </Link>
             </div>
           </div>
         </AuthForm>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="auth-page">
+    <AuthLayout>
       <AuthForm
         title="Forgot Password?"
         subtitle="Enter your email and we'll send you instructions to reset your password"
       >
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           <div className="auth-form-group">
-            <label className="auth-label">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="auth-input"
-              placeholder="you@example.com"
-              required
-            />
+            <label className="auth-label" htmlFor="forgot-email">Email Address</label>
+            <div className="auth-field">
+              <FaEnvelope className="auth-field-icon" aria-hidden="true" />
+              <input
+                id="forgot-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="auth-input auth-input--icon"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
           </div>
 
-          <button type="submit" className="auth-btn flex items-center justify-center gap-2" disabled={isLoading}>
+          <button type="submit" className="auth-btn" disabled={isLoading}>
             {isLoading ? (
-              <>
-                <Spinner />
-                Sending...
-              </>
+              <span className="btn-loading">
+                <span className="spinner" />
+                Sending…
+              </span>
             ) : (
               "Send Reset Link"
             )}
@@ -168,6 +109,6 @@ export default function ForgotPasswordPage() {
           </p>
         </form>
       </AuthForm>
-    </div>
+    </AuthLayout>
   );
 }

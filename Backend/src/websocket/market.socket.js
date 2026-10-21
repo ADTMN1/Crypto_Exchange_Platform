@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import binanceService from '../services/binance.service.js';
+import logger from '../utils/logger.js';
 
 const RECONNECT_DELAY_MS  = 3000;
 const MAX_RECONNECT_TRIES = 10;
@@ -23,7 +24,7 @@ const attachMarketSocket = (io) => {
     _openGlobalStream(io);
 
     nsp.on('connection', (socket) => {
-        console.log(`📡 Market client connected: ${socket.id}`);
+        logger.info('Market client connected', { socketId: socket.id });
 
         // ── subscribe ─────────────────────────────────────────────────────────
         // Accept either a string symbol or an object { symbol, type, interval }
@@ -37,7 +38,7 @@ const attachMarketSocket = (io) => {
                 const streamKey = type === 'kline' ? `${symbol}|kline|${interval}` : `${symbol}|trade`;
 
                 socket.join(streamKey);
-                console.log(`📊 ${socket.id} subscribed → ${streamKey}`);
+                logger.debug('Client subscribed', { socketId: socket.id, streamKey });
 
                 // Start Binance stream if not running
                 if (!activeStreams.has(streamKey)) {
@@ -71,7 +72,7 @@ const attachMarketSocket = (io) => {
                 const streamKey = type === 'kline' ? `${symbol}|kline|${interval}` : `${symbol}|trade`;
 
                 socket.leave(streamKey);
-                console.log(`🔕 ${socket.id} unsubscribed ← ${streamKey}`);
+                logger.debug('Client unsubscribed', { socketId: socket.id, streamKey });
 
                 // Close Binance stream if room is now empty
                 _closeStreamIfEmpty(streamKey, nsp);
@@ -84,7 +85,7 @@ const attachMarketSocket = (io) => {
 
         // ── disconnect ────────────────────────────────────────────────────────
         socket.on('disconnect', (reason) => {
-            console.log(`📡 Market client disconnected: ${socket.id} (${reason})`);
+            logger.info('Market client disconnected', { socketId: socket.id, reason });
 
             // Clean up any streams where this was the last subscriber
             activeStreams.forEach((_, symbol) => {
@@ -114,7 +115,7 @@ const _openGlobalStream = (io, retries = 0) => {
     const ws  = new WebSocket(url);
 
     ws.on('open', () => {
-        console.log('🟢 Binance global multi-stream opened');
+        logger.info('Binance global multi-stream opened');
     });
 
     ws.on('message', (raw) => {
@@ -137,18 +138,18 @@ const _openGlobalStream = (io, retries = 0) => {
     });
 
     ws.on('close', (code) => {
-        console.warn(`🟡 Binance global stream closed (code=${code})`);
+        logger.warn('Binance global stream closed', { code });
         if (retries >= MAX_RECONNECT_TRIES) {
-            console.error('🔴 Max reconnect attempts reached for global stream.');
+            logger.error('Max reconnect attempts reached for global stream');
             return;
         }
         const delay = RECONNECT_DELAY_MS * Math.pow(2, Math.min(retries, 4));
-        console.log(`🔁 Reconnecting global stream in ${delay}ms (attempt ${retries + 1})...`);
+        logger.info('Reconnecting global stream', { delayMs: delay, attempt: retries + 1 });
         setTimeout(() => _openGlobalStream(io, retries + 1), delay);
     });
 
     ws.on('error', (err) => {
-        console.error('🔴 Binance global stream error:', err.message);
+        logger.error('Binance global stream error', { error: err.message });
         ws.terminate();
     });
 };
@@ -166,7 +167,7 @@ const _openStream = (symbol, nsp, retries = 0) => {
     activeStreams.set(key, { ws, retries });
 
     ws.on('open', () => {
-        console.log(`🟢 Binance WS opened: ${symbol}`);
+        logger.info('Binance WS opened', { symbol });
         const entry = activeStreams.get(symbol);
         if (entry) entry.retries = 0;
     });
@@ -193,17 +194,17 @@ const _openStream = (symbol, nsp, retries = 0) => {
     });
 
     ws.on('close', (code) => {
-        console.warn(`🟡 Binance WS closed: ${symbol} (code=${code})`);
+        logger.warn('Binance WS closed', { symbol, code });
         activeStreams.delete(key);
 
         const room = nsp.adapter.rooms.get(key);
         if (!room || room.size === 0) {
-            console.log(`🔴 No subscribers left for ${key}. Stream will not reconnect.`);
+            logger.warn('No subscribers left for stream', { key });
             return;
         }
 
         if (retries >= MAX_RECONNECT_TRIES) {
-            console.error(`🔴 Max reconnect attempts reached for ${symbol}. Notifying clients.`);
+            logger.error('Max reconnect attempts reached for stream', { symbol });
             nsp.to(symbol).emit('stream_error', {
                 symbol,
                 message: `Live stream for ${symbol} is unavailable. Please refresh.`,
@@ -212,12 +213,12 @@ const _openStream = (symbol, nsp, retries = 0) => {
         }
 
         const delay = RECONNECT_DELAY_MS * Math.pow(2, Math.min(retries, 4));
-        console.log(`🔁 Reconnecting ${symbol} in ${delay}ms (attempt ${retries + 1}/${MAX_RECONNECT_TRIES})...`);
+        logger.info('Reconnecting stream', { symbol, delayMs: delay, attempt: retries + 1, maxAttempts: MAX_RECONNECT_TRIES });
         setTimeout(() => _openStream(symbol, nsp, retries + 1), delay);
     });
 
     ws.on('error', (err) => {
-        console.error(`🔴 Binance WS error (${symbol}):`, err.message);
+        logger.error('Binance WS error', { symbol, error: err.message });
         ws.terminate();
     });
 };
@@ -231,7 +232,7 @@ const _openKlineStream = (symbol, interval = '1m', nsp, retries = 0) => {
     activeStreams.set(key, { ws, retries });
 
     ws.on('open', () => {
-        console.log(`🟢 Binance KLINE WS opened: ${key}`);
+        logger.info('Binance KLINE WS opened', { key });
         const entry = activeStreams.get(key);
         if (entry) entry.retries = 0;
     });
@@ -263,17 +264,17 @@ const _openKlineStream = (symbol, interval = '1m', nsp, retries = 0) => {
     });
 
     ws.on('close', (code) => {
-        console.warn(`🟡 Binance KLINE WS closed: ${key} (code=${code})`);
+        logger.warn('Binance KLINE WS closed', { key, code });
         activeStreams.delete(key);
 
         const room = nsp.adapter.rooms.get(key);
         if (!room || room.size === 0) {
-            console.log(`🔴 No subscribers left for ${key}. Kline stream will not reconnect.`);
+            logger.warn('No subscribers left for kline stream', { key });
             return;
         }
 
         if (retries >= MAX_RECONNECT_TRIES) {
-            console.error(`🔴 Max reconnect attempts reached for ${key}. Notifying clients.`);
+            logger.error('Max reconnect attempts reached for kline stream', { key });
             nsp.to(key).emit('stream_error', {
                 stream: key,
                 message: `Live kline stream for ${key} is unavailable. Please refresh.`,
@@ -282,12 +283,12 @@ const _openKlineStream = (symbol, interval = '1m', nsp, retries = 0) => {
         }
 
         const delay = RECONNECT_DELAY_MS * Math.pow(2, Math.min(retries, 4));
-        console.log(`🔁 Reconnecting ${key} in ${delay}ms (attempt ${retries + 1}/${MAX_RECONNECT_TRIES})...`);
+        logger.info('Reconnecting kline stream', { key, delayMs: delay, attempt: retries + 1, maxAttempts: MAX_RECONNECT_TRIES });
         setTimeout(() => _openKlineStream(symbol, interval, nsp, retries + 1), delay);
     });
 
     ws.on('error', (err) => {
-        console.error(`🔴 Binance KLINE WS error (${key}):`, err.message);
+        logger.error('Binance KLINE WS error', { key, error: err.message });
         ws.terminate();
     });
 };
@@ -301,7 +302,7 @@ const _closeStreamIfEmpty = (streamKey, nsp) => {
 
     entry.ws.terminate();
     activeStreams.delete(streamKey);
-    console.log(`🔴 Stream closed (no subscribers): ${streamKey}`);
+    logger.info('Stream closed (no subscribers)', { streamKey });
 };
 
 export default attachMarketSocket;

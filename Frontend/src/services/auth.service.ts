@@ -77,9 +77,8 @@ const authService = {
    * Register new user
    */
   async register(userData: SignUpFormData, otp: string): Promise<RegisterResponse> {
-    const username = `${userData.firstName} ${userData.lastName}`
     const payload = {
-      username,
+      username: userData.fullName,
       email: userData.email,
       phone_number: userData.phone_number,
       password: userData.password,

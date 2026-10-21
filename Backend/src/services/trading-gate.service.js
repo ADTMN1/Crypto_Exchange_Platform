@@ -1,11 +1,12 @@
 import pool, { query } from '../config/db.config.js';
 import AppError from '../utils/errorHandling.js';
-import walletService from './wallet.service.js';
-import auditService from './audit.service.js';
-import notificationService from './notification.service.js';
+import redisClient from '../config/redis.config.js';
+import logger from '../utils/logger.js';
+
+const CACHE_KEY = 'trading_gate_status';
+const CACHE_TTL_SEC = 30; // Reasonable TTL — balances freshness with reduced DB load
 
 const tradingGateService = {
-
   // ─── CORE GATE OPERATIONS ──────────────────────────────────────────────────
 
   /**
@@ -22,10 +23,8 @@ const tradingGateService = {
     try {
       await client.query('BEGIN');
 
-      // Check if gate exists, create if not
       await tradingGateService._ensureGateExists(client);
 
-      // Update gate to open status
       const updateQuery = `
         UPDATE trading_gate 
         SET status = 'open', 
@@ -43,11 +42,22 @@ const tradingGateService = {
 
       await client.query('COMMIT');
 
-      // After gate is opened, immediately resolve any still-running trades as wins
-      tradingGateService.forceWinBinaryTrades()
-        .catch(err => console.error('Force-win binary trades failed:', err.message));
+      const updated = result.rows[0];
 
-      return result.rows[0];
+      // Write-through cache (never invalidate with DEL alone which can silently fail)
+      try {
+        await redisClient.setex(
+          CACHE_KEY,
+          CACHE_TTL_SEC,
+          JSON.stringify({ status: updated.status, changed_at: updated.changed_at })
+        );
+      } catch (err) {
+        logger.warn('Failed to write trading gate to cache after openGate', { error: err.message });
+        // Best-effort: try to delete any stale cached value so next read goes to DB
+        redisClient.del(CACHE_KEY).catch(() => {});
+      }
+      
+      return updated;
 
     } catch (error) {
       await client.query('ROLLBACK');
@@ -71,10 +81,8 @@ const tradingGateService = {
     try {
       await client.query('BEGIN');
 
-      // Check if gate exists, create if not
       await tradingGateService._ensureGateExists(client);
 
-      // Update gate to closed status
       const updateQuery = `
         UPDATE trading_gate 
         SET status = 'closed', 
@@ -92,11 +100,21 @@ const tradingGateService = {
 
       await client.query('COMMIT');
 
-      // After gate is closed, immediately force-resolve all running binary trades as losses
-      tradingGateService.forceResolveBinaryTrades()
-        .catch(err => console.error('Force-resolve binary trades failed:', err.message));
+      const updated = result.rows[0];
 
-      return result.rows[0];
+      // Write-through cache — ALWAYS cache closed immediately, never rely on invalidation only
+      try {
+        await redisClient.setex(
+          CACHE_KEY,
+          CACHE_TTL_SEC,
+          JSON.stringify({ status: updated.status, changed_at: updated.changed_at })
+        );
+      } catch (err) {
+        logger.warn('Failed to write trading gate to cache after closeGate', { error: err.message });
+        redisClient.del(CACHE_KEY).catch(() => {});
+      }
+      
+      return updated;
 
     } catch (error) {
       await client.query('ROLLBACK');
@@ -106,194 +124,21 @@ const tradingGateService = {
     }
   },
 
-  /**
-   * Force-resolve all currently running binary trades as losses.
-   * Called immediately when the trading gate is closed.
-   * Adds: TRADE_LOSS transaction record, audit log, user notification.
-   */
-  forceResolveBinaryTrades: async () => {
-    console.log('🔴 Gate closed — force-resolving all running binary trades as LOSE...');
-
-    const runningTrades = await query(
-      `SELECT id, user_id, amount, entry_price, duration, pair
-       FROM binary_trades WHERE status = 'running'`
-    );
-
-    if (runningTrades.rows.length === 0) {
-      console.log('✅ No running binary trades to force-resolve');
-      return;
-    }
-
-    console.log(`📊 Force-resolving ${runningTrades.rows.length} running trade(s) as LOSE`);
-
-    for (const trade of runningTrades.rows) {
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        // Get wallet id for transaction record
-        const walletRow = await client.query(
-          `SELECT id FROM wallets WHERE user_id = $1 AND currency = 'USDT' LIMIT 1`,
-          [trade.user_id]
-        );
-        const walletId = walletRow.rows[0]?.id ?? null;
-
-        await walletService.burn(trade.user_id, 'USDT', parseFloat(trade.amount), client);
-
-        await client.query(
-          `UPDATE binary_trades
-           SET status = 'lose', close_price = $1, payout = 0, resolved_at = CURRENT_TIMESTAMP
-           WHERE id = $2`,
-          [parseFloat(trade.entry_price), trade.id]
-        );
-
-        // TRADE_LOSS transaction record
-        if (walletId) {
-          await client.query(
-            `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
-             VALUES ($1, $2, 'TRADE_LOSS', 'USDT', $3, 0, 'completed', CURRENT_TIMESTAMP)`,
-            [trade.user_id, walletId, parseFloat(trade.amount)]
-          );
-        }
-
-        await client.query('COMMIT');
-        console.log(`✅ Force-resolved trade ${trade.id} as LOSE [gate closed]`);
-
-        // Audit log (fire-and-forget)
-        auditService.createAudit({
-          userId: trade.user_id,
-          action: 'Trade settled as LOSS - market closed by admin',
-          entityType: 'binary_trade',
-          entityId: trade.id,
-          metadata: { tradeId: trade.id, amount: trade.amount, payout: 0, marketStatus: 'closed' },
-        }).catch(e => console.error('Audit log failed:', e.message));
-
-        // User notification (fire-and-forget)
-        notificationService.sendToUser({
-          userId: trade.user_id,
-          type: 'TRADE_LOSS',
-          title: '📉 Trade Settled',
-          body: `Your ${trade.pair} trade was settled. Amount of ${parseFloat(trade.amount).toFixed(2)} USDT has been deducted.`,
-          metadata: { tradeId: trade.id, amount: trade.amount, pair: trade.pair },
-        }).catch(e => console.error('Notification failed:', e.message));
-
-      } catch (err) {
-        await client.query('ROLLBACK');
-        console.error(`❌ Failed to force-lose trade ${trade.id}:`, err.message);
-      } finally {
-        client.release();
-      }
-    }
-
-    console.log('✅ Force-lose completed');
-  },
+  // ─── STATUS CHECK OPERATIONS ────────────────────────────────────────────────────────
 
   /**
-   * Force-resolve all currently running binary trades as wins.
-   * Called immediately when the trading gate is opened.
-   * Adds: TRADE_WIN transaction record, audit log, user notification.
-   */
-  forceWinBinaryTrades: async () => {
-    console.log('🟢 Gate opened — force-resolving all running binary trades as WIN...');
-
-    const runningTrades = await query(
-      `SELECT id, user_id, amount, entry_price, duration, pair
-       FROM binary_trades WHERE status = 'running'`
-    );
-
-    if (runningTrades.rows.length === 0) {
-      console.log('✅ No running binary trades to force-win');
-      return;
-    }
-
-    console.log(`📊 Force-resolving ${runningTrades.rows.length} running trade(s) as WIN`);
-
-    const getPayoutMultiplier = (duration) => {
-      const map = { 30: 1.10, 60: 1.15, 90: 1.20, 120: 1.20, 180: 1.25, 300: 1.30 };
-      return map[duration] || 1.10;
-    };
-
-    for (const trade of runningTrades.rows) {
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        const multiplier = getPayoutMultiplier(trade.duration);
-        const payout     = parseFloat(trade.amount) * multiplier;
-        const profit     = payout - parseFloat(trade.amount);
-
-        // Get wallet id for transaction record
-        const walletRow = await client.query(
-          `SELECT id FROM wallets WHERE user_id = $1 AND currency = 'USDT' LIMIT 1`,
-          [trade.user_id]
-        );
-        const walletId = walletRow.rows[0]?.id ?? null;
-
-        await walletService.release(trade.user_id, 'USDT', parseFloat(trade.amount), client);
-
-        if (profit > 0) {
-          await walletService.credit(
-            trade.user_id, 'USDT', profit, `BINARY_WIN_${trade.id}`, client
-          );
-        }
-
-        await client.query(
-          `UPDATE binary_trades
-           SET status = 'win', close_price = $1, payout = $2, resolved_at = CURRENT_TIMESTAMP
-           WHERE id = $3`,
-          [parseFloat(trade.entry_price), payout, trade.id]
-        );
-
-        // TRADE_WIN transaction record
-        if (walletId) {
-          await client.query(
-            `INSERT INTO transactions (user_id, wallet_id, type, currency, amount, fee, status, confirmed_at)
-             VALUES ($1, $2, 'TRADE_WIN', 'USDT', $3, 0, 'completed', CURRENT_TIMESTAMP)`,
-            [trade.user_id, walletId, payout]
-          );
-        }
-
-        await client.query('COMMIT');
-        console.log(`✅ Force-resolved trade ${trade.id} as WIN [gate opened] | Payout: ${payout}`);
-
-        // Audit log (fire-and-forget)
-        auditService.createAudit({
-          userId: trade.user_id,
-          action: 'Trade settled as WIN - market opened by admin',
-          entityType: 'binary_trade',
-          entityId: trade.id,
-          metadata: { tradeId: trade.id, amount: trade.amount, payout, marketStatus: 'open' },
-        }).catch(e => console.error('Audit log failed:', e.message));
-
-        // User notification (fire-and-forget)
-        notificationService.sendToUser({
-          userId: trade.user_id,
-          type: 'TRADE_WIN',
-          title: '🎉 Trade Won!',
-          body: `Your ${trade.pair} trade settled as a WIN. Payout: ${payout.toFixed(2)} USDT`,
-          metadata: { tradeId: trade.id, payout, pair: trade.pair },
-        }).catch(e => console.error('Notification failed:', e.message));
-
-      } catch (err) {
-        await client.query('ROLLBACK');
-        console.error(`❌ Failed to force-win trade ${trade.id}:`, err.message);
-      } finally {
-        client.release();
-      }
-    }
-
-    console.log('✅ Force-win completed');
-  },
-
-  // ─── STATUS CHECK OPERATIONS ───────────────────────────────────────────────
-
-  /**
-   * Get current trading gate status (lightweight version for public use)
+   * Get current trading gate status (lightweight cached version)
+   * For display / middleware usage. Falls back to CLOSED on error — fail-safe.
    * @returns {Object} Current status and timestamp
    */
   getCurrentStatus: async () => {
     try {
-      // First ensure gate exists
+      const cached = await redisClient.get(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return { status: parsed.status, changed_at: parsed.changed_at };
+      }
+
       await tradingGateService._ensureGateExists();
 
       const statusQuery = `
@@ -306,26 +151,72 @@ const tradingGateService = {
       const result = await query(statusQuery);
       
       if (result.rows.length === 0) {
-        // This should not happen after _ensureGateExists, but just in case
-        return { status: 'open', changed_at: new Date() };
+        // Fail-safe: default CLOSED — gate status not found → don't let users win by default
+        const fallback = { status: 'closed', changed_at: new Date() };
+        logger.warn('Trading gate record missing, defaulting to CLOSED');
+        try {
+          await redisClient.setex(CACHE_KEY, CACHE_TTL_SEC, JSON.stringify(fallback));
+        } catch (_) { /* ignore */ }
+        return fallback;
       }
 
-      return result.rows[0];
+      const row = result.rows[0];
+      const status = { status: row.status, changed_at: row.changed_at };
+
+      try {
+        await redisClient.setex(CACHE_KEY, CACHE_TTL_SEC, JSON.stringify(status));
+      } catch (_) { /* ignore cache write */ }
+
+      return status;
 
     } catch (error) {
-      // If any error occurs, default to open for safety
-      console.error('Error getting trading gate status:', error);
-      return { status: 'open', changed_at: new Date() };
+      // FAIL-SAFE: If Redis or DB errors, default to CLOSED — never default to payout conditions
+      logger.error('Error getting trading gate status, defaulting to CLOSED', { error: error.message });
+      return { status: 'closed', changed_at: new Date() };
     }
   },
 
   /**
-   * Get full trading gate details (admin use)
+   * Get current trading gate status — DIRECT DB READ, no cache.
+   * For CRITICAL paths (binary trade resolver) where a stale read
+   * could result in an incorrect payout.
+   *
+   * Fail-safe: defaults to CLOSED on any error.
+   * @returns {Promise<boolean>} true if open, false if closed (or on error)
+   */
+  isTradingOpenDirect: async () => {
+    try {
+      const statusQuery = `
+        SELECT status 
+        FROM trading_gate 
+        ORDER BY changed_at DESC 
+        LIMIT 1
+      `;
+      const result = await query(statusQuery);
+
+      if (result.rows.length === 0) {
+        logger.warn('isTradingOpenDirect: no gate record found, defaulting CLOSED');
+        return false;
+      }
+
+      const isOpen = result.rows[0].status === 'open';
+      if (!isOpen) {
+        logger.debug('isTradingOpenDirect: gate is CLOSED (direct DB read)');
+      }
+      return isOpen;
+
+    } catch (error) {
+      logger.error('isTradingOpenDirect DB error, defaulting to CLOSED', { error: error.message });
+      return false;
+    }
+  },
+
+  /**
+   * Get full trading gate details (admin use) — always direct DB read
    * @returns {Object} Complete gate record
    */
   getGateDetails: async () => {
     try {
-      // Ensure gate exists
       await tradingGateService._ensureGateExists();
 
       const detailsQuery = `
@@ -349,7 +240,8 @@ const tradingGateService = {
   },
 
   /**
-   * Check if trading is currently open
+   * Check if trading is currently open (cached — for middleware / display)
+   * Fail-safe: returns false (closed) on error.
    * @returns {boolean} True if trading is open, false if closed
    */
   isTradingOpen: async () => {
@@ -357,13 +249,13 @@ const tradingGateService = {
       const status = await tradingGateService.getCurrentStatus();
       return status.status === 'open';
     } catch (error) {
-      // Default to open on error for safety
-      console.error('Error checking if trading is open:', error);
-      return true;
+      // FAIL-SAFE: Default to CLOSED on error
+      logger.error('Error checking if trading is open, defaulting to CLOSED', { error: error.message });
+      return false;
     }
   },
 
-  // ─── UTILITY FUNCTIONS ─────────────────────────────────────────────────────
+  // ─── UTILITY FUNCTIONS ─────────────────────────────────────────────────────────
 
   /**
    * Ensure trading gate record exists, create if not
@@ -373,14 +265,12 @@ const tradingGateService = {
     const dbClient = client || pool;
     
     try {
-      // Check if any record exists
       const checkQuery = 'SELECT COUNT(*) as count FROM trading_gate';
       const checkResult = await (client ? client.query(checkQuery) : query(checkQuery));
       
       const recordCount = parseInt(checkResult.rows[0].count);
       
       if (recordCount === 0) {
-        // Create initial record
         const insertQuery = `
           INSERT INTO trading_gate (status, changed_by, changed_at)
           VALUES ('open', 'system', NOW())
@@ -394,7 +284,6 @@ const tradingGateService = {
       throw new AppError('Failed to ensure trading gate exists', 500);
     }
   }
-
 };
 
 export default tradingGateService;

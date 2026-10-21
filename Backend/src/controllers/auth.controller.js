@@ -13,12 +13,12 @@ const AuthController = {
      * Send OTP to email for registration
      */
     sendOTP: async (req, res, next) => {
-        const { email } = req.body;
+        const { email, username } = req.body;
         if (!email) {
             throw new AppError('Email is required', 400);
         }
         try {
-            const result = await authService.sendOTP(email);
+            const result = await authService.sendOTP(email, username);
             res.status(200).json({
                 success: true,
                 message: result.message,
@@ -89,16 +89,25 @@ const AuthController = {
      * Controller bridge processing verification request streams.
      */
     login: async (req, res, next) => {
+        const requestId = `ADMIN_LOGIN_${Date.now()}`;
+        const requestStart = Date.now();
+        console.log(`[${requestId}] ADMIN LOGIN - Request received at ${new Date().toISOString()}`);
+        console.log(`[${requestId}] Request body:`, { email: req.body.email, passwordLength: req.body.password?.length });
+        
         const { email, password } = req.body; // 'username' can handle emails via flexible query mapping
 if(!email || !password) {
            throw new AppError('Email and password are required', 400);
         }
         try {
+            console.log(`[${requestId}] Calling authService.login...`);
             const userMetadata = await authService.login(email, password);
+            console.log(`[${requestId}] authService.login returned successfully`);
 // console.log('User metadata after successful login:', userMetadata); // Debug log
       // ✅ Generate token HERE
+      console.log(`[${requestId}] Generating tokens...`);
       const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.role);
        const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.role);
+      console.log(`[${requestId}] Tokens generated successfully`);
 
       // ✅ Set cookie using centralized cookieOptions
    res.cookie("token" ,accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
@@ -112,10 +121,14 @@ if(!email || !password) {
                 accessToken,
                 refreshToken: refre_shToken
             });
+            const totalDuration = Date.now() - requestStart;
+            console.log(`[${requestId}] ADMIN LOGIN - Response sent successfully in ${totalDuration}ms`);
             auditController.auditingSave(req, 'User login', 'user', userMetadata.id, { email: userMetadata.email }, userMetadata.id)
                 .catch((err) => console.error('Audit save failed:', err));
             return;
         } catch (error) {
+            const totalDuration = Date.now() - requestStart;
+            console.error(`[${requestId}] ADMIN LOGIN - ERROR after ${totalDuration}ms:`, error.message, error.code, error.stack);
             next(error);
         }
     },
@@ -128,17 +141,25 @@ if(!email || !password) {
      * - Audit logging for compliance
      */
     googleLogin: async (req, res, next) => {
+        const requestId = `GOOGLE_LOGIN_${Date.now()}`;
+        const requestStart = Date.now();
+        console.log(`[${requestId}] GOOGLE LOGIN - Request received at ${new Date().toISOString()}`);
+        console.log(`[${requestId}] Request body:`, { tokenLength: req.body.token?.length });
+        
         const { token } = req.body;
 
         try {
             // 1. Verify the Google token
+            console.log(`[${requestId}] Verifying Google token...`);
             const ticket = await googleClient.verifyIdToken({
                 idToken: token,
                 audience: process.env.GOOGLE_CLIENT_ID,
             });
+            console.log(`[${requestId}] Google token verified successfully`);
 
             const payload = ticket.getPayload();
             const { email, name, sub: googleId, picture, email_verified } = payload;
+            console.log(`[${requestId}] Google payload:`, { email, name, googleId, email_verified });
 
             // 2. Security check: Require verified email from Google
             if (!email_verified) {
@@ -148,11 +169,15 @@ if(!email || !password) {
             }
 
             // 3. Login or register user (with automatic account linking)
+            console.log(`[${requestId}] Calling authService.googleLogin...`);
             const userMetadata = await authService.googleLogin(email, name, googleId, picture);
+            console.log(`[${requestId}] authService.googleLogin returned successfully`);
 
             // 4. Generate tokens
+            console.log(`[${requestId}] Generating tokens...`);
             const accessToken = await generateToken(userMetadata.id, userMetadata.email, userMetadata.role);
             const refre_shToken = await refreshToken(userMetadata.id, userMetadata.email, userMetadata.role);
+            console.log(`[${requestId}] Tokens generated successfully`);
 
             // 5. Set cookies using centralized cookieOptions
             res.cookie("token", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
@@ -165,11 +190,14 @@ if(!email || !password) {
                 accessToken,
                 refreshToken: refre_shToken
             });
+            const totalDuration = Date.now() - requestStart;
+            console.log(`[${requestId}] GOOGLE LOGIN - Response sent successfully in ${totalDuration}ms`);
             auditController.auditingSave(req, 'Google OAuth login', 'user', userMetadata.id, { provider: 'google', email: userMetadata.email }, userMetadata.id)
                 .catch((err) => console.error('Audit save failed:', err));
             return;
         } catch (error) {
-            console.error('Google login error:', error);
+            const totalDuration = Date.now() - requestStart;
+            console.error(`[${requestId}] GOOGLE LOGIN - ERROR after ${totalDuration}ms:`, error.message, error.code, error.stack);
             next(error);
         }
     },

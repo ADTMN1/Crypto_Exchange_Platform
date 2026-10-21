@@ -1,8 +1,10 @@
 import { Server } from 'socket.io';
 import WebSocket from 'ws';
 import jwt from 'jsonwebtoken';
+import logger from '../utils/logger.js';
 
 let io;
+export { io };
 const connectedClients = new Map();
 const marketData = new Map();
 const binanceStreams = new Map();
@@ -19,21 +21,38 @@ const initializeWebSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`Client connected: ${socket.id}`);
+    logger.info('Client connected', { socketId: socket.id });
     connectedClients.set(socket.id, { socket, subscriptions: new Set(), klineInterval: '15m' });
 
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
+    let isAuthenticated = false;
+
     if (token) {
       try {
         const user = jwt.verify(token, process.env.JWT_SECRET);
         if (user?.id) {
+          isAuthenticated = true;
           socket.join(`user:${user.id}`);
           socket.data.user = user;
+          // Join admin room if user is admin
+          if (user.role === 'admin') {
+            socket.join('admin:support');
+          }
         }
       } catch (error) {
-        console.warn(`Socket auth failed for ${socket.id}:`, error.message);
+        logger.warn('Socket auth failed', { socketId: socket.id, error: error.message });
+        // Authentication failed - do not join user rooms; socket remains unauthenticated
       }
     }
+
+    // If no valid token provided, socket connects unauthenticated
+    // (can still receive public events but cannot join private user rooms)
+
+    // NOTE: The previous support:joinTicket / support:leaveTicket handlers
+    // allowed any socket (including unauthenticated ones) to join arbitrary
+    // `ticket:<id>` rooms. No server code emits to those rooms, so the handlers
+    // were removed. Re-introduce ticket rooms only behind an authenticated,
+    // ownership-checked handler.
 
     socket.on('subscribe', ({ symbol, interval = '15m' }) => {
       const sym = symbol.toLowerCase();
@@ -82,7 +101,7 @@ const initializeWebSocket = (server) => {
 
     // Handle order placement
     socket.on('placeOrder', (orderData) => {
-      console.log('Order placement request:', orderData);
+      logger.info('Order placement request', { orderData });
       
       // In a real implementation, this would interact with your trading engine
       // For now, we'll just acknowledge the order
@@ -95,7 +114,7 @@ const initializeWebSocket = (server) => {
 
     // Handle order cancellation
     socket.on('cancelOrder', ({ orderId }) => {
-      console.log('Order cancellation request:', orderId);
+      logger.info('Order cancellation request', { orderId });
       
       socket.emit('orderCancelled', {
         orderId,
@@ -105,7 +124,7 @@ const initializeWebSocket = (server) => {
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log(`Client disconnected: ${socket.id}`);
+      logger.info('Client disconnected', { socketId: socket.id });
       
       const clientData = connectedClients.get(socket.id);
       if (clientData) {
@@ -139,12 +158,12 @@ const startBinanceStream = (symbol) => {
   const streamName = `${symbol}@ticker`;
   const wsUrl = `wss://stream.binance.com:9443/ws/${streamName}`;
   
-  console.log(`Starting Binance stream for ${symbol}: ${wsUrl}`);
+  logger.info('Starting Binance stream', { symbol, wsUrl });
   
   const ws = new WebSocket(wsUrl);
   
   ws.on('open', () => {
-    console.log(`Binance WebSocket connected for ${symbol}`);
+    logger.info('Binance WebSocket connected', { symbol });
   });
 
   ws.on('message', (data) => {
@@ -170,17 +189,17 @@ const startBinanceStream = (symbol) => {
         }
       });
     } catch (error) {
-      console.error('Error parsing Binance ticker data:', error);
+      logger.error('Error parsing Binance ticker data', { error: error.message });
     }
   });
 
   ws.on('close', () => {
-    console.log(`Binance WebSocket closed for ${symbol}`);
+    logger.info('Binance WebSocket closed', { symbol });
     binanceStreams.delete(symbol);
   });
 
   ws.on('error', (error) => {
-    console.error(`Binance WebSocket error for ${symbol}:`, error);
+    logger.error('Binance WebSocket error', { symbol, error: error.message });
     binanceStreams.delete(symbol);
   });
 
@@ -214,7 +233,7 @@ const stopStream = (key) => {
 const stopBinanceStream = (symbol) => {
   const ws = binanceStreams.get(symbol);
   if (ws) {
-    console.log(`Stopping Binance stream for ${symbol}`);
+    logger.info('Stopping Binance stream', { symbol });
     ws.close();
     binanceStreams.delete(symbol);
   }
@@ -231,12 +250,12 @@ const startBinanceKlineStream = (symbol, interval = '1m') => {
   const streamName = `${symbol}@kline_${interval}`;
   const wsUrl = `wss://stream.binance.com:9443/ws/${streamName}`;
   
-  console.log(`Starting Binance kline stream for ${symbol} ${interval}: ${wsUrl}`);
+  logger.info('Starting Binance kline stream', { symbol, interval, wsUrl });
   
   const ws = new WebSocket(wsUrl);
   
   ws.on('open', () => {
-    console.log(`Binance kline WebSocket connected for ${symbol} ${interval}`);
+    logger.info('Binance kline WebSocket connected', { symbol, interval });
   });
 
   ws.on('message', (data) => {
@@ -266,17 +285,17 @@ const startBinanceKlineStream = (symbol, interval = '1m') => {
         }
       });
     } catch (error) {
-      console.error('Error parsing Binance kline data:', error);
+      logger.error('Error parsing Binance kline data', { error: error.message });
     }
   });
 
   ws.on('close', () => {
-    console.log(`Binance kline WebSocket closed for ${symbol} ${interval}`);
+    logger.info('Binance kline WebSocket closed', { symbol, interval });
     binanceStreams.delete(streamKey);
   });
 
   ws.on('error', (error) => {
-    console.error(`Binance kline WebSocket error for ${symbol} ${interval}:`, error);
+    logger.error('Binance kline WebSocket error', { symbol, interval, error: error.message });
     binanceStreams.delete(streamKey);
   });
 
@@ -294,12 +313,12 @@ const startBinanceDepthStream = (symbol) => {
   const streamName = `${symbol}@depth20@100ms`;
   const wsUrl = `wss://stream.binance.com:9443/ws/${streamName}`;
   
-  console.log(`Starting Binance depth stream for ${symbol}: ${wsUrl}`);
+  logger.info('Starting Binance depth stream', { symbol, wsUrl });
   
   const ws = new WebSocket(wsUrl);
   
   ws.on('open', () => {
-    console.log(`Binance depth WebSocket connected for ${symbol}`);
+    logger.info('Binance depth WebSocket connected', { symbol });
   });
 
   ws.on('message', (data) => {
@@ -326,17 +345,17 @@ const startBinanceDepthStream = (symbol) => {
         }
       });
     } catch (error) {
-      console.error('Error parsing Binance depth data:', error);
+      logger.error('Error parsing Binance depth data', { error: error.message });
     }
   });
 
   ws.on('close', () => {
-    console.log(`Binance depth WebSocket closed for ${symbol}`);
+    logger.info('Binance depth WebSocket closed', { symbol });
     binanceStreams.delete(streamKey);
   });
 
   ws.on('error', (error) => {
-    console.error(`Binance depth WebSocket error for ${symbol}:`, error);
+    logger.error('Binance depth WebSocket error', { symbol, error: error.message });
     binanceStreams.delete(streamKey);
   });
 
@@ -372,11 +391,11 @@ const emitToUser = (userId, event, data) => {
 
 // Cleanup function
 const cleanup = () => {
-  console.log('Cleaning up WebSocket connections...');
+  logger.info('Cleaning up WebSocket connections');
   
   // Close all Binance streams
   binanceStreams.forEach((ws, key) => {
-    console.log(`Closing stream: ${key}`);
+    logger.debug('Closing stream', { key });
     ws.close();
   });
   

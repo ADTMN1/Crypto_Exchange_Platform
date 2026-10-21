@@ -3,58 +3,60 @@ import { toast } from 'sonner';
 import adminService, { LoginHistoryRecord } from '../../services/admin.service';
 
 const ACTION_BADGE: Record<string, string> = {
-  'User login':             'nex-badge-success',
-  'Google OAuth login':     'nex-badge-success',
-  'User logout':            'nex-badge-secondary',
-  'Access token refreshed': 'nex-badge-info',
-  'User registered':        'nex-badge-warning',
+  'User login':             'mu-badge--active',
+  'Google OAuth login':     'mu-badge--active',
+  'User logout':            'mu-badge--suspended',
+  'Access token refreshed': 'mu-badge--role-user',
+  'User registered':        'mu-badge--pending',
 };
 
-const formatDate = (value: string) =>
+const fmtDate = (v: string) =>
   new Intl.DateTimeFormat('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
+    month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
-  }).format(new Date(value));
+  }).format(new Date(v));
+
+const fmtDateShort = (v: string) =>
+  new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }).format(new Date(v));
 
 export default function LoginHistoryPage() {
-  const [records, setRecords]     = useState<LoginHistoryRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearch]  = useState('');
-  const [page, setPage]           = useState(1);
-  const [totalCount, setTotal]    = useState(0);
-  const [error, setError]         = useState<string | null>(null);
-  const limit = 20;
+  const [records, setRecords]   = useState<LoginHistoryRecord[]>([]);
+  const [isLoading, setLoading] = useState(true);
+  const [search, setSearch]     = useState('');
+  const [page, setPage]         = useState(1);
+  const [total, setTotal]       = useState(0);
+  const [error, setError]       = useState<string | null>(null);
+  const LIMIT = 20;
 
-  const fetchHistory = useCallback(async (currentPage: number, currentSearch: string) => {
-    setIsLoading(true);
-    setError(null);
+  const fetch = useCallback(async (p: number, s: string) => {
+    setLoading(true); setError(null);
     try {
-      const res = await adminService.getLoginHistory({
-        page: currentPage,
-        limit,
-        search: currentSearch || undefined,
-      });
+      const res = await adminService.getLoginHistory({ page: p, limit: LIMIT, search: s || undefined });
       setRecords(res.data);
       setTotal(res.totalCount);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to load login history';
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [limit]);
+      setError(msg); toast.error(msg);
+    } finally { setLoading(false); }
+  }, []);
 
-  // refetch on page change immediately
-  useEffect(() => { fetchHistory(page, searchQuery); }, [page]);
-
-  // debounce search
+  useEffect(() => { fetch(page, search); }, [page]);
   useEffect(() => {
-    const t = setTimeout(() => { setPage(1); fetchHistory(1, searchQuery); }, 500);
+    const t = setTimeout(() => { setPage(1); fetch(1, search); }, 500);
     return () => clearTimeout(t);
-  }, [searchQuery]);
+  }, [search]);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+
+  const initials = (r: LoginHistoryRecord) =>
+    (r.user_name?.[0] || r.user_email?.[0] || '?').toUpperCase();
+
+  const ip = (r: LoginHistoryRecord) => r.ipAddress || r.ip_address || '—';
+  const agent = (r: LoginHistoryRecord) => r.deviceInfo || r.metadata?.userAgent || '—';
+  const time = (r: LoginHistoryRecord) => r.loginTime || r.created_at;
 
   return (
     <main className="nex-admin-section-page">
@@ -66,128 +68,131 @@ export default function LoginHistoryPage() {
       </section>
 
       <section className="nex-section-body">
-        <div className="nex-card">
-          <div className="nex-card-title">
-            <h2>Login Events</h2>
-            <div className="nex-search-box">
-              <input
-                type="text"
-                placeholder="Search by user, action, or IP..."
-                value={searchQuery}
-                onChange={(e) => setSearch(e.target.value)}
-                className="nex-search-input"
-              />
+        <div className="nex-card mu-card">
+
+          {/* ── Toolbar ── */}
+          <div className="mu-toolbar">
+            <span className="mu-count">{total} events</span>
+            <div className="mu-search-wrap">
+              <svg className="mu-search-icon" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input className="mu-search-input" type="text"
+                placeholder="User, action, IP…"
+                value={search} onChange={e => setSearch(e.target.value)} />
+              {search && <button className="mu-search-clear" onClick={() => setSearch('')}>✕</button>}
             </div>
           </div>
 
           {error && (
-            <div style={{
-              padding: '1rem', marginBottom: '1rem',
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '8px', color: '#ef4444',
-            }}>
+            <div className="nex-error-bar">
               {error}
-              <button
-                onClick={() => fetchHistory(page, searchQuery)}
-                style={{ marginLeft: '1rem', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: '#ef4444' }}
-              >
-                Retry
-              </button>
+              <button className="nex-error-retry" onClick={() => fetch(page, search)}>Retry</button>
             </div>
           )}
 
           {isLoading ? (
-            <div className="nex-loading">
-              <div className="nex-spinner" />
-              <p>Loading login history...</p>
+            <div className="nex-loading"><div className="nex-spinner"/><p>Loading…</p></div>
+
+          ) : records.length === 0 ? (
+            <div className="nex-empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              <p>No login events found</p>
+              {search && <button className="mu-clear-search-btn" onClick={() => setSearch('')}>Clear search</button>}
             </div>
+
           ) : (
-            <div className="nex-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>IP Address</th>
-                    <th>Device / Agent</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.length === 0 ? (
+            <>
+              {/* ── Desktop table ── */}
+              <div className="mu-table-wrap">
+                <table className="mu-table">
+                  <thead>
                     <tr>
-                      <td colSpan={5} className="nex-empty-state">
-                        <div>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                          </svg>
-                          <p>No login events found</p>
-                        </div>
-                      </td>
+                      <th>Time</th>
+                      <th>User</th>
+                      <th>Action</th>
+                      <th>IP Address</th>
+                      <th>Device / Agent</th>
                     </tr>
-                  ) : (
-                    records.map((r) => (
-                      <tr key={r.id}>
-                        <td style={{ whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-                          {formatDate(r.loginTime || r.created_at)}
-                        </td>
+                  </thead>
+                  <tbody>
+                    {records.map(r => (
+                      <tr key={r.id} className="mu-table-row" style={{ cursor: 'default' }}>
+                        <td><span className="mu-date">{fmtDate(time(r))}</span></td>
                         <td>
-                          <div className="nex-user-cell">
-                            <div className="nex-avatar-circle">
-                              {(r.user_name?.[0] || r.user_email?.[0] || '?').toUpperCase()}
-                            </div>
-                            <div>
-                              <strong>{r.user_name || 'Unknown'}</strong>
-                              <div className="nex-table-meta">{r.user_email || r.userId || '—'}</div>
+                          <div className="mu-user-cell">
+                            <div className="mu-avatar">{initials(r)}</div>
+                            <div className="mu-user-text">
+                              <span className="mu-username">{r.user_name || 'Unknown'}</span>
+                              <span className="mu-email">{r.user_email || r.userId || '—'}</span>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <span className={`nex-badge ${ACTION_BADGE[r.action] || 'nex-badge-secondary'}`}>
+                          <span className={`mu-badge ${ACTION_BADGE[r.action] || 'mu-badge--suspended'}`}>
                             {r.action}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                          {r.ipAddress || r.ip_address || '—'}
-                        </td>
-                        <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.deviceInfo || r.metadata?.userAgent || '—'}
-                        </td>
+                        <td><span className="lh-mono">{ip(r)}</span></td>
+                        <td><span className="lh-agent">{agent(r)}</span></td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── Mobile cards ── */}
+              <div className="mu-card-list">
+                {records.map(r => (
+                  <div key={r.id} className="mu-user-card lh-mobile-card">
+                    <div className="mu-card-row">
+                      <div className="mu-avatar mu-avatar--lg">{initials(r)}</div>
+                      <div className="mu-card-info">
+                        <span className="mu-username">{r.user_name || 'Unknown'}</span>
+                        <span className="mu-email">{r.user_email || r.userId || '—'}</span>
+                        <div className="aup-card-badges" style={{ marginTop: 4 }}>
+                          <span className={`mu-badge ${ACTION_BADGE[r.action] || 'mu-badge--suspended'}`}>
+                            {r.action}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="lh-card-details">
+                      {ip(r) !== '—' && (
+                        <div className="lh-detail-row">
+                          <span className="lh-detail-key">IP</span>
+                          <span className="lh-mono">{ip(r)}</span>
+                        </div>
+                      )}
+                      {agent(r) !== '—' && (
+                        <div className="lh-detail-row">
+                          <span className="lh-detail-key">Device</span>
+                          <span className="lh-agent">{agent(r)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mu-card-footer">
+                      <span className="mu-date-ago">{fmtDateShort(time(r))}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
+          {/* ── Pagination ── */}
           {!isLoading && records.length > 0 && (
-            <div style={{
-              marginTop: '1rem', padding: '1rem',
-              borderTop: '1px solid rgba(169,255,232,0.12)',
-              color: 'var(--text-muted)', fontSize: '14px',
-            }}>
-              Showing {records.length} of {totalCount} records
-              <div className="nex-pagination-controls" style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  className="btn-outline"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </button>
-                <span>Page {page} of {totalPages}</span>
-                <button
-                  type="button"
-                  className="btn-outline"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                </button>
+            <div className="dep-pagination">
+              <span className="mu-count">Page {page} of {totalPages} · {total} total</span>
+              <div className="dep-page-btns">
+                <button className="dep-page-btn" disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
+                <button className="dep-page-btn" disabled={page >= totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
               </div>
             </div>
           )}

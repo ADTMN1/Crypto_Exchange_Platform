@@ -68,6 +68,34 @@ const binaryController = {
     }
   },
 
+  getTrade: async (req, res, next) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return next(new AppError('Authenticated user information is missing', 401));
+      }
+
+      const { id } = req.params;
+      if (!id) {
+        return next(new AppError('Trade ID is required', 400));
+      }
+
+      const trade = await binaryService.getTradeById(req.user.id, id);
+
+      if (!trade) {
+        return next(new AppError('Trade not found or access denied', 404));
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Trade retrieved successfully',
+        data: trade,
+      });
+      return;
+    } catch (error) {
+      next(error);
+    }
+  },
+
   getSettings: async (req, res, next) => {
     try {
       const settings = await binaryService.getSettings();

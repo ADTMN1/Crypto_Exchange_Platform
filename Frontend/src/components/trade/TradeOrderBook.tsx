@@ -39,7 +39,7 @@ export default function TradeOrderBook() {
   }, [depth]);
 
   return (
-    <div className="trade-col-orderbook">
+    <>
       <div className="trade-panel-header">
         <span>Order Book</span>
         <div className="trade-ob-view-btns">
@@ -83,6 +83,6 @@ export default function TradeOrderBook() {
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

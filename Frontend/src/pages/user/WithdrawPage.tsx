@@ -78,14 +78,14 @@ export default function WithdrawPage() {
   };
 
   return (
-    <main className="wallet-page">
+    <main className="wallet-page" style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
       {/* Page Header */}
-      <div className="assets-card" style={{ marginBottom: '24px' }}>
+      <div className="assets-card" style={{ marginBottom: '24px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         <div className="assets-header">
-          <div>
+          <div style={{ width: '100%' }}>
             <h3 className="assets-label">Withdraw</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h1 className="assets-amount" style={{ fontSize: '28px' }}>Withdraw Funds</h1>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+              <h1 className="assets-amount" style={{ fontSize: '28px', wordBreak: 'break-word' }}>Withdraw Funds</h1>
               <p className="assets-change positive" style={{ background: 'transparent', padding: 0, fontSize: '15px', color: '#b0b0b0' }}>
                 Transfer funds to your external wallet
               </p>
@@ -95,14 +95,15 @@ export default function WithdrawPage() {
       </div>
 
       {/* Withdrawal Form */}
-      <div className="crypto-table">
-        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="crypto-table" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
           {/* Currency Selection */}
-          <div className="crypto-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', borderBottom: '1px solid var(--surface-hover)' }}>
+          <div className="crypto-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', borderBottom: '1px solid var(--surface-hover)', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
             <label style={{
               fontSize: '14px',
               fontWeight: '600',
-              color: 'var(--text-muted)'
+              color: 'var(--text-muted)',
+              width: '100%'
             }}>
               Select Currency
             </label>
@@ -111,6 +112,7 @@ export default function WithdrawPage() {
               onChange={(e) => setCurrency(e.target.value)}
               style={{
                 width: '100%',
+                maxWidth: '100%',
                 padding: '16px 18px',
                 background: 'var(--surface-hover)',
                 border: '1px solid var(--surface-hover)',
@@ -120,7 +122,8 @@ export default function WithdrawPage() {
                 fontWeight: '600',
                 outline: 'none',
                 transition: 'border-color 0.2s',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxSizing: 'border-box'
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--primary)';
@@ -138,11 +141,12 @@ export default function WithdrawPage() {
           </div>
 
           {/* Wallet Address */}
-          <div className="crypto-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', borderBottom: '1px solid var(--surface-hover)' }}>
+          <div className="crypto-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', borderBottom: '1px solid var(--surface-hover)', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
             <label style={{
               fontSize: '14px',
               fontWeight: '600',
-              color: 'var(--text-muted)'
+              color: 'var(--text-muted)',
+              width: '100%'
             }}>
               Wallet Address
             </label>
@@ -153,6 +157,7 @@ export default function WithdrawPage() {
               onChange={(e) => setAddress(e.target.value)}
               style={{
                 width: '100%',
+                maxWidth: '100%',
                 padding: '16px 18px',
                 background: 'var(--surface-hover)',
                 border: '1px solid var(--surface-hover)',
@@ -160,7 +165,9 @@ export default function WithdrawPage() {
                 color: 'var(--text-main)',
                 fontSize: '15px',
                 outline: 'none',
-                transition: 'border-color 0.2s'
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box',
+                wordBreak: 'break-all'
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--primary)';
@@ -172,8 +179,8 @@ export default function WithdrawPage() {
           </div>
 
           {/* Amount */}
-          <div className="crypto-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', borderBottom: '1px solid var(--surface-hover)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="crypto-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px', borderBottom: '1px solid var(--surface-hover)', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '8px' }}>
               <label style={{
                 fontSize: '14px',
                 fontWeight: '600',
@@ -185,7 +192,8 @@ export default function WithdrawPage() {
                 fontSize: '14px',
                 fontWeight: '600',
                 color: 'var(--primary)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                flexShrink: 0
               }} onClick={useMax}>
                 Use Max
               </span>
@@ -199,13 +207,15 @@ export default function WithdrawPage() {
               borderRadius: '12px',
               padding: '16px 18px',
               transition: 'border-color 0.2s',
-              width: '100%'
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
             }} onFocus={(e) => {
               e.currentTarget.style.borderColor = 'var(--primary)';
             }} onBlur={(e) => {
               e.currentTarget.style.borderColor = 'var(--surface-hover)';
             }} tabIndex={0}>
-              <FaWallet style={{ color: 'var(--primary)', fontSize: '20px' }} />
+              <FaWallet style={{ color: 'var(--primary)', fontSize: '20px', flexShrink: 0 }} />
               <input
                 type="number"
                 placeholder="0.00"
@@ -218,13 +228,15 @@ export default function WithdrawPage() {
                   color: 'var(--text-main)',
                   fontSize: '18px',
                   fontWeight: '700',
-                  outline: 'none'
+                  outline: 'none',
+                  minWidth: 0
                 }}
               />
               <span style={{
                 fontSize: '15px',
                 fontWeight: '700',
-                color: 'var(--text-muted)'
+                color: 'var(--text-muted)',
+                flexShrink: 0
               }}>
                 {currency}
               </span>
@@ -232,7 +244,7 @@ export default function WithdrawPage() {
           </div>
 
           {/* Submit Button */}
-          <div className="crypto-row" style={{ paddingTop: '12px' }}>
+          <div className="crypto-row" style={{ paddingTop: '12px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
             <button
               type="submit"
               disabled={loading || isLoading}
@@ -261,7 +273,10 @@ export default function WithdrawPage() {
         padding: '20px',
         background: 'rgba(247,147,26,0.1)',
         border: '1px solid rgba(247,147,26,0.3)',
-        borderRadius: '12px'
+        borderRadius: '12px',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         <h3 style={{
           margin: '0 0 12px',

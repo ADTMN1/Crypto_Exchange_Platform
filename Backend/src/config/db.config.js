@@ -1,10 +1,9 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import pg from 'pg';
 import dotenv from 'dotenv';
-import ws from 'ws';
+
+const { Pool } = pg;
 
 dotenv.config();
-// Neon configuration for WebSocket usage
-neonConfig.webSocketConstructor = ws;
 
 const isProduction = process.env.NODE_ENV === 'production';
 const connectionString = process.env.DATABASE_URL;
@@ -14,12 +13,20 @@ if (!connectionString) {
 	process.exit(1);
 }
 
-const pool = new Pool({ 
+// Statement timeout (ms) — aborts long-running queries so they cannot hang the app.
+// Configurable via DATABASE_STATEMENT_TIMEOUT; defaults to 30s.
+const statementTimeout = parseInt(process.env.DATABASE_STATEMENT_TIMEOUT || '30000', 10);
+
+// Supabase connection pooler requires SSL. `rejectUnauthorized: false` is used
+// because the Supabase pooler certificate chain is not always present in the
+// runtime's CA store. The connection itself is still encrypted.
+const pool = new Pool({
 	connectionString,
-	ssl: isProduction ? { rejectUnauthorized: true } : false,
-	max: isProduction ? 20 : 5,      
-	idleTimeoutMillis: 30000,        
-	connectionTimeoutMillis: 15000,   
+	ssl: isProduction ? { rejectUnauthorized: false } : false,
+	max: isProduction ? 20 : 5,
+	idleTimeoutMillis: 30000,
+	connectionTimeoutMillis: 15000,
+	options: `-c statement_timeout=${Number.isFinite(statementTimeout) ? statementTimeout : 30000}`,
 });
 
 pool.on('error', (err) => {
@@ -31,15 +38,15 @@ export const query = async (text, params) => {
 	try {
 		const res = await pool.query(text, params);
 		const duration = Date.now() - start;
-		
+
 		if (!isProduction) {
 			// console.log(`⚡ Executed Query: [${text.substring(0, 50)}...] in ${duration}ms | Rows: ${res.rowCount}`);
 		}
-		
+
 		return res;
 	} catch (error) {
 		console.error(`❌ Database Query Execution Failure: ${error.message}`);
-		throw error; 
+		throw error;
 	}
 };
 

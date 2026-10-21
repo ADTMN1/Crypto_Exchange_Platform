@@ -9,7 +9,7 @@ const authValidator = {
                 'string.email': 'Please provide a valid email address.',
                 'any.required': 'Email is a required field.'
             }),
-            username: Joi.string().alphanum().min(3).max(30).required().messages({
+            username: Joi.string().min(3).max(30).required().messages({
                 'string.min': 'Username must be at least 3 characters long.',
                 'any.required': 'Username is a required field.'
             }),
@@ -19,6 +19,10 @@ const authValidator = {
             password: Joi.string().min(6).max(100).required().messages({
                 'string.min': 'Password must be at least 6 characters long.',
                 'any.required': 'Password is a required field.'
+            }),
+            otp: Joi.string().length(6).required().messages({
+                'any.required': 'OTP is a required field.',
+                'string.length': 'OTP must be 6 characters long.'
             }),
             // Optional field matching your single role mapping layout
             role_id: Joi.string().guid({ version: 'uuidv4' }).optional()

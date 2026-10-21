@@ -2,10 +2,9 @@ import api, { API_ENDPOINTS } from './api.service'
 import type { User } from '../types/auth.types'
 
 interface UpdateProfilePayload {
-  firstName?: string
-  lastName?: string
+  username?: string
   email?: string
-  phone?: string
+  phone_number?: string
 }
 
 interface ChangePasswordPayload {
@@ -35,7 +34,7 @@ const userService = {
   },
   
   async changePassword(data: ChangePasswordPayload): Promise<void> {
-    await api.post(API_ENDPOINTS.USER.CHANGE_PASSWORD, data)
+    await api.put(API_ENDPOINTS.USER.CHANGE_PASSWORD, data)
   },
 
   async uploadProfileImage(file: File): Promise<{ imageUrl: string; user: User }> {

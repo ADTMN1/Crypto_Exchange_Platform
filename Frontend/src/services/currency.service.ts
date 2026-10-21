@@ -1,140 +1,77 @@
-import api from './api.service';
+import api, { API_ENDPOINTS } from './api.service';
 
 export interface Currency {
   id: string;
-  name: string;
   symbol: string;
-  logo?: string;
+  name: string;
   status: 'enabled' | 'disabled';
-  price?: number;
+  decimals: number;
+  icon?: string;
+  is_crypto: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface SupportedSymbol {
+export interface CreateCurrencyRequest {
   symbol: string;
   name: string;
+  decimals: number;
+  icon?: string;
+  is_crypto: boolean;
 }
 
-export interface ImportResult {
-  imported: number;
-  skipped: number;
-  errors: number;
-  details: {
-    imported: Currency[];
-    skipped: Array<{ symbol: string; reason: string }>;
-    errors: Array<{ symbol: string; reason: string }>;
-  };
+export interface UpdateCurrencyRequest extends Partial<CreateCurrencyRequest> {}
+
+export interface CurrenciesResponse {
+  success: boolean;
+  message: string;
+  data: Currency[];
+}
+
+export interface CurrencyResponse {
+  success: boolean;
+  message: string;
+  data: Currency;
 }
 
 const currencyService = {
-  // ─── GET ALL CURRENCIES ─────────────────────────────────────────────────────
-
-  /**
-   * Get all currencies with live prices
-   * @param includeDisabled - Include disabled currencies
-   */
-  getAllCurrencies: async (includeDisabled: boolean = true) => {
-    const response = await api.get('/admin/currencies', {
-      params: { includeDisabled: includeDisabled ? 'true' : 'false' },
-    });
+  getAllCurrencies: async (includeDisabled: boolean = false): Promise<CurrenciesResponse> => {
+    const params = new URLSearchParams();
+    if (includeDisabled) params.append('includeDisabled', 'true');
+    
+    const response = await api.get(`${API_ENDPOINTS.CURRENCY.GET_ALL}?${params.toString()}`);
     return response.data;
   },
 
-  // ─── GET SINGLE CURRENCY ────────────────────────────────────────────────────
-
-  /**
-   * Get currency by ID
-   * @param id - Currency UUID
-   */
-  getCurrency: async (id: string) => {
-    const response = await api.get(`/admin/currencies/${id}`);
+  getSupportedSymbols: async (): Promise<CurrenciesResponse> => {
+    const response = await api.get(API_ENDPOINTS.CURRENCY.GET_SUPPORTED);
     return response.data;
   },
 
-  // ─── CREATE CURRENCY ────────────────────────────────────────────────────────
-
-  /**
-   * Create new currency
-   * @param data - Currency data
-   */
-  createCurrency: async (data: {
-    name: string;
-    symbol: string;
-    logo?: string;
-    status?: 'enabled' | 'disabled';
-  }) => {
-    const response = await api.post('/admin/currencies', data);
+  getCurrencyById: async (id: string): Promise<CurrencyResponse> => {
+    const response = await api.get(API_ENDPOINTS.CURRENCY.GET_BY_ID(id));
     return response.data;
   },
 
-  // ─── UPDATE CURRENCY ────────────────────────────────────────────────────────
-
-  /**
-   * Update currency
-   * @param id - Currency UUID
-   * @param data - Updated fields
-   */
-  updateCurrency: async (
-    id: string,
-    data: {
-      name?: string;
-      symbol?: string;
-      logo?: string;
-      status?: 'enabled' | 'disabled';
-    }
-  ) => {
-    const response = await api.put(`/admin/currencies/${id}`, data);
+  createCurrency: async (data: CreateCurrencyRequest): Promise<CurrencyResponse> => {
+    const response = await api.post(API_ENDPOINTS.CURRENCY.CREATE, data);
     return response.data;
   },
 
-  // ─── UPDATE STATUS ──────────────────────────────────────────────────────────
-
-  /**
-   * Update currency status (enable/disable)
-   * @param id - Currency UUID
-   * @param status - New status
-   */
-  updateStatus: async (id: string, status: 'enabled' | 'disabled') => {
-    const response = await api.patch(`/admin/currencies/${id}/status`, {
-      status,
-    });
+  updateCurrency: async (id: string, data: UpdateCurrencyRequest): Promise<CurrencyResponse> => {
+    const response = await api.put(API_ENDPOINTS.CURRENCY.UPDATE(id), data);
     return response.data;
   },
 
-  // ─── DELETE CURRENCY ────────────────────────────────────────────────────────
-
-  /**
-   * Delete currency
-   * @param id - Currency UUID
-   */
-  deleteCurrency: async (id: string) => {
-    const response = await api.delete(`/admin/currencies/${id}`);
+  updateStatus: async (id: string, status: 'enabled' | 'disabled'): Promise<CurrencyResponse> => {
+    const response = await api.patch(API_ENDPOINTS.CURRENCY.UPDATE_STATUS(id), { status });
     return response.data;
   },
 
-  // ─── BULK IMPORT ────────────────────────────────────────────────────────────
-
-  /**
-   * Bulk import currencies from symbols
-   * @param symbols - Array of symbols to import
-   */
-  bulkImport: async (symbols: string[]) => {
-    const response = await api.post('/admin/currencies/import', {
-      symbols,
-    });
+  deleteCurrency: async (id: string): Promise<CurrencyResponse> => {
+    const response = await api.delete(API_ENDPOINTS.CURRENCY.DELETE(id));
     return response.data;
-  },
-
-  // ─── GET SUPPORTED SYMBOLS ──────────────────────────────────────────────────
-
-  /**
-   * Get list of supported symbols for import
-   */
-  getSupportedSymbols: async () => {
-    const response = await api.get('/admin/currencies/supported');
-    return response.data;
-  },
+  }
 };
 
 export default currencyService;

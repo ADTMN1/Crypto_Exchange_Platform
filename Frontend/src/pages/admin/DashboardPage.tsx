@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "../../store";
-import logoImage from "../../assets/image.svg";
+import logoImage from "../../assets/logo.webp";
 import {
   FaAward,
+  FaBars,
   FaBell,
   FaBolt,
   FaChartBar,
@@ -180,6 +181,7 @@ export default function AdminOverviewPage() {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifyOpen,  setIsNotifyOpen]  = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<AdminBellNotification[]>([]);
   const [unreadCount,   setUnreadCount]   = useState(0);
 
@@ -276,10 +278,30 @@ export default function AdminOverviewPage() {
   return (
     <main className="nex-admin-page">
       <div className="nex-admin-shell">
-        <aside className="nex-sidebar">
-          <div className="nex-brand">
-            <img src={logoImage} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-            <span>CryptoProp</span>
+        {/* Mobile overlay backdrop */}
+        {isMobileSidebarOpen && (
+          <div
+            className="nex-mobile-overlay"
+            onClick={() => setIsMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        <aside className={`nex-sidebar${isMobileSidebarOpen ? " nex-sidebar-open" : ""}`}>
+          <div className="nex-sidebar-top">
+            <div className="nex-brand">
+              <img src={logoImage} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
+              <span>PrimeAlfaTrade</span>
+            </div>
+            {/* Mobile close button */}
+            <button
+              className="nex-sidebar-close"
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            >
+              <FaTimes />
+            </button>
           </div>
 
           <span className="nex-menu-label">Menu</span>
@@ -300,6 +322,7 @@ export default function AdminOverviewPage() {
                     onClick={() => {
                       if (hasChildren) { setOpenMenu(isOpen ? null : item.label); return; }
                       navigate(item.path);
+                      setIsMobileSidebarOpen(false);
                     }}
                   >
                     <Icon />
@@ -314,7 +337,7 @@ export default function AdminOverviewPage() {
                           className={`nex-submenu-item${location.pathname === child.path ? " active" : ""}`}
                           key={child.label}
                           type="button"
-                          onClick={() => navigate(child.path)}
+                          onClick={() => { navigate(child.path); setIsMobileSidebarOpen(false); }}
                         >
                           {child.label}
                         </button>
@@ -334,8 +357,32 @@ export default function AdminOverviewPage() {
 
         <section className="nex-main">
           <header className="nex-topbar">
-            <div className="nex-breadcrumb">
-              <FaHome /><FaChevronRight /><span>Dashboard</span><FaChevronRight /><strong>Overview</strong>
+            <div className="nex-topbar-left">
+              {/* Hamburger – mobile only */}
+              <button
+                className="nex-hamburger"
+                type="button"
+                aria-label="Open menu"
+                onClick={() => setIsMobileSidebarOpen(true)}
+              >
+                <FaBars />
+              </button>
+              <div className="nex-breadcrumb">
+                <FaHome /><FaChevronRight />
+                <span className="nex-breadcrumb-current">
+                  {(() => {
+                    // Find deepest matching menu item for current path
+                    for (const item of menuItems) {
+                      if (item.children) {
+                        const child = item.children.find(c => location.pathname === c.path);
+                        if (child) return child.label;
+                      }
+                    }
+                    const top = menuItems.find(i => location.pathname === i.path);
+                    return top?.label || 'Dashboard';
+                  })()}
+                </span>
+              </div>
             </div>
 
             <div className="nex-top-actions">
@@ -371,50 +418,24 @@ export default function AdminOverviewPage() {
                   <div
                     role="dialog"
                     aria-label="Notifications"
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 12px)',
-                      right: 0,
-                      width: 'min(460px, calc(100vw - 2rem))',
-                      background: 'var(--card-bg, #1a1f2e)',
-                      border: '1px solid rgba(169,255,232,0.14)',
-                      borderRadius: 12,
-                      boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
-                      zIndex: 300,
-                      overflow: 'hidden',
-                    }}
+                    className="nex-notify-dropdown"
                   >
                     {/* header row */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '0.9rem 1.1rem',
-                      borderBottom: '1px solid rgba(169,255,232,0.1)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary, #e8f0fe)' }}>
-                          Notifications
-                        </span>
+                    <div className="nex-notify-header">
+                      <div className="nex-notify-header-left">
+                        <span>Notifications</span>
                         {unreadCount > 0 && (
-                          <span style={{
-                            background: 'rgba(169,255,232,0.12)', color: '#a9ffe8',
-                            borderRadius: 20, fontSize: '0.68rem', fontWeight: 700,
-                            padding: '2px 8px',
-                          }}>
+                          <span className="nex-notify-unread-badge">
                             {unreadCount} unread
                           </span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="nex-notify-header-right">
                         {unreadCount > 0 && (
                           <button
                             type="button"
                             onClick={handleMarkAllRead}
-                            style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#a9ffe8', fontSize: '0.75rem',
-                              display: 'flex', alignItems: 'center', gap: 4,
-                              padding: '3px 6px', borderRadius: 4,
-                            }}
+                            className="nex-notify-mark-all"
                           >
                             <FaCheckDouble size={11} />
                             Mark all read
@@ -424,7 +445,7 @@ export default function AdminOverviewPage() {
                           type="button"
                           title="Close"
                           onClick={() => setIsNotifyOpen(false)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '3px 4px' }}
+                          className="nex-notify-close-btn"
                         >
                           <FaTimes size={13} />
                         </button>
@@ -432,114 +453,56 @@ export default function AdminOverviewPage() {
                     </div>
 
                     {/* list */}
-                    {notifications.length === 0 ? (
-                      <div style={{
-                        padding: '2.75rem 1.5rem', textAlign: 'center',
-                        color: 'var(--text-muted)',
-                      }}>
-                        <FaBell size={34} style={{ opacity: 0.2, display: 'block', margin: '0 auto 0.75rem' }} />
-                        <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.3rem', color: 'var(--text-primary, #e8f0fe)' }}>
-                          You're all caught up
-                        </p>
-                        <p style={{ fontSize: '0.78rem', margin: 0 }}>
-                          New notifications will appear here.
-                        </p>
-                      </div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => { if (!n.is_read) handleMarkOneRead(n.id); }}
-                          onKeyDown={(e) => { if (e.key === 'Enter' && !n.is_read) handleMarkOneRead(n.id); }}
-                          style={{
-                            display: 'flex', gap: '0.85rem', alignItems: 'flex-start',
-                            padding: '0.95rem 1.1rem',
-                            borderBottom: '1px solid rgba(169,255,232,0.07)',
-                            background: n.is_read ? 'transparent' : 'rgba(169,255,232,0.04)',
-                            cursor: n.is_read ? 'default' : 'pointer',
-                            transition: 'background 0.15s',
-                            outline: 'none',
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLDivElement).style.background = 'rgba(169,255,232,0.08)';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLDivElement).style.background =
-                              n.is_read ? 'transparent' : 'rgba(169,255,232,0.04)';
-                          }}
-                        >
-                          {/* type icon */}
-                          <div style={{
-                            flexShrink: 0, width: 38, height: 38, borderRadius: '50%',
-                            background: TYPE_ICON_BG[n.type] ?? 'rgba(169,255,232,0.1)',
-                            color: TYPE_ICON_COLOR[n.type] ?? '#a9ffe8',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.85rem', marginTop: 1,
-                          }}>
-                            <NotifIcon type={n.type} />
-                          </div>
-
-                          {/* text */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              display: 'flex', alignItems: 'flex-start',
-                              justifyContent: 'space-between', gap: '0.4rem',
-                              marginBottom: '0.2rem',
-                            }}>
-                              <span style={{
-                                fontWeight: n.is_read ? 500 : 700,
-                                fontSize: '0.84rem',
-                                color: 'var(--text-primary, #e8f0fe)',
-                                lineHeight: 1.3,
-                              }}>
-                                {n.title}
-                              </span>
-                              {!n.is_read && (
-                                <span style={{
-                                  flexShrink: 0, width: 8, height: 8,
-                                  borderRadius: '50%', background: '#a9ffe8', marginTop: 4,
-                                }} />
-                              )}
-                            </div>
-                            <p style={{
-                              margin: '0 0 0.3rem',
-                              color: 'var(--text-muted)', fontSize: '0.77rem', lineHeight: 1.45,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical' as const,
-                              overflow: 'hidden',
-                            }}>
-                              {n.body}
-                            </p>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.75 }}>
-                              {relativeTime(n.created_at)}
-                            </span>
-                          </div>
+                    <div className="nex-notify-list">
+                      {notifications.length === 0 ? (
+                        <div className="nex-notify-empty">
+                          <FaBell size={34} style={{ opacity: 0.2, display: 'block', margin: '0 auto 0.75rem' }} />
+                          <p className="nex-notify-empty-title">You're all caught up</p>
+                          <p className="nex-notify-empty-sub">New notifications will appear here.</p>
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => { if (!n.is_read) handleMarkOneRead(n.id); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && !n.is_read) handleMarkOneRead(n.id); }}
+                            className={`nex-notify-item${n.is_read ? ' read' : ''}`}
+                          >
+                            {/* type icon */}
+                            <div
+                              className="nex-notify-icon"
+                              style={{
+                                background: TYPE_ICON_BG[n.type] ?? 'rgba(169,255,232,0.1)',
+                                color: TYPE_ICON_COLOR[n.type] ?? '#a9ffe8',
+                              }}
+                            >
+                              <NotifIcon type={n.type} />
+                            </div>
+
+                            {/* text */}
+                            <div className="nex-notify-text">
+                              <div className="nex-notify-text-top">
+                                <span className={`nex-notify-title${n.is_read ? '' : ' unread'}`}>
+                                  {n.title}
+                                </span>
+                                {!n.is_read && <span className="nex-notify-dot" />}
+                              </div>
+                              <p className="nex-notify-body">{n.body}</p>
+                              <span className="nex-notify-time">{relativeTime(n.created_at)}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
 
                     {/* footer — view all */}
-                    <div style={{ borderTop: '1px solid rgba(169,255,232,0.1)' }}>
+                    <div className="nex-notify-footer">
                       <button
                         type="button"
                         onClick={() => { setIsNotifyOpen(false); navigate('/admin/notification-history'); }}
-                        style={{
-                          display: 'block', width: '100%',
-                          padding: '0.85rem 1.1rem',
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: '#a9ffe8', fontSize: '0.82rem', fontWeight: 600,
-                          textAlign: 'center', letterSpacing: '0.01em',
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(169,255,232,0.07)';
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.background = 'none';
-                        }}
+                        className="nex-notify-view-all"
                       >
                         View All Notifications →
                       </button>
@@ -620,7 +583,7 @@ export default function AdminOverviewPage() {
                 <section className="nex-card-grid">
                   <article className="nex-feature-card discord">
                     <div>
-                      <h2>CryptoProp Discord</h2>
+                      <h2>PrimeAlfaTrade Discord</h2>
                       <p>Preview snapshots of upcoming news.</p>
                       <button type="button">Follow Us <FaChevronRight /></button>
                     </div>
@@ -641,12 +604,12 @@ export default function AdminOverviewPage() {
                   <div className="nex-social-stack">
                     <article className="nex-social-card">
                       <FaTwitter />
-                      <p>Follow CryptoProp Twitter to see snapshots of upcoming news.</p>
+                      <p>Follow PrimeAlfaTrade Twitter to see snapshots of upcoming news.</p>
                       <button type="button">Follow Us <FaChevronRight /></button>
                     </article>
                     <article className="nex-social-card">
                       <FaInstagram />
-                      <p>Follow CryptoProp Instagram to see snapshots of upcoming news.</p>
+                      <p>Follow PrimeAlfaTrade Instagram to see snapshots of upcoming news.</p>
                       <button type="button">Invite a friend <FaChevronRight /></button>
                     </article>
                   </div>

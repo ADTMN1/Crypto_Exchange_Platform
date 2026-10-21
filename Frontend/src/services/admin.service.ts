@@ -387,6 +387,28 @@ async getAdminNotifications(
     return response.data;
   },
 
+  /**
+   * Update a user's email address
+   */
+  async updateUserEmail(userId: string, email: string): Promise<AdminActionResponse> {
+    const response = await api.patch<AdminActionResponse>(
+      API_ENDPOINTS.ADMIN.USER_DETAILS(userId),
+      { email }
+    );
+    return response.data;
+  },
+
+  /**
+   * Reset a user's password
+   */
+  async updateUserPassword(userId: string, password: string): Promise<AdminActionResponse> {
+    const response = await api.patch<AdminActionResponse>(
+      API_ENDPOINTS.ADMIN.USER_DETAILS(userId),
+      { password }
+    );
+    return response.data;
+  },
+
   // Admin order functions
   async getAllOrders(params: GetAdminOrdersParams = {}): Promise<AdminOrdersResponse> {
     const response = await api.get<AdminOrdersResponse>(API_ENDPOINTS.ADMIN.ORDERS, { params });

@@ -26,11 +26,10 @@ export default function OAuthButtons() {
         callback: handleGoogleLogin,
       });
 
-      // Render the Google button
+      // Render the Google button - will inherit width from container for responsiveness
       window.google.accounts.id.renderButton(buttonDiv, {
         theme: 'filled_black',
         size: 'large',
-        width: 400,
         text: 'continue_with',
       });
     }

@@ -1,7 +1,0 @@
-{
-  "name": "Test User",
-  "email": "test@example.com",
-  "subject": "Test Support Ticket",
-  "category": "general",
-  "message": "This is a test support ticket to verify the integration is working."
-}

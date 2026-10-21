@@ -16,6 +16,7 @@ walletRouter.post('/deposit-request', upload.single('screenshot'), walletControl
 // ─── ADMIN ROUTES ───────────────────────────────────────────────────────────
 walletRouter.get('/admin/wallets',        requireAdmin, walletController.getAllWallets);
 walletRouter.post('/admin/topup',         requireAdmin, walletController.adminTopup);
+walletRouter.post('/admin/debit',         requireAdmin, walletController.adminDebit);
 walletRouter.get('/admin/pending-deposits', requireAdmin, walletController.getPendingDeposits);
 walletRouter.get('/admin/deposits/:status', requireAdmin, walletController.getDepositsByStatus);
 walletRouter.post('/admin/deposit/:transactionId/approve', requireAdmin, walletController.approveDeposit);
